@@ -133,6 +133,9 @@ jobs:
 
           gh pr merge "$PR_URL" --merge --admin
 
+          # マージ後にブランチを削除
+          git push origin --delete "${{ env.TARGET_DATE }}_update"
+
       - name: Issue をクローズ
         if: success()
         env:

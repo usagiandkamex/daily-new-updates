@@ -47,6 +47,23 @@ jobs:
           DAY=${TARGET_DATE:6:2}
           echo "TARGET_DATE_FORMATTED=${YEAR}/${MONTH}/${DAY}" >> $GITHUB_ENV
 
+      - name: 既存ブランチ・PRのクリーンアップ
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ env.TARGET_DATE }}_update"
+          # 既存PRがあればクローズ
+          EXISTING_PR=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING_PR" ]; then
+            echo "既存PR #${EXISTING_PR} をクローズします"
+            gh pr close "$EXISTING_PR" --comment "再実行のためクローズします。" || true
+          fi
+          # 既存リモートブランチがあれば削除
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "既存ブランチ $BRANCH を削除します"
+            git push origin --delete "$BRANCH" || true
+          fi
+
       - name: GitHub Issue 作成
         id: create_issue
         env:

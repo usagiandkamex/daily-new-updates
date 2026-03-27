@@ -60,6 +60,8 @@ FEEDS = {
         {"name": "はてなブックマーク IT", "url": "https://b.hatena.ne.jp/hotentry/it.rss"},
         {"name": "Reddit Technology", "url": "https://www.reddit.com/r/technology/.rss"},
         {"name": "Reddit Programming", "url": "https://www.reddit.com/r/programming/.rss"},
+        {"name": "X(Twitter) IT話題 (国内)", "url": "https://news.google.com/rss/search?q=X+Twitter+IT+%E8%A9%B1%E9%A1%8C+%E3%83%88%E3%83%AC%E3%83%B3%E3%83%89&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "X(Twitter) Tech Trends", "url": "https://news.google.com/rss/search?q=twitter+X+trending+tech&hl=en&gl=US&ceid=US:en"},
     ],
 }
 

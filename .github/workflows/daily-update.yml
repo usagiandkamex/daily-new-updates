@@ -89,7 +89,7 @@ jobs:
 
       - name: コミット & プッシュ
         run: |
-          git add "${{ env.TARGET_DATE }}.md"
+          git add "updates/${{ env.TARGET_DATE }}.md"
           git commit -m "${{ env.TARGET_DATE_FORMATTED }} デイリーアップデート (#${{ env.ISSUE_NUMBER }})"
           git push origin ${{ env.TARGET_DATE }}_update
 

@@ -209,8 +209,8 @@ def build_user_prompt(
 日本語・英語の両方のソースが含まれていますが、記事はすべて日本語で書いてください。
 技術系ニュースは「ニュースで話題のテーマ」に活用してください（IT分野のトピックのみ選定）。SNS/トレンド情報は「SNSで話題のテーマ」に活用してください。
 
-出力フォーマット（各項目の間には必ず空行を入れること）:
-```
+出力フォーマット（各項目の間には必ず空行を入れること。コードブロックで囲まず、マークダウンをそのまま出力すること）:
+
 # {formatted_date} デイリーアップデート
 
 ## 1. Azure アップデート情報
@@ -236,7 +236,6 @@ def build_user_prompt(
 ## 4. ビジネスホットトピック
 
 (最大3つ。各トピックは見出し・要約・影響・参考リンクで構成)
-```
 
 ---
 
@@ -359,7 +358,9 @@ def main():
         client, model, target_date, azure_news, tech_news, business_news, sns_news
     )
 
-    output_path = f"{target_date}.md"
+    output_dir = "updates"
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, f"{target_date}.md")
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(article + "\n")
 

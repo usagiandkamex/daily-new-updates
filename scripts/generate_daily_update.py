@@ -72,7 +72,7 @@ HTTP_HEADERS = {
 # --- フィード取得 -----------------------------------------------------------------
 
 
-def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
+def _fetch_feed(url: str, since: datetime, max_items: int = 5) -> list[dict]:
     """単一の RSS/Atom フィードを取得し、since 以降の記事を返す。"""
     resp = requests.get(url, headers=HTTP_HEADERS, timeout=30)
     resp.raise_for_status()
@@ -97,7 +97,7 @@ def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
         articles.append(
             {
                 "title": entry.get("title", "").strip(),
-                "description": entry.get("summary", "").strip()[:300],
+                "description": entry.get("summary", "").strip()[:150],
                 "url": entry.get("link", ""),
                 "datePublished": str(pub_date) if pub_date else "",
             }
@@ -113,7 +113,7 @@ def fetch_category(category: str, since: datetime) -> list[dict]:
     all_articles = []
     for source in FEEDS.get(category, []):
         try:
-            items = _fetch_feed(source["url"], since, max_items=10)
+            items = _fetch_feed(source["url"], since)
             for item in items:
                 item["source"] = source["name"]
             all_articles.extend(items)
@@ -121,6 +121,23 @@ def fetch_category(category: str, since: datetime) -> list[dict]:
         except Exception as e:
             print(f"    {source['name']}: 取得失敗 ({e})")
     return all_articles
+
+
+# カテゴリ別の記事数上限（プロンプトサイズ制御用）
+MAX_ARTICLES = {
+    "azure": 10,
+    "tech": 15,
+    "business": 15,
+    "sns": 10,
+}
+
+
+def _limit_articles(articles: list[dict], category: str) -> list[dict]:
+    """記事リストをカテゴリ上限に制限する。"""
+    limit = MAX_ARTICLES.get(category, 10)
+    if len(articles) > limit:
+        print(f"  ※ {len(articles)} 件 → {limit} 件に制限")
+    return articles[:limit]
 
 
 # --- LLM クライアント -----------------------------------------------------------
@@ -242,9 +259,39 @@ def generate_article(
     business_news: list[dict],
     sns_news: list[dict],
 ) -> str:
+    # プロンプトサイズの安全チェック (16,000 トークン制限 - 4,096 出力 - 約 600 システム)
+    # 概算: 日英混在で 1 トークン ≈ 2.5 文字
+    MAX_INPUT_CHARS = 10_000 * 2.5  # ≈ 25,000 文字
+
+    news_lists = [azure_news, tech_news, business_news, sns_news]
     user_prompt = build_user_prompt(
         target_date, azure_news, tech_news, business_news, sns_news
     )
+
+    # プロンプトが大きすぎる場合、各カテゴリから均等に記事を削る
+    while len(user_prompt) > MAX_INPUT_CHARS:
+        trimmed = False
+        for nl in news_lists:
+            if len(nl) > 3:
+                nl.pop()
+                trimmed = True
+        if not trimmed:
+            break
+        user_prompt = build_user_prompt(
+            target_date, azure_news, tech_news, business_news, sns_news
+        )
+
+    if len(user_prompt) > MAX_INPUT_CHARS:
+        print(f"  ⚠ プロンプトが大きいため description を除去します")
+        for nl in news_lists:
+            for article in nl:
+                article["description"] = ""
+        user_prompt = build_user_prompt(
+            target_date, azure_news, tech_news, business_news, sns_news
+        )
+
+    print(f"  プロンプトサイズ: 約 {len(user_prompt):,} 文字")
+
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -275,7 +322,7 @@ def main():
     print("ニュースを取得中...")
 
     print("\n[Azure]")
-    azure_news = fetch_category("azure", since)
+    azure_news = _limit_articles(fetch_category("azure", since), "azure")
     print(f"  → 合計: {len(azure_news)} 件")
 
     print("\n[技術系 日本語]")
@@ -286,7 +333,7 @@ def main():
     tech_en = fetch_category("tech_en", since)
     print(f"  → 合計: {len(tech_en)} 件")
 
-    tech_news = tech_ja + tech_en
+    tech_news = _limit_articles(tech_ja + tech_en, "tech")
 
     print("\n[ビジネス系 日本語]")
     biz_ja = fetch_category("business_ja", since)
@@ -296,10 +343,10 @@ def main():
     biz_en = fetch_category("business_en", since)
     print(f"  → 合計: {len(biz_en)} 件")
 
-    business_news = biz_ja + biz_en
+    business_news = _limit_articles(biz_ja + biz_en, "business")
 
     print("\n[SNS / トレンド]")
-    sns_news = fetch_category("sns", since)
+    sns_news = _limit_articles(fetch_category("sns", since), "sns")
     print(f"  → 合計: {len(sns_news)} 件")
 
     print("\n記事を生成中...")

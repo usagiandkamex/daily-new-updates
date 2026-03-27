@@ -1,0 +1,117 @@
+name: デイリーアップデート
+
+on:
+  schedule:
+    # 毎日 8:30 JST (= 23:30 UTC 前日)
+    - cron: '30 23 * * *'
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: '対象日 (YYYYMMDD形式、未指定時は当日JST)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  models: read
+
+jobs:
+  daily-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 依存関係インストール
+        run: pip install -r scripts/requirements.txt
+
+      - name: 対象日の設定
+        run: |
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            echo "TARGET_DATE=${{ github.event.inputs.target_date }}" >> $GITHUB_ENV
+          else
+            echo "TARGET_DATE=$(TZ=Asia/Tokyo date +%Y%m%d)" >> $GITHUB_ENV
+          fi
+
+      - name: 対象日のフォーマット設定
+        run: |
+          YEAR=${TARGET_DATE:0:4}
+          MONTH=${TARGET_DATE:4:2}
+          DAY=${TARGET_DATE:6:2}
+          echo "TARGET_DATE_FORMATTED=${YEAR}/${MONTH}/${DAY}" >> $GITHUB_ENV
+
+      - name: GitHub Issue 作成
+        id: create_issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_URL=$(gh issue create \
+            --title "${{ env.TARGET_DATE_FORMATTED }} デイリーアップデート" \
+            --body "## 概要
+          ${{ env.TARGET_DATE_FORMATTED }} のデイリーアップデートを作成します。
+
+          ### 収集対象
+          - Azure アップデート情報
+          - インターネットで話題のテーマ
+          - ビジネスホットトピック
+
+          ### 対象期間
+          前日 8:30 〜 本日 8:30 (JST)
+
+          ---
+          > このIssueは GitHub Actions により自動作成されました。")
+
+          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oP '\d+$')
+          echo "issue_number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
+          echo "ISSUE_NUMBER=${ISSUE_NUMBER}" >> $GITHUB_ENV
+
+      - name: ブランチ作成
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ${{ env.TARGET_DATE }}_update
+
+      - name: デイリーアップデート生成
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        run: python scripts/generate_daily_update.py ${{ env.TARGET_DATE }}
+
+      - name: コミット & プッシュ
+        run: |
+          git add "${{ env.TARGET_DATE }}.md"
+          git commit -m "${{ env.TARGET_DATE_FORMATTED }} デイリーアップデート (#${{ env.ISSUE_NUMBER }})"
+          git push origin ${{ env.TARGET_DATE }}_update
+
+      - name: プルリクエスト作成 & マージ
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+            --title "${{ env.TARGET_DATE_FORMATTED }} デイリーアップデート" \
+            --body "## ${{ env.TARGET_DATE_FORMATTED }} デイリーアップデート
+
+          Closes #${{ env.ISSUE_NUMBER }}
+
+          ### 内容
+          - Azure アップデート情報
+          - ニュースで話題のテーマ
+          - SNSで話題のテーマ
+          - ビジネスホットトピック
+
+          ---
+          > このPRは GitHub Actions により自動作成されました。" \
+            --base main \
+            --head "${{ env.TARGET_DATE }}_update")
+
+          gh pr merge "$PR_URL" --merge --admin

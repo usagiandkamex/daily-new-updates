@@ -115,3 +115,9 @@ jobs:
             --head "${{ env.TARGET_DATE }}_update")
 
           gh pr merge "$PR_URL" --merge --admin
+
+      - name: Issue をクローズ
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh issue close ${{ env.ISSUE_NUMBER }} --comment "PR がマージされたため、自動クローズします。"

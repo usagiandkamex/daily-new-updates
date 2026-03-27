@@ -1,0 +1,164 @@
+name: テクニカル雑談
+
+on:
+  schedule:
+    # 毎日 3:00 JST (= 18:00 UTC 前日)
+    - cron: '0 18 * * *'
+    # 毎日 15:00 JST (= 6:00 UTC)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: '対象日 (YYYYMMDD形式、未指定時は当日JST)'
+        required: false
+        type: string
+      slot:
+        description: '時間帯 (am/pm、未指定時は現在時刻で自動判定)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - am
+          - pm
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  models: read
+
+jobs:
+  smallchat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v6
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: 依存関係インストール
+        run: pip install -r scripts/requirements.txt
+
+      - name: 対象日・時間帯の設定
+        run: |
+          # 対象日
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            echo "TARGET_DATE=${{ github.event.inputs.target_date }}" >> $GITHUB_ENV
+          else
+            echo "TARGET_DATE=$(TZ=Asia/Tokyo date +%Y%m%d)" >> $GITHUB_ENV
+          fi
+
+          # 時間帯
+          if [ -n "${{ github.event.inputs.slot }}" ]; then
+            echo "SLOT=${{ github.event.inputs.slot }}" >> $GITHUB_ENV
+          else
+            HOUR=$(TZ=Asia/Tokyo date +%H)
+            if [ "$HOUR" -lt 12 ]; then
+              echo "SLOT=am" >> $GITHUB_ENV
+            else
+              echo "SLOT=pm" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: 対象日のフォーマット設定
+        run: |
+          YEAR=${TARGET_DATE:0:4}
+          MONTH=${TARGET_DATE:4:2}
+          DAY=${TARGET_DATE:6:2}
+          echo "TARGET_DATE_FORMATTED=${YEAR}/${MONTH}/${DAY}" >> $GITHUB_ENV
+          if [ "$SLOT" = "am" ]; then
+            echo "SLOT_LABEL=午前" >> $GITHUB_ENV
+          else
+            echo "SLOT_LABEL=午後" >> $GITHUB_ENV
+          fi
+
+      - name: 既存ブランチ・PRのクリーンアップ
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ env.TARGET_DATE }}_smallchat_${{ env.SLOT }}"
+          EXISTING_PR=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING_PR" ]; then
+            echo "既存PR #${EXISTING_PR} をクローズします"
+            gh pr close "$EXISTING_PR" --comment "再実行のためクローズします。" || true
+          fi
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "既存ブランチ $BRANCH を削除します"
+            git push origin --delete "$BRANCH" || true
+          fi
+
+      - name: GitHub Issue 作成
+        id: create_issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_URL=$(gh issue create \
+            --title "${{ env.TARGET_DATE_FORMATTED }} テクニカル雑談（${{ env.SLOT_LABEL }}）" \
+            --body "## 概要
+          ${{ env.TARGET_DATE_FORMATTED }} ${{ env.SLOT_LABEL }}のテクニカル雑談を作成します。
+
+          ### 収集対象
+          - Microsoft
+          - AI
+          - Azure
+          - セキュリティ
+
+          ---
+          > このIssueは GitHub Actions により自動作成されました。")
+
+          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oP '\d+$')
+          echo "issue_number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
+          echo "ISSUE_NUMBER=${ISSUE_NUMBER}" >> $GITHUB_ENV
+
+      - name: ブランチ作成
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ${{ env.TARGET_DATE }}_smallchat_${{ env.SLOT }}
+
+      - name: テクニカル雑談生成
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        run: python scripts/generate_smallchat.py ${{ env.TARGET_DATE }} ${{ env.SLOT }}
+
+      - name: コミット & プッシュ
+        run: |
+          git add "smallchat/${{ env.TARGET_DATE }}_${{ env.SLOT }}.md"
+          git commit -m "${{ env.TARGET_DATE_FORMATTED }} テクニカル雑談（${{ env.SLOT_LABEL }}） (#${{ env.ISSUE_NUMBER }})"
+          git push origin ${{ env.TARGET_DATE }}_smallchat_${{ env.SLOT }}
+
+      - name: プルリクエスト作成 & マージ
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+            --title "${{ env.TARGET_DATE_FORMATTED }} テクニカル雑談（${{ env.SLOT_LABEL }}）" \
+            --body "## ${{ env.TARGET_DATE_FORMATTED }} テクニカル雑談（${{ env.SLOT_LABEL }}）
+
+          Closes #${{ env.ISSUE_NUMBER }}
+
+          ### 内容
+          - Microsoft
+          - AI
+          - Azure
+          - セキュリティ
+
+          ---
+          > このPRは GitHub Actions により自動作成されました。" \
+            --base main \
+            --head "${{ env.TARGET_DATE }}_smallchat_${{ env.SLOT }}")
+
+          gh pr merge "$PR_URL" --merge --admin
+
+      - name: Issue をクローズ
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh issue close ${{ env.ISSUE_NUMBER }} --comment "PR がマージされたため、自動クローズします。"

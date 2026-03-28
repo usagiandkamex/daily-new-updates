@@ -104,6 +104,7 @@ jobs:
           - Microsoft
           - AI
           - Azure
+          - クラウド（AWS / GCP / OCI）
           - セキュリティ
 
           ---
@@ -148,6 +149,7 @@ jobs:
           - Microsoft
           - AI
           - Azure
+          - クラウド（AWS / GCP / OCI）
           - セキュリティ
 
           ---

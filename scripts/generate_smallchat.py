@@ -26,6 +26,11 @@ FEEDS = {
         {"name": "はてなブックマーク Microsoft", "url": "https://b.hatena.ne.jp/search/tag?q=Microsoft&mode=rss"},
         {"name": "X(Twitter) Microsoft話題", "url": "https://news.google.com/rss/search?q=Microsoft+%E8%A9%B1%E9%A1%8C&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News Microsoft", "url": "https://news.google.com/rss/search?q=Microsoft+latest&hl=en&gl=US&ceid=US:en"},
+        {"name": "Reddit Surface", "url": "https://www.reddit.com/r/Surface/.rss"},
+        {"name": "Publickey", "url": "https://www.publickey1.jp/atom.xml"},
+        {"name": "Qiita Microsoft", "url": "https://qiita.com/tags/microsoft/feed"},
+        {"name": "Google News Microsoft Japan", "url": "https://news.google.com/rss/search?q=Microsoft+%E6%97%A5%E6%9C%AC&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News Windows", "url": "https://news.google.com/rss/search?q=Windows+update+new&hl=en&gl=US&ceid=US:en"},
     ],
     # --- AI ---
     "ai": [
@@ -34,21 +39,50 @@ FEEDS = {
         {"name": "はてなブックマーク AI", "url": "https://b.hatena.ne.jp/search/tag?q=AI&mode=rss"},
         {"name": "X(Twitter) AI話題", "url": "https://news.google.com/rss/search?q=AI+%E4%BA%BA%E5%B7%A5%E7%9F%A5%E8%83%BD+%E8%A9%B1%E9%A1%8C&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Hacker News AI", "url": "https://hnrss.org/best?q=AI+LLM"},
+        {"name": "Reddit Artificial", "url": "https://www.reddit.com/r/artificial/.rss"},
+        {"name": "Reddit OpenAI", "url": "https://www.reddit.com/r/OpenAI/.rss"},
+        {"name": "Qiita AI", "url": "https://qiita.com/tags/ai/feed"},
+        {"name": "Zenn AI", "url": "https://zenn.dev/topics/ai/feed"},
+        {"name": "Google News AI Business", "url": "https://news.google.com/rss/search?q=artificial+intelligence+business&hl=en&gl=US&ceid=US:en"},
     ],
     # --- Azure ---
     "azure": [
-        {"name": "Azure Updates", "url": "https://azure.microsoft.com/ja-jp/updates/feed/"},
+        {"name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/"},
+        {"name": "Azure Release Communications", "url": "https://www.microsoft.com/releasecommunications/api/v2/azure/rss"},
         {"name": "Reddit Azure", "url": "https://www.reddit.com/r/azure/.rss"},
         {"name": "X(Twitter) Azure話題", "url": "https://news.google.com/rss/search?q=Azure+%E8%A9%B1%E9%A1%8C&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News Azure", "url": "https://news.google.com/rss/search?q=Azure+cloud&hl=en&gl=US&ceid=US:en"},
+        {"name": "Azure SDK Blog", "url": "https://devblogs.microsoft.com/azure-sdk/feed/"},
+        {"name": "Qiita Azure", "url": "https://qiita.com/tags/azure/feed"},
+        {"name": "DevelopersIO", "url": "https://dev.classmethod.jp/feed/"},
+        {"name": "Reddit CloudComputing", "url": "https://www.reddit.com/r/cloudcomputing/.rss"},
+        {"name": "Google News Azure Japan", "url": "https://news.google.com/rss/search?q=Azure+%E3%82%A2%E3%83%83%E3%83%97%E3%83%87%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
     ],
     # --- セキュリティ ---
     "security": [
         {"name": "Reddit netsec", "url": "https://www.reddit.com/r/netsec/.rss"},
         {"name": "Reddit cybersecurity", "url": "https://www.reddit.com/r/cybersecurity/.rss"},
-        {"name": "はてなブックマーク セキュリティ", "url": "https://b.hatena.ne.jp/hotentry/it/security.rss"},
+        {"name": "はてなブックマーク IT", "url": "https://b.hatena.ne.jp/hotentry/it.rss"},
         {"name": "X(Twitter) セキュリティ話題", "url": "https://news.google.com/rss/search?q=%E3%82%BB%E3%82%AD%E3%83%A5%E3%83%AA%E3%83%86%E3%82%A3+%E8%84%86%E5%BC%B1%E6%80%A7+IT&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News Cybersecurity", "url": "https://news.google.com/rss/search?q=cybersecurity+vulnerability&hl=en&gl=US&ceid=US:en"},
+        {"name": "Qiita セキュリティ", "url": "https://qiita.com/tags/security/feed"},
+        {"name": "Reddit InfoSec", "url": "https://www.reddit.com/r/InfoSecNews/.rss"},
+        {"name": "Google News サイバーセキュリティ JP", "url": "https://news.google.com/rss/search?q=%E3%82%B5%E3%82%A4%E3%83%90%E3%83%BC%E6%94%BB%E6%92%83+%E3%82%BB%E3%82%AD%E3%83%A5%E3%83%AA%E3%83%86%E3%82%A3&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "INTERNET Watch", "url": "https://internet.watch.impress.co.jp/data/rss/1.0/iw/feed.rdf"},
+        {"name": "Slashdot Security", "url": "https://slashdot.org/index.rss"},
+    ],
+    # --- クラウド (Azure以外) ---
+    "cloud": [
+        {"name": "Reddit AWS", "url": "https://www.reddit.com/r/aws/.rss"},
+        {"name": "Reddit GCP", "url": "https://www.reddit.com/r/googlecloud/.rss"},
+        {"name": "Reddit CloudComputing", "url": "https://www.reddit.com/r/cloudcomputing/.rss"},
+        {"name": "Qiita AWS", "url": "https://qiita.com/tags/aws/feed"},
+        {"name": "Qiita GCP", "url": "https://qiita.com/tags/gcp/feed"},
+        {"name": "Google News AWS", "url": "https://news.google.com/rss/search?q=AWS+Amazon+Web+Services&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News GCP", "url": "https://news.google.com/rss/search?q=Google+Cloud+Platform&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News OCI", "url": "https://news.google.com/rss/search?q=Oracle+Cloud+Infrastructure&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News クラウド JP", "url": "https://news.google.com/rss/search?q=AWS+GCP+%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%89&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "DevelopersIO AWS", "url": "https://dev.classmethod.jp/feed/"},
     ],
 }
 
@@ -174,6 +208,7 @@ def build_user_prompt(
     ai_news: list[dict],
     azure_news: list[dict],
     security_news: list[dict],
+    cloud_news: list[dict],
 ) -> str:
     formatted_date = f"{target_date[:4]}/{target_date[4:6]}/{target_date[6:]}"
     slot_label = "午前" if slot == "am" else "午後"
@@ -197,7 +232,11 @@ def build_user_prompt(
 
 (最大3つ。各トピックは見出し・要約・影響・参考リンクで構成)
 
-## 4. セキュリティ
+## 4. クラウド（AWS / GCP / OCI）
+
+(最大3つ。Azure以外のクラウドサービス（AWS、GCP、OCI等）のトレンド。各トピックは見出し・要約・影響・参考リンクで構成)
+
+## 5. セキュリティ
 
 (最大3つ。各トピックは見出し・要約・影響・参考リンクで構成)
 
@@ -211,6 +250,9 @@ def build_user_prompt(
 
 ### Azure 関連
 {json.dumps(azure_news, ensure_ascii=False, indent=2)}
+
+### クラウド（AWS / GCP / OCI）関連
+{json.dumps(cloud_news, ensure_ascii=False, indent=2)}
 
 ### セキュリティ関連
 {json.dumps(security_news, ensure_ascii=False, indent=2)}
@@ -226,12 +268,13 @@ def generate_article(
     ai_news: list[dict],
     azure_news: list[dict],
     security_news: list[dict],
+    cloud_news: list[dict],
 ) -> str:
-    MAX_INPUT_CHARS = 10_000 * 2.5
+    MAX_INPUT_CHARS = 15_000 * 2.5
 
-    news_lists = [microsoft_news, ai_news, azure_news, security_news]
+    news_lists = [microsoft_news, ai_news, azure_news, security_news, cloud_news]
     user_prompt = build_user_prompt(
-        target_date, slot, microsoft_news, ai_news, azure_news, security_news
+        target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news
     )
 
     while len(user_prompt) > MAX_INPUT_CHARS:
@@ -243,7 +286,7 @@ def generate_article(
         if not trimmed:
             break
         user_prompt = build_user_prompt(
-            target_date, slot, microsoft_news, ai_news, azure_news, security_news
+            target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news
         )
 
     if len(user_prompt) > MAX_INPUT_CHARS:
@@ -252,7 +295,7 @@ def generate_article(
             for article in nl:
                 article["description"] = ""
         user_prompt = build_user_prompt(
-            target_date, slot, microsoft_news, ai_news, azure_news, security_news
+            target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news
         )
 
     print(f"  プロンプトサイズ: 約 {len(user_prompt):,} 文字")
@@ -300,6 +343,10 @@ def main():
     azure_news = fetch_category("azure", since)
     print(f"  → 合計: {len(azure_news)} 件")
 
+    print("\n[クラウド]")
+    cloud_news = fetch_category("cloud", since)
+    print(f"  → 合計: {len(cloud_news)} 件")
+
     print("\n[セキュリティ]")
     security_news = fetch_category("security", since)
     print(f"  → 合計: {len(security_news)} 件")
@@ -307,7 +354,7 @@ def main():
     print("\n記事を生成中...")
     client, model = create_llm_client()
     article = generate_article(
-        client, model, target_date, slot, microsoft_news, ai_news, azure_news, security_news
+        client, model, target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news
     )
 
     output_dir = "smallchat"

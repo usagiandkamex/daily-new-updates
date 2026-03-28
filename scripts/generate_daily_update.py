@@ -21,15 +21,22 @@ JST = timezone(timedelta(hours=9))
 FEEDS = {
     # --- Azure ---
     "azure": [
-        {"name": "Azure Updates", "url": "https://azure.microsoft.com/ja-jp/updates/feed/"},
+        {"name": "Azure Release Communications", "url": "https://www.microsoft.com/releasecommunications/api/v2/azure/rss"},
+        {"name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/"},
+        {"name": "Google News Azure", "url": "https://news.google.com/rss/search?q=Azure+%E3%82%A2%E3%83%83%E3%83%97%E3%83%87%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
     ],
     # --- 技術系 (日本語) ---
     "tech_ja": [
         {"name": "ITmedia NEWS", "url": "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml"},
         {"name": "GIGAZINE", "url": "https://gigazine.net/news/rss_2.0/"},
         {"name": "Publickey", "url": "https://www.publickey1.jp/atom.xml"},
-        {"name": "クラウド Watch", "url": "https://cloud.watch.impress.co.jp/data/rss/1.0/cw/feed.rdf"},
+        {"name": "INTERNET Watch", "url": "https://internet.watch.impress.co.jp/data/rss/1.0/iw/feed.rdf"},
         {"name": "Zenn トレンド", "url": "https://zenn.dev/feed"},
+        {"name": "ITmedia テクノロジー", "url": "https://rss.itmedia.co.jp/rss/2.0/news_technology.xml"},
+        {"name": "PC Watch", "url": "https://pc.watch.impress.co.jp/data/rss/1.0/pcw/feed.rdf"},
+        {"name": "DevelopersIO", "url": "https://dev.classmethod.jp/feed/"},
+        {"name": "日経クロステック IT", "url": "https://xtech.nikkei.com/rss/xtech-it.rdf"},
+        {"name": "Impress Watch", "url": "https://www.watch.impress.co.jp/data/rss/1.0/ipw/feed.rdf"},
     ],
     # --- 技術系 (英語) ---
     "tech_en": [
@@ -38,14 +45,24 @@ FEEDS = {
         {"name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index"},
         {"name": "Hacker News (Best)", "url": "https://hnrss.org/best"},
         {"name": "MIT Technology Review", "url": "https://www.technologyreview.com/feed/"},
+        {"name": "Wired", "url": "https://www.wired.com/feed/rss"},
+        {"name": "The Register", "url": "https://www.theregister.com/headlines.atom"},
+        {"name": "ZDNet", "url": "https://www.zdnet.com/news/rss.xml"},
+        {"name": "Dev.to", "url": "https://dev.to/feed"},
+        {"name": "Slashdot", "url": "https://slashdot.org/index.rss"},
     ],
     # --- ビジネス系 (日本語) ---
     "business_ja": [
         {"name": "NHK ビジネス", "url": "https://www.nhk.or.jp/rss/news/cat4.xml"},
         {"name": "東洋経済オンライン", "url": "https://toyokeizai.net/list/feed/rss"},
-        {"name": "ITmedia ビジネス", "url": "https://rss.itmedia.co.jp/rss/2.0/business_articles.xml"},
+        {"name": "ITmedia エンタープライズ", "url": "https://rss.itmedia.co.jp/rss/2.0/enterprise.xml"},
         {"name": "Google News 経済", "url": "https://news.google.com/rss/search?q=%E7%B5%8C%E6%B8%88+%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News IT企業", "url": "https://news.google.com/rss/search?q=IT%E4%BC%81%E6%A5%AD+%E3%82%B9%E3%82%BF%E3%83%BC%E3%83%88%E3%82%A2%E3%83%83%E3%83%97&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News AI", "url": "https://news.google.com/rss/search?q=AI+%E4%BA%BA%E5%B7%A5%E7%9F%A5%E8%83%BD+%E6%96%B0%E6%A9%9F%E8%83%BD&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News DX", "url": "https://news.google.com/rss/search?q=DX+%E3%83%87%E3%82%B8%E3%82%BF%E3%83%AB%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B9%E3%83%95%E3%82%A9%E3%83%BC%E3%83%A1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News スタートアップ", "url": "https://news.google.com/rss/search?q=%E3%82%B9%E3%82%BF%E3%83%BC%E3%83%88%E3%82%A2%E3%83%83%E3%83%97+%E8%B3%87%E9%87%91%E8%AA%BF%E9%81%94+IT&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News 半導体", "url": "https://news.google.com/rss/search?q=%E5%8D%8A%E5%B0%8E%E4%BD%93+%E3%83%86%E3%82%AF%E3%83%8E%E3%83%AD%E3%82%B8%E3%83%BC&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News サイバーセキュリティ", "url": "https://news.google.com/rss/search?q=%E3%82%B5%E3%82%A4%E3%83%90%E3%83%BC%E3%82%BB%E3%82%AD%E3%83%A5%E3%83%AA%E3%83%86%E3%82%A3+%E8%84%86%E5%BC%B1%E6%80%A7&hl=ja&gl=JP&ceid=JP:ja"},
     ],
     # --- ビジネス系 (英語) ---
     "business_en": [
@@ -54,6 +71,11 @@ FEEDS = {
         {"name": "Google News (Reuters Business)", "url": "https://news.google.com/rss/search?q=business+technology+site:reuters.com&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News (Bloomberg Tech)", "url": "https://news.google.com/rss/search?q=technology+site:bloomberg.com&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News (Financial Times)", "url": "https://news.google.com/rss/search?q=technology+business+site:ft.com&hl=en&gl=US&ceid=US:en"},
+        {"name": "WSJ Tech", "url": "https://feeds.a.dj.com/rss/RSSWSJD.xml"},
+        {"name": "Google News (Cloud Computing)", "url": "https://news.google.com/rss/search?q=cloud+computing+AWS+Azure+GCP&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News (AI Business)", "url": "https://news.google.com/rss/search?q=artificial+intelligence+business&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News (Startup Funding)", "url": "https://news.google.com/rss/search?q=startup+funding+technology&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News (Semiconductor)", "url": "https://news.google.com/rss/search?q=semiconductor+chip+technology&hl=en&gl=US&ceid=US:en"},
     ],
     # --- SNS / トレンド ---
     "sns": [
@@ -62,6 +84,11 @@ FEEDS = {
         {"name": "Reddit Programming", "url": "https://www.reddit.com/r/programming/.rss"},
         {"name": "X(Twitter) IT話題 (国内)", "url": "https://news.google.com/rss/search?q=X+Twitter+IT+%E8%A9%B1%E9%A1%8C+%E3%83%88%E3%83%AC%E3%83%B3%E3%83%89&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "X(Twitter) Tech Trends", "url": "https://news.google.com/rss/search?q=twitter+X+trending+tech&hl=en&gl=US&ceid=US:en"},
+        {"name": "Reddit DevOps", "url": "https://www.reddit.com/r/devops/.rss"},
+        {"name": "Reddit SysAdmin", "url": "https://www.reddit.com/r/sysadmin/.rss"},
+        {"name": "Qiita トレンド", "url": "https://qiita.com/popular-items/feed"},
+        {"name": "Reddit Artificial Intelligence", "url": "https://www.reddit.com/r/artificial/.rss"},
+        {"name": "Reddit Cloud Computing", "url": "https://www.reddit.com/r/cloudcomputing/.rss"},
     ],
 }
 
@@ -127,10 +154,10 @@ def fetch_category(category: str, since: datetime) -> list[dict]:
 
 # カテゴリ別の記事数上限（プロンプトサイズ制御用）
 MAX_ARTICLES = {
-    "azure": 10,
-    "tech": 15,
-    "business": 15,
-    "sns": 10,
+    "azure": 20,
+    "tech": 30,
+    "business": 30,
+    "sns": 20,
 }
 
 
@@ -188,7 +215,7 @@ SYSTEM_PROMPT = """\
 提供されたニュースソースを元に、正確で分かりやすい日本語のデイリーアップデート記事を作成してください。
 
 ## ルール
-- 読むのに約5分かかる分量で書いてください（2000〜3000文字程度）。
+- 読むのに約10分かかる分量で書いてください（4000〜6000文字程度）。
 - 各トピックは「見出し」「要約」「影響」「参考リンク」の4項目で構成してください。
 - 各項目（**要約**、**影響**、**参考リンク**）の間には必ず空行を入れてください。
 - 要約は簡潔かつ具体的に。影響はビジネスや開発者にとっての意味を記載してください。
@@ -225,19 +252,19 @@ def build_user_prompt(
 
 **参考リンク**: [タイトル](URL)
 
-(複数トピックがあれば繰り返し)
+(複数トピックがあれば繰り返し。最大6つまで)
 
 ## 2. ニュースで話題のテーマ
 
-(最大3つ。IT分野の技術系ニュースのみから選定。各トピックは見出し・要約・影響・参考リンクで構成)
+(最大6つ。IT分野の技術系ニュースのみから選定。各トピックは見出し・要約・影響・参考リンクで構成)
 
 ## 3. SNSで話題のテーマ
 
-(最大3つ。はてブ・ Reddit 等のトレンドから選定。各トピックは見出し・要約・影響・参考リンクで構成)
+(最大6つ。はてブ・ Reddit 等のトレンドから選定。各トピックは見出し・要約・影響・参考リンクで構成)
 
 ## 4. ビジネスホットトピック
 
-(最大3つ。各トピックは見出し・要約・影響・参考リンクで構成)
+(最大6つ。各トピックは見出し・要約・影響・参考リンクで構成)
 
 ---
 
@@ -264,9 +291,9 @@ def generate_article(
     business_news: list[dict],
     sns_news: list[dict],
 ) -> str:
-    # プロンプトサイズの安全チェック (16,000 トークン制限 - 4,096 出力 - 約 600 システム)
+    # プロンプトサイズの安全チェック (128,000 トークン制限 - 8,192 出力 - 約 600 システム)
     # 概算: 日英混在で 1 トークン ≈ 2.5 文字
-    MAX_INPUT_CHARS = 10_000 * 2.5  # ≈ 25,000 文字
+    MAX_INPUT_CHARS = 20_000 * 2.5  # ≈ 50,000 文字
 
     news_lists = [azure_news, tech_news, business_news, sns_news]
     user_prompt = build_user_prompt(
@@ -304,7 +331,7 @@ def generate_article(
             {"role": "user", "content": user_prompt},
         ],
         temperature=0.3,
-        max_tokens=4096,
+        max_tokens=8192,
     )
     return response.choices[0].message.content
 
@@ -318,9 +345,9 @@ def main():
         sys.exit(1)
 
     target_date = sys.argv[1]
-    # 前日 8:30 JST 以降の記事を対象とする
+    # 前日 8:00 JST 以降の記事を対象とする
     target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
-    since = target_dt - timedelta(days=1) + timedelta(hours=8, minutes=30)
+    since = target_dt - timedelta(days=1) + timedelta(hours=8)
 
     print(f"対象日: {target_date}")
     print(f"収集期間: {since.isoformat()} 以降")

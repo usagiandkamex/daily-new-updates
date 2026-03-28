@@ -2,8 +2,8 @@ name: デイリーアップデート
 
 on:
   schedule:
-    # 毎日 8:30 JST (= 23:30 UTC 前日)
-    - cron: '30 23 * * *'
+    # 毎日 8:00 JST (= 23:00 UTC 前日)
+    - cron: '0 23 * * *'
   workflow_dispatch:
     inputs:
       target_date:
@@ -80,7 +80,7 @@ jobs:
           - ビジネスホットトピック
 
           ### 対象期間
-          前日 8:30 〜 本日 8:30 (JST)
+          前日 8:00 〜 本日 8:00 (JST)
 
           ---
           > このIssueは GitHub Actions により自動作成されました。")
@@ -131,10 +131,9 @@ jobs:
             --base main \
             --head "${{ env.TARGET_DATE }}_update")
 
-          gh pr merge "$PR_URL" --merge --admin
+          gh pr merge "$PR_URL" --merge --delete-branch
 
-          # マージ後にブランチを削除
-          git push origin --delete "${{ env.TARGET_DATE }}_update"
+          # --delete-branch オプションでマージ後にブランチ自動削除
 
       - name: Issue をクローズ
         if: success()

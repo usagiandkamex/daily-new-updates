@@ -111,6 +111,11 @@
       (_, label, url) =>
         `<a href="${url.replace(/"/g, "&quot;")}" target="_blank" rel="noopener">${label}</a>`
     );
+    // Auto-link bare URLs not already inside an <a> tag
+    text = text.replace(
+      /(?<!href="|>)(https?:\/\/[^\s<"]+[^\s<".,;:!?)」』）】])/g,
+      '<a href="$1" target="_blank" rel="noopener">$1</a>'
+    );
     return text;
   }
 

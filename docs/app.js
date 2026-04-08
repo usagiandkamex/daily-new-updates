@@ -5,7 +5,7 @@
 
   // ── constants ────────────────────────────────────────────────────
   const PAGE_SIZE    = 12;
-  const LATEST_COUNT = 5;
+  const LATEST_COUNT = 6;
 
   const TYPE_LABEL = {
     daily:          "Daily",
@@ -102,7 +102,11 @@
     const latest = allUpdates.slice(0, LATEST_COUNT);
     const grid   = $("#latest-grid");
     if (latest.length === 0) {
-      grid.innerHTML = '<div class="loading">アップデートがありません</div>';
+      grid.innerHTML = `
+<div class="empty-state">
+  <div class="empty-state-icon">📭</div>
+  <p>アップデートはありません</p>
+</div>`;
       return;
     }
     grid.innerHTML = latest.map((u) => cardHtml(u, "")).join("");
@@ -207,7 +211,18 @@
 
   function renderTagFilters() {
     const container = $("#tag-filters");
-    container.innerHTML = allTagsSorted()
+    const tags = allTagsSorted();
+    const tagRow = container.closest(".filter-row");
+
+    // Hide entire tag filter row when no tags exist
+    if (tags.length === 0) {
+      if (tagRow) tagRow.style.display = "none";
+      container.innerHTML = "";
+      return;
+    }
+    if (tagRow) tagRow.style.display = "";
+
+    container.innerHTML = tags
       .map(
         (tag) =>
           `<button class="tag-filter-btn${activeTags.has(tag) ? " active" : ""}" data-tag="${esc(tag)}">${esc(tag)}</button>`

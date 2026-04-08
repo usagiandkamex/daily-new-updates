@@ -253,10 +253,11 @@ section { padding: 3rem 0; }
   text-decoration: none;
   font-size: .83rem;
   font-weight: 500;
-  padding: .35rem .7rem;
+  padding: .45rem 1.6rem;
   border: 1px solid var(--primary);
   border-radius: var(--radius);
   transition: background var(--ease), color var(--ease);
+  text-align: center;
 }
 .btn-read:hover { background: var(--primary); color: #fff; }
 
@@ -528,6 +529,7 @@ mark.hl {
   .header-search input { width: 100%; }
   .cards-grid { grid-template-columns: 1fr; }
   .footer-inner { flex-direction: column; text-align: center; }
+  .btn-read { display: block; padding: .5rem 2rem; }
 }
 
 @media (max-width: 480px) {

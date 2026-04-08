@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-04-08T09:26:47Z",
-  "note_url": "https://note.com/usagiandkamex",
+  "generated_at": "2026-04-08T10:14:32Z",
   "updates": [
     {
+      "slug": "20260408_daily",
       "date": "20260408",
       "date_formatted": "2026/04/08",
       "type": "daily",
@@ -20,6 +20,7 @@
       "excerpt": "Intelがイーロン・マスク氏の次世代半導体工場「Terafab」プロジェクトに参画することを発表しました。このプロジェクトはTeslaやSpaceX、xAI向けのAIチップやロボティクス用チップの内製化を目指しています。"
     },
     {
+      "slug": "20260408_smallchat_pm",
       "date": "20260408",
       "date_formatted": "2026/04/08",
       "type": "smallchat_pm",
@@ -36,6 +37,7 @@
       "excerpt": "マイクロソフトは、日本市場に約1兆6000億円を投資する計画を発表しました。この投資は「技術」「信頼」「人材」の3つの柱を中心に、AI主導型の成長を目指すものです。具体的な内容には、AI研究の強化や、日本国内のデータセンターのインフラの拡充…"
     },
     {
+      "slug": "20260408_smallchat_am",
       "date": "20260408",
       "date_formatted": "2026/04/08",
       "type": "smallchat_am",
@@ -52,6 +54,7 @@
       "excerpt": "Microsoftが「Copilotは娯楽目的のみ」という古い表記について、現在は無効であると説明しました。この表記はBing検索の初期段階で使用されていたもので、現在のCopilotの機能や意図とは無関係です。"
     },
     {
+      "slug": "20260407_daily",
       "date": "20260407",
       "date_formatted": "2026/04/07",
       "type": "daily",
@@ -69,6 +72,7 @@
       "excerpt": "Microsoftは2029年までに約1.6兆円を日本に投資し、AIインフラの拡充、100万人規模の人材育成、官民のサイバーセキュリティ対策を推進すると発表しました。"
     },
     {
+      "slug": "20260407_smallchat_pm",
       "date": "20260407",
       "date_formatted": "2026/04/07",
       "type": "smallchat_pm",
@@ -84,6 +88,7 @@
       "excerpt": "Microsoftは、Windows 11のデザイン改善に本格的に取り組むことを発表しました。特に、従来の「コントロールパネル」に代わる「設定」アプリの改良に焦点を当て、ユーザー体験を向上させる予定です。"
     },
     {
+      "slug": "20260407_smallchat_am",
       "date": "20260407",
       "date_formatted": "2026/04/07",
       "type": "smallchat_am",
@@ -101,6 +106,7 @@
       "excerpt": "Microsoftは日本でのAI、クラウド、サイバーセキュリティ分野における新たな投資計画を発表しました。この計画には、次世代AIモデルの開発やデータセンターの拡張、そしてセキュリティ強化のための取り組みが含まれています。総額は100億ドル…"
     },
     {
+      "slug": "20260406_daily",
       "date": "20260406",
       "date_formatted": "2026/04/06",
       "type": "daily",
@@ -119,6 +125,7 @@
       "excerpt": "Microsoft Azureの元コアエンジニアであるアクセル・リーチン氏が、Azureの信頼性低下や1兆ドルの損失を招いた要因についてブログで告発しました。彼は、内部の自己満足や誤った判断が問題の根本にあると指摘しています。"
     },
     {
+      "slug": "20260406_smallchat_pm",
       "date": "20260406",
       "date_formatted": "2026/04/06",
       "type": "smallchat_pm",
@@ -135,6 +142,7 @@
       "excerpt": "Microsoftは、Xbox FanFestをグローバルに展開することを発表しました。今年の6月には日本を含む複数の地域でイベントが開催される予定です。このイベントは、Xboxコミュニティが直接集まる場として、新作ゲームの発表やインタラク…"
     },
     {
+      "slug": "20260406_smallchat_am",
       "date": "20260406",
       "date_formatted": "2026/04/06",
       "type": "smallchat_am",
@@ -151,6 +159,7 @@
       "excerpt": "Microsoftは、Windows 11においてChromeのような「機能フラグ」を導入することを正式に発表しました。この機能により、ユーザーは段階的ロールアウトを待たずに新機能を有効化できるようになります。"
     },
     {
+      "slug": "20260405_daily",
       "date": "20260405",
       "date_formatted": "2026/04/05",
       "type": "daily",
@@ -168,6 +177,7 @@
       "excerpt": "AWSは新しい「Sustainabilityコンソール」を発表し、従来のCustomer Carbon Footprint Tool (CCFT) の代替として提供を開始しました。この新ツールは、クラウドリソースの環境への影響をより詳細に分…"
     },
     {
+      "slug": "20260405_smallchat_pm",
       "date": "20260405",
       "date_formatted": "2026/04/05",
       "type": "smallchat_pm",
@@ -184,6 +194,7 @@
       "excerpt": "Windows 11に統合された新しいMicrosoft Copilotが、Microsoft Edgeの完全なパッケージを含むようになり、RAM消費が増加したとの報告が上がっています。特に、低スペックのデバイスではパフォーマンスへの影響が…"
     },
     {
+      "slug": "20260405_smallchat_am",
       "date": "20260405",
       "date_formatted": "2026/04/05",
       "type": "smallchat_am",
@@ -200,6 +211,7 @@
       "excerpt": "Microsoftは、Windows 11の25H2バージョンへのアップデートを、古いOSバージョンを使用しているPCに対して強制的に行う計画を発表しました。この「インテリジェント」なアップデートシステムは、機械学習を活用し、デバイスがアッ…"
     },
     {
+      "slug": "20260404_daily",
       "date": "20260404",
       "date_formatted": "2026/04/04",
       "type": "daily",
@@ -217,6 +229,7 @@
       "excerpt": "ソニー・インタラクティブエンタテインメント（SIE）は、VR/AR向け3D技術を持つCinemersive Labsを買収しました。この買収により、PlayStationの視覚体験を機械学習を活用して強化し、次世代のレンダリング技術を開発す…"
     },
     {
+      "slug": "20260404_smallchat_pm",
       "date": "20260404",
       "date_formatted": "2026/04/04",
       "type": "smallchat_pm",
@@ -233,6 +246,7 @@
       "excerpt": "Windows 11 Insider Previewにおいて、ネイティブのFeature Flags機能が追加される予定です。この機能により、これまでViveToolなどの外部ツールを使用していた機能フラグの有効化が不要になり、より簡単に新…"
     },
     {
+      "slug": "20260404_smallchat_am",
       "date": "20260404",
       "date_formatted": "2026/04/04",
       "type": "smallchat_am",
@@ -249,6 +263,7 @@
       "excerpt": "Microsoftは、AIアシスタント「Copilot」の利用規約を更新し、「エンターテインメント目的のみ」との記載を追加しました。この変更は、AIの出力に対する責任を限定する意図があると考えられます。"
     },
     {
+      "slug": "20260403_daily",
       "date": "20260403",
       "date_formatted": "2026/04/03",
       "type": "daily",
@@ -266,6 +281,7 @@
       "excerpt": "Microsoftは、Azure App ServiceおよびAzure FunctionsのWindows環境におけるPythonサポートを2027年3月31日に終了することを発表しました。この変更により、PythonアプリケーションをW…"
     },
     {
+      "slug": "20260403_smallchat_pm",
       "date": "20260403",
       "date_formatted": "2026/04/03",
       "type": "smallchat_pm",
@@ -283,6 +299,7 @@
       "excerpt": "マイクロソフトは日本国内でのAI開発促進のため、データセンター整備などに約1兆6000億円（100億ドル）を投資する計画を発表しました。この投資は、通信大手ソフトバンクなどとの連携を含み、AI技術の進展を目指します。"
     },
     {
+      "slug": "20260403_smallchat_am",
       "date": "20260403",
       "date_formatted": "2026/04/03",
       "type": "smallchat_am",
@@ -298,6 +315,7 @@
       "excerpt": "Microsoftは、Windows 11向けに「100%ネイティブ」なアプリとエクスペリエンスを提供することを目標にした新チームを立ち上げました。この動きは、プラットフォームの一貫性とパフォーマンス向上を目指したものとされています。"
     },
     {
+      "slug": "20260402_daily",
       "date": "20260402",
       "date_formatted": "2026/04/02",
       "type": "daily",
@@ -315,6 +333,7 @@
       "excerpt": "Microsoftは、Service FabricのWindows Server 2022サポートを2027年3月31日で終了すると発表しました。ユーザーはWindows Server 2025へのアップグレードを推奨されています。"
     },
     {
+      "slug": "20260402_smallchat_pm",
       "date": "20260402",
       "date_formatted": "2026/04/02",
       "type": "smallchat_pm",
@@ -330,6 +349,7 @@
       "excerpt": "MicrosoftがWindows 11用の「100%ネイティブ」アプリとエクスペリエンスの開発に特化した新しいチームを立ち上げました。この動きは、Windowsエコシステム全体の統一性とパフォーマンス向上を目指したものとされています。"
     },
     {
+      "slug": "20260402_smallchat_am",
       "date": "20260402",
       "date_formatted": "2026/04/02",
       "type": "smallchat_am",
@@ -345,6 +365,7 @@
       "excerpt": "GitHubのプルリクエストに「Coding Agent Tip」と呼ばれる広告のようなメッセージが11,000件挿入された件について、Microsoftは「プログラムロジックの問題」として謝罪し、広告を意図したものではないと主張しました。…"
     },
     {
+      "slug": "20260401_daily",
       "date": "20260401",
       "date_formatted": "2026/04/01",
       "type": "daily",
@@ -362,6 +383,7 @@
       "excerpt": "Microsoftは、Azure Machine Learningの外部データインポート機能（プレビュー版）および外部データ接続（プレビュー版）を2026年9月30日に廃止することを発表しました。これには、S3、Snowflake、Azur…"
     },
     {
+      "slug": "20260401_smallchat_pm",
       "date": "20260401",
       "date_formatted": "2026/04/01",
       "type": "smallchat_pm",
@@ -377,6 +399,7 @@
       "excerpt": "MicrosoftのAI「Copilot」がGitHubのプルリクエストに勝手に広告を挿入している問題が報告され、開発者コミュニティで大炎上中です。Microsoftは「プログラミングロジックの問題」として謝罪しましたが、すでに11,000…"
     },
     {
+      "slug": "20260401_smallchat_am",
       "date": "20260401",
       "date_formatted": "2026/04/01",
       "type": "smallchat_am",
@@ -392,6 +415,7 @@
       "excerpt": "Windows 11のネイティブなコマンドプロンプトが、Windows Terminalのいくつかの機能を取り入れる形で大幅なアップデートを受ける予定です。具体的には、グラフィックスのサポート向上やスクロールパフォーマンスの改善が含まれてい…"
     },
     {
+      "slug": "20260331_daily",
       "date": "20260331",
       "date_formatted": "2026/03/31",
       "type": "daily",
@@ -409,6 +433,7 @@
       "excerpt": "Azureの仮想マシン（VM）および仮想マシンスケールセット（VMSS）向けに、Ephemeral OS Diskのフルキャッシング機能がパブリックプレビューとして利用可能になりました。この機能により、OSディスクのパフォーマンスが大幅に向…"
     },
     {
+      "slug": "20260331_smallchat_pm",
       "date": "20260331",
       "date_formatted": "2026/03/31",
       "type": "smallchat_pm",
@@ -424,6 +449,7 @@
       "excerpt": "Microsoft CopilotがGitHubのプルリクエストに広告を挿入する機能を追加しました。この動きは、開発者コミュニティで議論を呼んでいます。"
     },
     {
+      "slug": "20260331_smallchat_am",
       "date": "20260331",
       "date_formatted": "2026/03/31",
       "type": "smallchat_am",
@@ -440,6 +466,7 @@
       "excerpt": "MicrosoftのAIコーディングアシスタント「Copilot」が、GitHubのプルリクエストに広告を挿入するという動きが報告されました。この変更は、開発者コミュニティで賛否両論を巻き起こしています。"
     },
     {
+      "slug": "20260330_daily",
       "date": "20260330",
       "date_formatted": "2026/03/30",
       "type": "daily",
@@ -457,6 +484,7 @@
       "excerpt": "AWSは、AWS Batchでジョブ完了後のインスタンス終了タイミングを制御できる新機能をリリースしました。この機能により、ジョブの終了後にインスタンスを即座に終了させるか、一定時間稼働させるかを選択できるようになります。"
     },
     {
+      "slug": "20260330_smallchat_pm",
       "date": "20260330",
       "date_formatted": "2026/03/30",
       "type": "smallchat_pm",
@@ -473,6 +501,7 @@
       "excerpt": "Microsoftは、Windows 11のKB5079391アップデートをインストール中に発生する問題を確認し、アップデートを取り下げました。ユーザーからはエラー報告が相次いでおり、現在Microsoftは問題解決に向けて取り組んでいると…"
     },
     {
+      "slug": "20260330_smallchat_am",
       "date": "20260330",
       "date_formatted": "2026/03/30",
       "type": "smallchat_am",
@@ -489,6 +518,7 @@
       "excerpt": "MicrosoftがAI分野に1,460億ドル以上を投じていることが明らかになり、投資家の間で懸念が広がっています。この大規模な投資が、2008年の金融危機以来、最悪の四半期業績をもたらす可能性があると指摘されています。"
     },
     {
+      "slug": "20260329_daily",
       "date": "20260329",
       "date_formatted": "2026/03/29",
       "type": "daily",
@@ -506,6 +536,7 @@
       "excerpt": "ソニーは、デジタルカメラ向けのCFexpressおよびSDメモリーカードの一部製品について、世界的な半導体不足により注文受付を一時停止すると発表しました。当面は店頭在庫のみの販売となり、再開時期は未定です。"
     },
     {
+      "slug": "20260329_smallchat_pm",
       "date": "20260329",
       "date_formatted": "2026/03/29",
       "type": "smallchat_pm",
@@ -522,6 +553,7 @@
       "excerpt": "MicrosoftがAI分野に1460億ドルを投じていることが明らかになり、この莫大な投資が投資家を不安にさせているとの報道がありました。この支出は、2008年以来最悪の四半期業績をもたらす可能性があると指摘されています。"
     },
     {
+      "slug": "20260329_smallchat_am",
       "date": "20260329",
       "date_formatted": "2026/03/29",
       "type": "smallchat_am",
@@ -539,6 +571,7 @@
       "excerpt": "Microsoftは、Windows 11の最新機能アップデートの展開を一時停止しました。インストールエラーが多数報告されたため、問題の解決を優先するとのことです。"
     },
     {
+      "slug": "20260328_daily",
       "date": "20260328",
       "date_formatted": "2026/03/28",
       "type": "daily",
@@ -556,6 +589,7 @@
       "excerpt": "KMSが提供する業務効率化サービス「Azure AI Foundry」がアップデートされ、最新のAIモデル「GPT-5.4」を含む5種類のモデルが新たに実装されました。これにより、より高度なAI機能を活用した業務効率化が可能になります。"
     },
     {
+      "slug": "20260328_smallchat_pm",
       "date": "20260328",
       "date_formatted": "2026/03/28",
       "type": "smallchat_pm",
@@ -572,6 +606,7 @@
       "excerpt": "Microsoftは、4月20日からMicrosoft 365 E5のテナント全体でSecurity Copilotを利用可能にすると発表しました。これにより、追加費用なしで高度なセキュリティ機能を活用できるようになります。"
     },
     {
+      "slug": "20260328_smallchat_am",
       "date": "20260328",
       "date_formatted": "2026/03/28",
       "type": "smallchat_am",
@@ -587,6 +622,7 @@
       "excerpt": "Microsoft Entra Agent IDについて、Redditのユーザーたちがその利用状況や効果を議論しています。この新しいID管理ツールは、より柔軟で安全な認証を提供することを目指していますが、まだ実際の利用者は少ないようです。"
     },
     {
+      "slug": "20260327_daily",
       "date": "20260327",
       "date_formatted": "2026/03/27",
       "type": "daily",
@@ -602,6 +638,7 @@
       "excerpt": "Wikimedia Foundationは、Wikipediaの記事作成や編集における大規模言語モデル（LLM）の使用を原則禁止する新しいガイドラインを公開しました。ただし、翻訳や校正案としての利用など、特定の条件下では例外が認められるとの…"
     },
     {
+      "slug": "20260327_smallchat_pm",
       "date": "20260327",
       "date_formatted": "2026/03/27",
       "type": "smallchat_pm",

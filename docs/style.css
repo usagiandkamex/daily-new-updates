@@ -457,6 +457,69 @@ mark.hl {
   padding: 0 1px;
 }
 
+/* ---------- Article detail page ---------------------------------- */
+.section-article { background: var(--surface); min-height: 60vh; }
+
+.btn-back {
+  display: inline-block;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: .88rem;
+  padding: .35rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  transition: background var(--ease), color var(--ease);
+}
+.btn-back:hover { background: var(--bg); color: var(--text); }
+
+.article-meta { margin-bottom: 1.5rem; }
+
+.article-header { border-bottom: 1px solid var(--border); padding-bottom: 1.2rem; }
+
+.article-header-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .75rem;
+}
+
+.article-date { font-size: .83rem; color: var(--muted); }
+
+.article-github-link {
+  font-size: .83rem;
+  color: var(--muted);
+  text-decoration: none;
+  margin-left: auto;
+  transition: color var(--ease);
+}
+.article-github-link:hover { color: var(--primary); }
+
+.article-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 .75rem;
+  line-height: 1.35;
+}
+
+.article-body {
+  max-width: 760px;
+  line-height: 1.8;
+  margin-top: 1.5rem;
+}
+
+.article-body h1 { font-size: 1.4rem; font-weight: 700; margin: 1.8rem 0 .6rem; border-bottom: 1px solid var(--border); padding-bottom: .4rem; }
+.article-body h2 { font-size: 1.15rem; font-weight: 700; margin: 1.6rem 0 .5rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+.article-body h3 { font-size: 1rem; font-weight: 600; margin: 1.2rem 0 .4rem; }
+.article-body p  { margin: 0 0 .9rem; }
+.article-body hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.article-body a  { color: var(--primary); }
+.article-body a:hover { text-decoration: underline; }
+.article-body strong { font-weight: 600; }
+
+.article-footer-nav { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+
 /* ---------- Responsive ------------------------------------------- */
 @media (max-width: 768px) {
   .header-inner { height: auto; padding: .65rem 0; flex-wrap: wrap; }

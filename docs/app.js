@@ -5,7 +5,7 @@
 
   // ── constants ────────────────────────────────────────────────────
   const PAGE_SIZE    = 12;
-  const LATEST_COUNT = 5;   // update cards in Latest section (plus 1 note card)
+  const LATEST_COUNT = 5;
 
   const TYPE_LABEL = {
     daily:          "Daily",
@@ -33,7 +33,6 @@
   // ── state ────────────────────────────────────────────────────────
   let allUpdates      = [];
   let filteredUpdates = [];
-  let noteUrl         = "#";
   let currentPage     = 1;
   let activeTags      = new Set();
   let dateFrom        = "";
@@ -93,35 +92,7 @@
   ${excerpt ? `<p class="card-excerpt">${excerpt}</p>` : ""}
   ${tagsHtml(u.tags)}
   <div class="card-footer">
-    <a href="${esc(u.github_url)}" target="_blank" rel="noopener" class="btn-read">Read →</a>
-  </div>
-</div>`;
-  }
-
-  // Small note card that sits alongside latest update cards
-  function noteCardSmallHtml(url) {
-    return `
-<div class="card">
-  <div class="card-header">
-    <span class="badge badge-note">note</span>
-  </div>
-  <h3 class="card-title">note 記事</h3>
-  <p class="card-excerpt">定期的に更新される解説・コラムを note で公開しています</p>
-  <div class="card-footer">
-    <a href="${esc(url)}" target="_blank" rel="noopener" class="btn-read">Open →</a>
-  </div>
-</div>`;
-  }
-
-  // Large note card in the SNS section
-  function noteCardLargeHtml(url) {
-    return `
-<div class="note-card">
-  <div class="note-icon">📝</div>
-  <div class="note-info">
-    <h3>note</h3>
-    <p>最新の解説・コラムは note で公開しています</p>
-    <a href="${esc(url)}" target="_blank" rel="noopener" class="btn-open">Open →</a>
+    <a href="article.html?slug=${esc(u.slug)}" class="btn-read">Read →</a>
   </div>
 </div>`;
   }
@@ -134,8 +105,7 @@
       grid.innerHTML = '<div class="loading">アップデートがありません</div>';
       return;
     }
-    grid.innerHTML =
-      latest.map((u) => cardHtml(u, "")).join("") + noteCardSmallHtml(noteUrl);
+    grid.innerHTML = latest.map((u) => cardHtml(u, "")).join("");
 
     // Tag click → jump to archive with that tag active
     $$(".tag", grid).forEach((el) => {
@@ -148,11 +118,6 @@
         }
       });
     });
-  }
-
-  // ── SNS / note section ───────────────────────────────────────────
-  function renderNoteSection() {
-    $("#note-card-container").innerHTML = noteCardLargeHtml(noteUrl);
   }
 
   // ── Archive section ──────────────────────────────────────────────
@@ -339,7 +304,6 @@
       const data = await res.json();
 
       allUpdates = data.updates || [];
-      noteUrl    = data.note_url || "#";
 
       if (data.generated_at) {
         const dt = new Date(data.generated_at);
@@ -357,7 +321,6 @@
     }
 
     renderLatest();
-    renderNoteSection();
     renderTagFilters();
     applyFilters();
     bindEvents();

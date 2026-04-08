@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_URL = "https://github.com/usagiandkamex/daily-new-updates"
-NOTE_URL = "https://note.com/usagiandkamex"
 
 # Section headers → tag names
 SECTION_TAG_MAP = {
@@ -121,6 +120,7 @@ def parse_daily_update(filepath: Path) -> dict:
     title = title_m.group(1).strip() if title_m else f"{y}/{mo}/{d} デイリーアップデート"
 
     return {
+        "slug": f"{date_str}_daily",
         "date": date_str,
         "date_formatted": f"{y}/{mo}/{d}",
         "type": "daily",
@@ -128,6 +128,7 @@ def parse_daily_update(filepath: Path) -> dict:
         "github_url": f"{REPO_URL}/blob/main/updates/{filepath.name}",
         "tags": extract_tags(content),
         "excerpt": extract_excerpt(content),
+        "content": content,
     }
 
 
@@ -144,6 +145,7 @@ def parse_smallchat(filepath: Path) -> dict:
     title = title_m.group(1).strip() if title_m else f"{y}/{mo}/{d} テクニカル雑談（{slot_ja}）"
 
     return {
+        "slug": f"{date_str}_smallchat_{slot}",
         "date": date_str,
         "date_formatted": f"{y}/{mo}/{d}",
         "type": f"smallchat_{slot}",
@@ -151,6 +153,7 @@ def parse_smallchat(filepath: Path) -> dict:
         "github_url": f"{REPO_URL}/blob/main/smallchat/{filepath.name}",
         "tags": extract_tags(content),
         "excerpt": extract_excerpt(content),
+        "content": content,
     }
 
 
@@ -158,6 +161,9 @@ def main() -> None:
     repo_root = Path(__file__).parent.parent
     docs_dir = repo_root / "docs"
     docs_dir.mkdir(exist_ok=True)
+
+    articles_dir = docs_dir / "articles"
+    articles_dir.mkdir(exist_ok=True)
 
     updates: list[dict] = []
 
@@ -185,15 +191,26 @@ def main() -> None:
         reverse=True,
     )
 
+    # Write individual article JSON files (includes full content)
+    for entry in updates:
+        slug = entry["slug"]
+        article_out = articles_dir / f"{slug}.json"
+        article_out.write_text(
+            json.dumps(entry, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    # Strip content from entries before writing the index data.json
+    index_updates = [{k: v for k, v in u.items() if k != "content"} for u in updates]
+
     data = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "note_url": NOTE_URL,
-        "updates": updates,
+        "updates": index_updates,
     }
 
     out = docs_dir / "data.json"
     out.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Generated {out} with {len(updates)} entries.")
+    print(f"Generated {len(updates)} article files in {articles_dir}.")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,200 @@
+"""
+Generate docs/data.json from all updates/ and smallchat/ markdown files.
+
+Run this script manually or via GitHub Actions to refresh the GitHub Pages data.
+"""
+
+import json
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+
+REPO_URL = "https://github.com/usagiandkamex/daily-new-updates"
+NOTE_URL = "https://note.com/usagiandkamex"
+
+# Section headers → tag names
+SECTION_TAG_MAP = {
+    "azure": "Azure",
+    "microsoft": "Microsoft",
+    "ai": "AI",
+    "セキュリティ": "セキュリティ",
+    "security": "セキュリティ",
+    "クラウド": "クラウド",
+    "cloud": "クラウド",
+    "ニュース": "ニュース",
+    "sns": "SNS",
+    "twitter": "SNS",
+    "ビジネス": "ビジネス",
+    "business": "ビジネス",
+}
+
+# Keyword → tag (checked against full content)
+KEYWORD_TAG_MAP = {
+    "Azure": "Azure",
+    "AKS": "Azure",
+    "ARO": "Azure",
+    "Microsoft": "Microsoft",
+    "Windows": "Microsoft",
+    "OneDrive": "Microsoft",
+    "Teams": "Microsoft",
+    "AI": "AI",
+    "LLM": "AI",
+    "ChatGPT": "AI",
+    "Claude": "AI",
+    "Gemini": "AI",
+    "GPT": "AI",
+    "生成AI": "AI",
+    "機械学習": "AI",
+    "脆弱性": "セキュリティ",
+    "CVE": "セキュリティ",
+    "セキュリティ": "セキュリティ",
+    "フィッシング": "セキュリティ",
+    "AWS": "クラウド",
+    "GCP": "クラウド",
+    "Google Cloud": "クラウド",
+    "Kubernetes": "クラウド",
+    "SNS": "SNS",
+    "はてな": "SNS",
+    "Reddit": "SNS",
+    "ビジネス": "ビジネス",
+    "投資": "ビジネス",
+    "経済": "ビジネス",
+}
+
+TYPE_LABELS = {
+    "daily": "Daily",
+    "smallchat_am": "SmallChat AM",
+    "smallchat_pm": "SmallChat PM",
+}
+
+
+def extract_tags(content: str) -> list[str]:
+    """Return sorted list of tags derived from section headers and content keywords."""
+    tags: set[str] = set()
+
+    # From section headers (## N. SectionName)
+    for heading in re.findall(r"^## \d+\. (.+)$", content, re.MULTILINE):
+        lower = heading.lower()
+        for key, tag in SECTION_TAG_MAP.items():
+            if key.lower() in lower:
+                tags.add(tag)
+
+    # From content keywords
+    for keyword, tag in KEYWORD_TAG_MAP.items():
+        if keyword in content:
+            tags.add(tag)
+
+    return sorted(tags)
+
+
+def extract_excerpt(content: str) -> str:
+    """Return a short excerpt taken from the first topic summary (要約)."""
+    # Pattern A: **要約**: text on the same line (daily update style)
+    m = re.search(
+        r"\*\*要約\*\*[：:]\s*(.+?)(?=\n\n|\n\*\*|\Z)",
+        content,
+        re.DOTALL,
+    )
+    if not m:
+        # Pattern B: **要約**  \n text on next line (smallchat style)
+        m = re.search(
+            r"\*\*要約\*\*\s*\n+\s*(.+?)(?=\n\n|\n\*\*|\Z)",
+            content,
+            re.DOTALL,
+        )
+    if m:
+        text = re.sub(r"\s+", " ", m.group(1)).strip()
+        return text[:120] + ("…" if len(text) > 120 else "")
+    return ""
+
+
+def _date_parts(date_str: str) -> tuple[str, str, str]:
+    return date_str[:4], date_str[4:6], date_str[6:8]
+
+
+def parse_daily_update(filepath: Path) -> dict:
+    content = filepath.read_text(encoding="utf-8")
+    date_str = filepath.stem  # "20260408"
+    y, mo, d = _date_parts(date_str)
+
+    title_m = re.match(r"^# (.+)$", content, re.MULTILINE)
+    title = title_m.group(1).strip() if title_m else f"{y}/{mo}/{d} デイリーアップデート"
+
+    return {
+        "date": date_str,
+        "date_formatted": f"{y}/{mo}/{d}",
+        "type": "daily",
+        "title": title,
+        "github_url": f"{REPO_URL}/blob/main/updates/{filepath.name}",
+        "tags": extract_tags(content),
+        "excerpt": extract_excerpt(content),
+    }
+
+
+def parse_smallchat(filepath: Path) -> dict:
+    content = filepath.read_text(encoding="utf-8")
+    stem = filepath.stem  # "20260408_am"
+    parts = stem.split("_")
+    date_str = parts[0]
+    slot = parts[1] if len(parts) > 1 else "am"
+    y, mo, d = _date_parts(date_str)
+
+    title_m = re.match(r"^# (.+)$", content, re.MULTILINE)
+    slot_ja = "午前" if slot == "am" else "午後"
+    title = title_m.group(1).strip() if title_m else f"{y}/{mo}/{d} テクニカル雑談（{slot_ja}）"
+
+    return {
+        "date": date_str,
+        "date_formatted": f"{y}/{mo}/{d}",
+        "type": f"smallchat_{slot}",
+        "title": title,
+        "github_url": f"{REPO_URL}/blob/main/smallchat/{filepath.name}",
+        "tags": extract_tags(content),
+        "excerpt": extract_excerpt(content),
+    }
+
+
+def main() -> None:
+    repo_root = Path(__file__).parent.parent
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir(exist_ok=True)
+
+    updates: list[dict] = []
+
+    updates_dir = repo_root / "updates"
+    if updates_dir.exists():
+        for fp in sorted(updates_dir.glob("*.md")):
+            try:
+                updates.append(parse_daily_update(fp))
+            except Exception as exc:
+                print(f"[WARN] skip {fp.name}: {exc}")
+
+    smallchat_dir = repo_root / "smallchat"
+    if smallchat_dir.exists():
+        for fp in sorted(smallchat_dir.glob("*.md")):
+            try:
+                updates.append(parse_smallchat(fp))
+            except Exception as exc:
+                print(f"[WARN] skip {fp.name}: {exc}")
+
+    # Sort: newest date first; within same date: daily → pm → am
+    # Higher value = earlier in descending sort
+    type_priority = {"daily": 2, "smallchat_pm": 1, "smallchat_am": 0}
+    updates.sort(
+        key=lambda x: (x["date"], type_priority.get(x["type"], -1)),
+        reverse=True,
+    )
+
+    data = {
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "note_url": NOTE_URL,
+        "updates": updates,
+    }
+
+    out = docs_dir / "data.json"
+    out.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Generated {out} with {len(updates)} entries.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,54 @@
+name: GitHub Pages デプロイ
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'updates/**'
+      - 'smallchat/**'
+      - 'scripts/generate_pages_data.py'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v6
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: データ生成 (docs/data.json)
+        run: python scripts/generate_pages_data.py
+
+      - name: GitHub Pages 設定
+        uses: actions/configure-pages@v5
+
+      - name: Pages アーティファクトをアップロード
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pages へデプロイ
+        uses: actions/deploy-pages@v4
+        id: deployment

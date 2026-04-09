@@ -16,6 +16,7 @@ import feedparser
 import requests
 from googlenewsdecoder import new_decoderv1
 from openai import AzureOpenAI, OpenAI
+from openai import OpenAIError
 
 JST = timezone(timedelta(hours=9))
 
@@ -357,39 +358,49 @@ def _limit_articles(articles: list[dict], category: str) -> list[dict]:
 # --- LLM クライアント -----------------------------------------------------------
 
 
-def create_llm_client() -> tuple:
-    """環境変数に応じて GitHub Copilot / Azure OpenAI / OpenAI クライアントを生成する。"""
-    # 優先順位: GitHub Copilot (GITHUB_TOKEN) → Azure OpenAI → OpenAI
+def create_llm_clients() -> list[tuple]:
+    """環境変数に応じて利用可能な LLM クライアントを優先順に返す。"""
+    clients = []
+
     github_token = os.environ.get("GITHUB_TOKEN")
     if github_token:
-        client = OpenAI(
-            base_url="https://api.githubcopilot.com",
-            api_key=github_token,
-        )
-        return client, "claude-opus-4"
+        clients.append((
+            OpenAI(
+                base_url="https://models.inference.ai.azure.com",
+                api_key=github_token,
+            ),
+            "claude-opus-4",
+        ))
 
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     if azure_endpoint:
         api_key = os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get(
             "OPENAI_API_KEY"
         )
-        client = AzureOpenAI(
-            azure_endpoint=azure_endpoint,
-            api_key=api_key,
-            api_version="2024-12-01-preview",
-        )
-        deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
-        return client, deployment
+        clients.append((
+            AzureOpenAI(
+                azure_endpoint=azure_endpoint,
+                api_key=api_key,
+                api_version="2024-12-01-preview",
+            ),
+            os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+        ))
 
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     if openai_api_key:
-        client = OpenAI(api_key=openai_api_key)
-        return client, "gpt-4o"
+        clients.append((OpenAI(api_key=openai_api_key), "gpt-4o"))
 
-    raise RuntimeError(
-        "LLM の認証情報が見つかりません。"
-        "GITHUB_TOKEN, OPENAI_API_KEY, または AZURE_OPENAI_ENDPOINT を設定してください。"
-    )
+    if not clients:
+        raise RuntimeError(
+            "LLM の認証情報が見つかりません。"
+            "GITHUB_TOKEN, OPENAI_API_KEY, または AZURE_OPENAI_ENDPOINT を設定してください。"
+        )
+    return clients
+
+
+def create_llm_client() -> tuple:
+    """環境変数に応じて GitHub Models / Azure OpenAI / OpenAI クライアントを生成する。"""
+    return create_llm_clients()[0]
 
 
 # --- 記事生成 -------------------------------------------------------------------
@@ -572,10 +583,20 @@ def main():
     print(f"  → 合計: {len(sns_news)} 件")
 
     print("\n記事を生成中...")
-    client, model = create_llm_client()
-    article = generate_article(
-        client, model, target_date, azure_news, tech_news, business_news, sns_news
-    )
+    llm_clients = create_llm_clients()
+    article = None
+    last_error = None
+    for client, model in llm_clients:
+        try:
+            article = generate_article(
+                client, model, target_date, azure_news, tech_news, business_news, sns_news
+            )
+            break
+        except OpenAIError as e:
+            print(f"  ⚠ {model} での生成に失敗しました ({e})")
+            last_error = e
+    if article is None:
+        raise RuntimeError(f"全ての LLM プロバイダーで生成に失敗しました。最後のエラー: {last_error}")
 
     print("\nリンクを検証中...")
     article = validate_links(article)

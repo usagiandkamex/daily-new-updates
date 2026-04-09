@@ -378,13 +378,13 @@ def create_llm_client() -> tuple:
             api_key=api_key,
             api_version="2024-12-01-preview",
         )
-        deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "claude-opus-4")
+        deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
         return client, deployment
 
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     if openai_api_key:
         client = OpenAI(api_key=openai_api_key)
-        return client, "claude-opus-4"
+        return client, "gpt-4o"
 
     raise RuntimeError(
         "LLM の認証情報が見つかりません。"

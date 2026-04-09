@@ -35,7 +35,7 @@
 |---|---|---|
 | `OPENAI_API_KEY` | - | OpenAI API キー |
 | `AZURE_OPENAI_ENDPOINT` | - | Azure OpenAI を使用する場合のエンドポイント URL |
-| `AZURE_OPENAI_DEPLOYMENT` | - | Azure OpenAI のデプロイメント名（既定: `claude-opus-4`） |
+| `AZURE_OPENAI_DEPLOYMENT` | - | Azure OpenAI のデプロイメント名（既定: `gpt-4o`） |
 | `AZURE_OPENAI_API_KEY` | - | Azure OpenAI 専用キー（未設定時は `OPENAI_API_KEY` を使用） |
 
 ### ニュースソース

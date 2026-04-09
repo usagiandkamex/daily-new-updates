@@ -2,7 +2,7 @@
 テクニカル雑談生成スクリプト
 
 SNS を中心に IT 関連の話題を収集し、
-GitHub Models (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
+GitHub Copilot (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
 """
 
 import json
@@ -325,12 +325,12 @@ def fetch_category(category: str, since: datetime) -> list[dict]:
 
 
 def create_llm_client() -> tuple:
-    """環境変数に応じて GitHub Models / Azure OpenAI / OpenAI クライアントを生成する。"""
-    # 優先順位: GitHub Models (GITHUB_TOKEN) → Azure OpenAI → OpenAI
+    """環境変数に応じて GitHub Copilot / Azure OpenAI / OpenAI クライアントを生成する。"""
+    # 優先順位: GitHub Copilot (GITHUB_TOKEN) → Azure OpenAI → OpenAI
     github_token = os.environ.get("GITHUB_TOKEN")
     if github_token:
         client = OpenAI(
-            base_url="https://models.inference.ai.azure.com",
+            base_url="https://api.githubcopilot.com",
             api_key=github_token,
         )
         return client, "claude-opus-4"

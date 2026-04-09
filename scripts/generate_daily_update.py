@@ -480,8 +480,9 @@ def generate_article(
     business_news: list[dict],
     sns_news: list[dict],
 ) -> str:
-    # プロンプトサイズの安全チェック (Claude Opus: 200,000 トークン制限 - 8,192 出力 - 約 600 システム)
-    # 概算: 日英混在で 1 トークン ≈ 2.5 文字
+    # プロンプトサイズの安全チェック
+    # 実運用ではモデル上限いっぱいまでは使わず、保守的な安全マージンとして
+    # 20,000 トークン相当を上限にする（日英混在で 1 トークン ≈ 2.5 文字として概算）。
     MAX_INPUT_CHARS = 20_000 * 2.5  # ≈ 50,000 文字
 
     news_lists = [azure_news, tech_news, business_news, sns_news]

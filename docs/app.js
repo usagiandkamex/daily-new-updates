@@ -240,6 +240,7 @@
           btn.classList.add("active");
         }
         syncClearTagsBtn();
+        syncClearAllBtn();
         applyFilters();
       });
     });
@@ -249,6 +250,7 @@
     activeTags.add(tag);
     renderTagFilters();
     syncClearTagsBtn();
+    syncClearAllBtn();
     applyFilters();
   }
 
@@ -260,28 +262,45 @@
     $("#clear-dates").style.display = dateFrom || dateTo ? "" : "none";
   }
 
+  function syncClearSearchBtn() {
+    $("#clear-search").style.display = searchQuery ? "" : "none";
+  }
+
+  function syncClearTypesBtn() {
+    const allChecked = activeTypes.size === 3;
+    $("#clear-types").style.display = allChecked ? "none" : "";
+  }
+
+  function syncClearAllBtn() {
+    const hasAny =
+      activeTags.size > 0 ||
+      dateFrom || dateTo ||
+      searchQuery ||
+      activeTypes.size !== 3;
+    $("#clear-all").style.display = hasAny ? "" : "none";
+  }
+
   // ── Event wiring ─────────────────────────────────────────────────
   function bindEvents() {
-    // Global header search → filter archive
+    // Search input in archive filter bar
     $("#global-search").addEventListener("input", (e) => {
       searchQuery = e.target.value.trim();
+      syncClearSearchBtn();
+      syncClearAllBtn();
       applyFilters();
-    });
-    $("#global-search").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        $("#archive").scrollIntoView({ behavior: "smooth" });
-      }
     });
 
     // Date filters
     $("#date-from").addEventListener("change", (e) => {
       dateFrom = e.target.value.replace(/-/g, "");
       syncClearDatesBtn();
+      syncClearAllBtn();
       applyFilters();
     });
     $("#date-to").addEventListener("change", (e) => {
       dateTo = e.target.value.replace(/-/g, "");
       syncClearDatesBtn();
+      syncClearAllBtn();
       applyFilters();
     });
 
@@ -290,6 +309,7 @@
       activeTags.clear();
       renderTagFilters();
       syncClearTagsBtn();
+      syncClearAllBtn();
       applyFilters();
     });
     $("#clear-dates").addEventListener("click", () => {
@@ -297,6 +317,45 @@
       $("#date-from").value = "";
       $("#date-to").value   = "";
       syncClearDatesBtn();
+      syncClearAllBtn();
+      applyFilters();
+    });
+    $("#clear-search").addEventListener("click", () => {
+      searchQuery = "";
+      $("#global-search").value = "";
+      syncClearSearchBtn();
+      syncClearAllBtn();
+      applyFilters();
+    });
+    $("#clear-types").addEventListener("click", () => {
+      activeTypes = new Set(["daily", "smallchat_am", "smallchat_pm"]);
+      $$(".type-checkbox input").forEach((cb) => { cb.checked = true; });
+      syncClearTypesBtn();
+      syncClearAllBtn();
+      applyFilters();
+    });
+
+    // Clear all button
+    $("#clear-all").addEventListener("click", () => {
+      // Reset search
+      searchQuery = "";
+      $("#global-search").value = "";
+      // Reset tags
+      activeTags.clear();
+      renderTagFilters();
+      // Reset dates
+      dateFrom = dateTo = "";
+      $("#date-from").value = "";
+      $("#date-to").value   = "";
+      // Reset types
+      activeTypes = new Set(["daily", "smallchat_am", "smallchat_pm"]);
+      $$(".type-checkbox input").forEach((cb) => { cb.checked = true; });
+      // Sync all clear buttons
+      syncClearSearchBtn();
+      syncClearTagsBtn();
+      syncClearDatesBtn();
+      syncClearTypesBtn();
+      syncClearAllBtn();
       applyFilters();
     });
 
@@ -306,6 +365,8 @@
         activeTypes = new Set(
           $$(".type-checkbox input:checked").map((c) => c.value)
         );
+        syncClearTypesBtn();
+        syncClearAllBtn();
         applyFilters();
       });
     });

@@ -111,19 +111,6 @@ a { color: var(--primary); }
 }
 .site-nav a:hover { color: var(--text); background: var(--bg); }
 
-.header-search input {
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: .38rem 1rem;
-  font-size: .875rem;
-  width: 190px;
-  background: var(--bg);
-  color: var(--text);
-  outline: none;
-  transition: border-color var(--ease), width var(--ease);
-}
-.header-search input:focus { border-color: var(--primary); width: 240px; }
-
 /* ---------- Sections --------------------------------------------- */
 section { padding: 3rem 0; }
 
@@ -391,6 +378,48 @@ section { padding: 3rem 0; }
 }
 .btn-clear:hover { color: var(--text); background: var(--border); }
 
+/* search filter in archive */
+.search-filter {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  flex: 1;
+  min-width: 0;
+}
+.search-input {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .35rem .75rem;
+  font-size: .85rem;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  flex: 1;
+  min-width: 120px;
+  max-width: 400px;
+  transition: border-color var(--ease);
+}
+.search-input:focus { border-color: var(--primary); }
+
+/* clear all button */
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: .25rem;
+}
+.btn-clear-all {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: .8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: .35rem .9rem;
+  border-radius: var(--radius);
+  transition: color var(--ease), background var(--ease), border-color var(--ease);
+}
+.btn-clear-all:hover { color: var(--text); background: var(--border); border-color: var(--text); }
+
 /* ---------- Archive result count --------------------------------- */
 .archive-count {
   font-size: .83rem;
@@ -524,12 +553,11 @@ mark.hl {
 /* ---------- Responsive ------------------------------------------- */
 @media (max-width: 768px) {
   .header-inner { height: auto; padding: .65rem 0; flex-wrap: wrap; }
-  .site-nav { order: 3; width: 100%; }
-  .header-search { order: 2; }
-  .header-search input { width: 100%; }
+  .site-nav { order: 2; width: 100%; }
   .cards-grid { grid-template-columns: 1fr; }
   .footer-inner { flex-direction: column; text-align: center; }
   .btn-read { display: block; padding: .5rem 2rem; }
+  .search-input { max-width: 100%; }
 }
 
 @media (max-width: 480px) {

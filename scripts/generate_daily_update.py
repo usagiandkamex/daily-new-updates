@@ -2,7 +2,7 @@
 デイリーアップデート生成スクリプト
 
 複数の RSS/Atom フィードで最新ニュースを取得し、
-GitHub Models / OpenAI / Azure OpenAI API でマークダウン記事を生成する。
+GitHub Models (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
 """
 
 import json
@@ -358,8 +358,16 @@ def _limit_articles(articles: list[dict], category: str) -> list[dict]:
 
 
 def create_llm_client() -> tuple:
-    """環境変数に応じて GitHub Models / OpenAI / Azure OpenAI クライアントを生成する。"""
-    # 優先順位: Azure OpenAI → OpenAI → GitHub Models (GITHUB_TOKEN)
+    """環境変数に応じて GitHub Models / Azure OpenAI / OpenAI クライアントを生成する。"""
+    # 優先順位: GitHub Models (GITHUB_TOKEN) → Azure OpenAI → OpenAI
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if github_token:
+        client = OpenAI(
+            base_url="https://models.inference.ai.azure.com",
+            api_key=github_token,
+        )
+        return client, "claude-opus-4"
+
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     if azure_endpoint:
         api_key = os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get(
@@ -376,15 +384,6 @@ def create_llm_client() -> tuple:
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     if openai_api_key:
         client = OpenAI(api_key=openai_api_key)
-        return client, "gpt-4o"
-
-    # GitHub Models (GITHUB_TOKEN を使用)
-    github_token = os.environ.get("GITHUB_TOKEN")
-    if github_token:
-        client = OpenAI(
-            base_url="https://models.inference.ai.azure.com",
-            api_key=github_token,
-        )
         return client, "gpt-4o"
 
     raise RuntimeError(
@@ -481,8 +480,9 @@ def generate_article(
     business_news: list[dict],
     sns_news: list[dict],
 ) -> str:
-    # プロンプトサイズの安全チェック (128,000 トークン制限 - 8,192 出力 - 約 600 システム)
-    # 概算: 日英混在で 1 トークン ≈ 2.5 文字
+    # プロンプトサイズの安全チェック
+    # 実運用ではモデル上限いっぱいまでは使わず、保守的な安全マージンとして
+    # 20,000 トークン相当を上限にする（日英混在で 1 トークン ≈ 2.5 文字として概算）。
     MAX_INPUT_CHARS = 20_000 * 2.5  # ≈ 50,000 文字
 
     news_lists = [azure_news, tech_news, business_news, sns_news]

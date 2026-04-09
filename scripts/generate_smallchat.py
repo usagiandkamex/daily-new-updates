@@ -2,7 +2,7 @@
 テクニカル雑談生成スクリプト
 
 SNS を中心に IT 関連の話題を収集し、
-GitHub Models / OpenAI / Azure OpenAI API でマークダウン記事を生成する。
+GitHub Models (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
 """
 
 import json
@@ -325,6 +325,16 @@ def fetch_category(category: str, since: datetime) -> list[dict]:
 
 
 def create_llm_client() -> tuple:
+    """環境変数に応じて GitHub Models / Azure OpenAI / OpenAI クライアントを生成する。"""
+    # 優先順位: GitHub Models (GITHUB_TOKEN) → Azure OpenAI → OpenAI
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if github_token:
+        client = OpenAI(
+            base_url="https://models.inference.ai.azure.com",
+            api_key=github_token,
+        )
+        return client, "claude-opus-4"
+
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     if azure_endpoint:
         api_key = os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get(
@@ -335,21 +345,13 @@ def create_llm_client() -> tuple:
             api_key=api_key,
             api_version="2024-12-01-preview",
         )
-        deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
+        deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "claude-opus-4")
         return client, deployment
 
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     if openai_api_key:
         client = OpenAI(api_key=openai_api_key)
-        return client, "gpt-4o"
-
-    github_token = os.environ.get("GITHUB_TOKEN")
-    if github_token:
-        client = OpenAI(
-            base_url="https://models.inference.ai.azure.com",
-            api_key=github_token,
-        )
-        return client, "gpt-4o"
+        return client, "claude-opus-4"
 
     raise RuntimeError(
         "LLM の認証情報が見つかりません。"

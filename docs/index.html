@@ -24,10 +24,6 @@
         <a href="#archive">Archive</a>
         <a href="#about">About</a>
       </nav>
-      <div class="header-search">
-        <label for="global-search" class="sr-only">アーカイブを検索</label>
-        <input type="search" id="global-search" placeholder="🔍 検索…" autocomplete="off">
-      </div>
     </div>
   </header>
 
@@ -54,6 +50,15 @@
         <div class="filters-bar" role="search" aria-label="アーカイブフィルター">
 
           <div class="filter-row">
+            <span class="filter-label">検索</span>
+            <div class="search-filter">
+              <label for="global-search" class="sr-only">アーカイブを検索</label>
+              <input type="search" id="global-search" class="search-input" placeholder="🔍 キーワードで検索…" autocomplete="off">
+              <button id="clear-search" class="btn-clear" style="display:none" aria-label="検索をクリア">✕ クリア</button>
+            </div>
+          </div>
+
+          <div class="filter-row">
             <span class="filter-label" id="tag-filter-label">タグ</span>
             <div id="tag-filters" class="tag-filter-list" role="group" aria-labelledby="tag-filter-label"></div>
             <button id="clear-tags" class="btn-clear" style="display:none" aria-label="タグフィルターをクリア">✕ クリア</button>
@@ -78,6 +83,11 @@
               <label class="type-checkbox"><input type="checkbox" value="smallchat_am" checked> SmallChat AM</label>
               <label class="type-checkbox"><input type="checkbox" value="smallchat_pm" checked> SmallChat PM</label>
             </div>
+            <button id="clear-types" class="btn-clear" style="display:none" aria-label="種別フィルターをクリア">✕ クリア</button>
+          </div>
+
+          <div class="filter-actions">
+            <button id="clear-all" class="btn-clear-all" style="display:none" aria-label="すべてのフィルターをクリア">🔄 すべてクリア</button>
           </div>
 
         </div><!-- /filters-bar -->

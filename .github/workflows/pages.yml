@@ -8,6 +8,12 @@ on:
       - 'smallchat/**'
       - 'scripts/generate_pages_data.py'
       - 'docs/**'
+  workflow_run:
+    workflows:
+      - "デイリーアップデート"
+      - "テクニカル雑談"
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -22,6 +28,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: リポジトリをチェックアウト
         uses: actions/checkout@v6

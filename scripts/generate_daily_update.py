@@ -358,19 +358,24 @@ def _limit_articles(articles: list[dict], category: str) -> list[dict]:
 # --- LLM クライアント -----------------------------------------------------------
 
 
+GITHUB_MODELS_CANDIDATES = [
+    "gpt-4o",
+    "gpt-4o-mini",
+]
+
+
 def create_llm_clients() -> list[tuple]:
     """環境変数に応じて利用可能な LLM クライアントを優先順に返す。"""
     clients = []
 
     github_token = os.environ.get("GITHUB_TOKEN")
     if github_token:
-        clients.append((
-            OpenAI(
-                base_url="https://models.inference.ai.azure.com",
-                api_key=github_token,
-            ),
-            "claude-opus-4",
-        ))
+        gh_client = OpenAI(
+            base_url="https://models.inference.ai.azure.com",
+            api_key=github_token,
+        )
+        for model_name in GITHUB_MODELS_CANDIDATES:
+            clients.append((gh_client, model_name))
 
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     if azure_endpoint:

@@ -402,6 +402,10 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
             print(f"    connpass ({pref}): {data.get('results_returned', 0)} 件取得")
 
             for event in data.get("events", []):
+                # 参加受付型のみ対象（"advertisement" は申し込み不可）
+                if event.get("event_type") != "participation":
+                    continue
+
                 started_at_str = event.get("started_at", "")
                 if not started_at_str:
                     continue

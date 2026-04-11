@@ -100,8 +100,9 @@ FEEDS = {
         {"name": "はてなブックマーク IT", "url": "https://b.hatena.ne.jp/hotentry/it.rss"},
         {"name": "Reddit Technology", "url": "https://www.reddit.com/r/technology/.rss"},
         {"name": "Reddit Programming", "url": "https://www.reddit.com/r/programming/.rss"},
-        {"name": "X(Twitter) IT話題 (国内)", "url": "https://news.google.com/rss/search?q=X+Twitter+IT+%E8%A9%B1%E9%A1%8C+%E3%83%88%E3%83%AC%E3%83%B3%E3%83%89&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "X(Twitter) Tech Trends", "url": "https://news.google.com/rss/search?q=twitter+X+trending+tech&hl=en&gl=US&ceid=US:en"},
+        {"name": "X(旧Twitter) テック話題 JP", "url": "https://news.google.com/rss/search?q=X+%E6%97%A7Twitter+%E3%83%86%E3%83%83%E3%82%AF+%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "X(旧Twitter) 新機能・ニュース JP", "url": "https://news.google.com/rss/search?q=X+%E6%97%A7Twitter+%E6%96%B0%E6%A9%9F%E8%83%BD+%E3%82%A2%E3%83%83%E3%83%97%E3%83%87%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "X (formerly Twitter) Tech EN", "url": "https://news.google.com/rss/search?q=X+formerly+Twitter+tech+developer&hl=en&gl=US&ceid=US:en"},
         {"name": "Reddit DevOps", "url": "https://www.reddit.com/r/devops/.rss"},
         {"name": "Reddit SysAdmin", "url": "https://www.reddit.com/r/sysadmin/.rss"},
         {"name": "Qiita トレンド", "url": "https://qiita.com/popular-items/feed"},
@@ -857,14 +858,15 @@ SECTION_DEFINITIONS = [
             "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
         ),
         "instruction": (
-            "以下の SNS・トレンド情報（はてブ・Reddit 等）から 5〜6 個のトピックを選定し、"
+            "以下の SNS・トレンド情報（はてブ・Reddit・X 等）から 5〜6 個のトピックを選定し、"
             "マークダウン形式で出力してください。\n"
+            "X（旧Twitter）で話題になっている IT・テクノロジー関連トピックを優先的に含めてください。\n"
             "先頭に「## 3. SNSで話題のテーマ」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
             "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
             "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
         ),
-        "data_label": "SNS / トレンド（はてブ・Reddit）",
+        "data_label": "SNS / トレンド（はてブ・Reddit・X）",
     },
     {
         "key": "business",

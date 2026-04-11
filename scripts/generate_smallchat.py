@@ -562,6 +562,7 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 
 
 GITHUB_MODELS_CANDIDATES = [
+    "claude-opus-4-6",
     "gpt-4o",
     "gpt-4o-mini",
 ]

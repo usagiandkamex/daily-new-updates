@@ -395,8 +395,8 @@ class TestRegenerateEmptySections(unittest.TestCase):
 
         client.chat.completions.create.assert_not_called()
 
-    def test_no_new_items_skips_regeneration(self):
-        """拡張窓でも新規データがなければ LLM は呼ばれない。"""
+    def test_no_new_items_writes_no_info_message(self):
+        """拡張窓でも新規データがなければ LLM は呼ばれず、情報なしメッセージが記載される。"""
         article = f"{self._HEADER}\n\n"
         original_items = [{"url": "https://old.example.com", "title": "既存"}]
         llm_clients = self._make_llm_clients()
@@ -404,7 +404,7 @@ class TestRegenerateEmptySections(unittest.TestCase):
 
         # fetch_category は元データと同じ URL だけ返す → new_items = []
         with patch.object(sc, "fetch_category", return_value=original_items):
-            sc._regenerate_empty_sections(
+            result = sc._regenerate_empty_sections(
                 article,
                 [self._SECTION_DEF],
                 {"cloud": original_items},
@@ -413,6 +413,7 @@ class TestRegenerateEmptySections(unittest.TestCase):
             )
 
         client.chat.completions.create.assert_not_called()
+        self.assertIn("ありません", result)
 
     def test_regenerated_section_links_are_validated(self):
         """再生成されたセクションのリンクも validate_links で検証される。"""
@@ -469,6 +470,28 @@ class TestRegenerateEmptySections(unittest.TestCase):
         urls_used = [item["url"] for item in captured_data]
         self.assertNotIn("https://old.example.com", urls_used)
         self.assertIn("https://new.example.com", urls_used)
+
+    def test_empty_section_after_retry_validate_writes_no_info_message(self):
+        """再生成後も validate_links でトピックが全除去された場合、情報なしメッセージが記載される。"""
+        article = f"{self._HEADER}\n\n"
+        new_items = [{"url": "https://new.example.com", "title": "新記事"}]
+        # LLM はトピックを生成するが validate_links が全除去して ### がなくなる
+        new_content_with_topics = f"{self._HEADER}\n\n### 新トピック\n内容"
+        new_content_all_removed = f"{self._HEADER}\n\n"  # validate_links 後の状態
+        llm_clients = self._make_llm_clients(new_content_with_topics)
+
+        with (patch.object(sc, "fetch_category", return_value=new_items),
+              patch.object(sc, "validate_links", return_value=new_content_all_removed)):
+            result = sc._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"cloud": []},
+                object(),
+                llm_clients,
+            )
+
+        self.assertIn("ありません", result)
+        self.assertNotIn("新トピック", result)
 
 
 class TestSectionDefinitionsSmallchat(unittest.TestCase):

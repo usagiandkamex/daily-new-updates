@@ -305,6 +305,7 @@ def _regenerate_empty_sections(
 
     各セクションをチェックし、### 見出しが 0 件のセクションに対して
     拡張時間窓でフィードを再取得し LLM でセクションを再生成する。
+    再取得しても情報が得られない場合は「情報なし」メッセージを記載する。
     """
     for section_def in section_definitions:
         key = section_def["key"]
@@ -329,7 +330,15 @@ def _regenerate_empty_sections(
         new_items = [item for item in extended_data if item.get("url", "") not in original_urls]
 
         if not new_items:
-            print(f"  [{key}] 新しいデータがありませんでした。スキップします。")
+            print(f"  [{key}] 新しいデータがありませんでした。情報なしメッセージを記載します。")
+            no_info_section = f"{header}\n\n現在の対象期間に該当する情報はありません。"
+            article = re.sub(
+                rf'{escaped_header}.*?(?=\n## |\Z)',
+                no_info_section.rstrip(),
+                article,
+                count=1,
+                flags=re.DOTALL,
+            )
             continue
 
         print(f"  [{key}] 新規データ: {len(new_items)} 件。セクションを再生成します...")
@@ -343,11 +352,24 @@ def _regenerate_empty_sections(
                 print(f"  [{key}] 再生成失敗 ({model}): {e}")
 
         if new_section is None:
-            print(f"  [{key}] 全モデルで再生成に失敗しました。スキップします。")
+            print(f"  [{key}] 全モデルで再生成に失敗しました。情報なしメッセージを記載します。")
+            no_info_section = f"{header}\n\n現在の対象期間に該当する情報はありません。"
+            article = re.sub(
+                rf'{escaped_header}.*?(?=\n## |\Z)',
+                no_info_section.rstrip(),
+                article,
+                count=1,
+                flags=re.DOTALL,
+            )
             continue
 
         # 新しいセクションのリンクも検証
         new_section = validate_links(new_section)
+
+        # 再生成後もトピックが0件なら「情報なし」メッセージを記載する
+        if not re.search(r'^### ', new_section, re.MULTILINE):
+            print(f"  [{key}] 再生成後もトピックがありません。情報なしメッセージを記載します。")
+            new_section = f"{header}\n\n現在の対象期間に該当する情報はありません。"
 
         # 記事内の空セクションを新セクションで置換
         article = re.sub(

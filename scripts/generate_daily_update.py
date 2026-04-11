@@ -94,24 +94,6 @@ FEEDS = {
         {"name": "Reddit Artificial Intelligence", "url": "https://www.reddit.com/r/artificial/.rss"},
         {"name": "Reddit Cloud Computing", "url": "https://www.reddit.com/r/cloudcomputing/.rss"},
     ],
-    # --- IT運用・管理 ---
-    "itops": [
-        {"name": "Microsoft Tech Community - IT Ops", "url": "https://techcommunity.microsoft.com/plugins/custom/microsoft/o365/custom-blog-rss?tid=8&board=ITOpsTalkBlog"},
-        {"name": "Reddit SysAdmin", "url": "https://www.reddit.com/r/sysadmin/.rss"},
-        {"name": "Reddit DevOps", "url": "https://www.reddit.com/r/devops/.rss"},
-        {"name": "Google News AIOps EN", "url": "https://news.google.com/rss/search?q=AIOps+AI+operations&hl=en&gl=US&ceid=US:en"},
-        {"name": "Google News AIOps JP", "url": "https://news.google.com/rss/search?q=AIOps+%E9%81%8B%E7%94%A8+AI&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "Google News IT運用", "url": "https://news.google.com/rss/search?q=IT%E9%81%8B%E7%94%A8+%E7%AE%A1%E7%90%86+%E8%87%AA%E5%8B%95%E5%8C%96&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "Google News IT Operations Management", "url": "https://news.google.com/rss/search?q=IT+operations+management+automation&hl=en&gl=US&ceid=US:en"},
-        {"name": "Google News Azure Monitor AIOps", "url": "https://news.google.com/rss/search?q=Azure+Monitor+AIOps+observability&hl=en&gl=US&ceid=US:en"},
-        {"name": "Google News Microsoft Intune", "url": "https://news.google.com/rss/search?q=Microsoft+Intune+endpoint+management&hl=en&gl=US&ceid=US:en"},
-        {"name": "InfoQ DevOps", "url": "https://feed.infoq.com/DevOps"},
-        {"name": "Reddit MSP (Managed Service Providers)", "url": "https://www.reddit.com/r/msp/.rss"},
-        {"name": "Google News ITSM", "url": "https://news.google.com/rss/search?q=ITSM+ServiceNow+IT+service+management&hl=en&gl=US&ceid=US:en"},
-        {"name": "Google News Observability", "url": "https://news.google.com/rss/search?q=observability+monitoring+AIOps+OpenTelemetry&hl=en&gl=US&ceid=US:en"},
-        {"name": "Google News SRE Agent EN", "url": "https://news.google.com/rss/search?q=SRE+agent+AI+site+reliability+engineering&hl=en&gl=US&ceid=US:en"},
-        {"name": "Google News SRE Agent JP", "url": "https://news.google.com/rss/search?q=SRE+%E3%82%A8%E3%83%BC%E3%82%B8%E3%82%A7%E3%83%B3%E3%83%88+AI+%E3%82%B5%E3%82%A4%E3%83%88%E4%BF%A1%E9%A0%BC%E6%80%A7&hl=ja&gl=JP&ceid=JP:ja"},
-    ],
     # --- コミュニティイベント参加レポ ---
     "event_reports": [
         {"name": "Google News connpass 参加レポ", "url": "https://news.google.com/rss/search?q=connpass+%E5%8F%82%E5%8A%A0+%E3%83%AC%E3%83%9D+%E6%9D%B1%E4%BA%AC+%E7%A5%9E%E5%A5%88%E5%B7%9D&hl=ja&gl=JP&ceid=JP:ja"},
@@ -337,7 +319,6 @@ SECTION_FEED_KEYS: dict[str, list[str]] = {
     "tech": ["tech_ja", "tech_en"],
     "sns": ["sns"],
     "business": ["business_ja", "business_en"],
-    "itops": ["itops"],
 }
 
 
@@ -629,7 +610,6 @@ MAX_ARTICLES = {
     "tech": 30,
     "business": 30,
     "sns": 20,
-    "itops": 20,
     "event_reports": 15,
 }
 
@@ -770,36 +750,16 @@ SECTION_DEFINITIONS = [
         "data_label": "ビジネスニュース（日本語 + 英語ソース）",
     },
     {
-        "key": "itops",
-        "header": "## 5. IT運用・管理",
-        "system": (
-            "あなたは IT 運用・管理の専門ライターです。"
-            "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
-        ),
-        "instruction": (
-            "以下の IT 運用・管理ニュースから 3〜5 個のトピックを選定し、マークダウン形式で出力してください。\n"
-            "**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析）および"
-            "**SRE Agent**（AI駆動のサイト信頼性エンジニアリングエージェント）を重点的に取り上げてください。"
-            "Microsoft Azure Monitor・System Center 等の Microsoft 製品による AIOps も優先的に含めてください。"
-            "ITSM・DevOps・エンドポイント管理・MSP・オブザーバビリティなど IT 運用全般のトレンドも含めてください。\n"
-            "先頭に「## 5. IT運用・管理」を出力し、各トピックを次の形式で構成してください"
-            "（各項目の間には必ず空行を入れること）。\n\n"
-            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
-            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
-        ),
-        "data_label": "IT運用・管理（AIOps / ITSM / DevOps / エンドポイント管理）",
-    },
-    {
         "key": "community",
-        "header": "## 6. コミュニティイベント情報（東京・神奈川）",
+        "header": "## 5. コミュニティイベント情報（東京・神奈川）",
         "system": (
             "あなたはコミュニティイベント情報の専門ライターです。"
             "提供されたデータを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
         ),
         "instruction": (
             "以下の connpass イベントデータと参加レポートを元に"
-            "「## 6. コミュニティイベント情報（東京・神奈川）」セクションを作成してください。\n\n"
-            "先頭に「## 6. コミュニティイベント情報（東京・神奈川）」を出力し、"
+            "「## 5. コミュニティイベント情報（東京・神奈川）」セクションを作成してください。\n\n"
+            "先頭に「## 5. コミュニティイベント情報（東京・神奈川）」を出力し、"
             "以下の 2 サブセクション構成で出力してください。\n\n"
             "### 📅 申し込み受付中のイベント\n\n"
             "connpass イベントデータから申し込み可能な近日開催イベントを箇条書きで列挙してください。"
@@ -823,7 +783,6 @@ SECTION_MAX_INPUT_CHARS = {
     "tech": 40_000,
     "business": 40_000,
     "sns": 30_000,
-    "itops": 30_000,
     "community": 20_000,
 }
 
@@ -908,7 +867,6 @@ def generate_article(
     tech_news: list[dict],
     business_news: list[dict],
     sns_news: list[dict],
-    itops_news: list[dict],
     connpass_events: list[dict],
     event_reports: list[dict],
 ) -> str:
@@ -924,7 +882,6 @@ def generate_article(
         "tech": tech_news,
         "sns": sns_news,
         "business": business_news,
-        "itops": itops_news,
         "community": {
             "connpass イベント（東京・神奈川、申し込み受付中）": connpass_events,
             "コミュニティイベント参加レポート": event_reports,
@@ -988,10 +945,6 @@ def main():
     sns_news = _limit_articles(fetch_category("sns", since), "sns")
     print(f"  → 合計: {len(sns_news)} 件")
 
-    print("\n[IT運用・管理]")
-    itops_news = _limit_articles(fetch_category("itops", since), "itops")
-    print(f"  → 合計: {len(itops_news)} 件")
-
     print("\n[connpass イベント（東京・神奈川）]")
     connpass_events = fetch_connpass_events(target_date)
     print(f"  → 合計: {len(connpass_events)} 件")
@@ -1008,7 +961,7 @@ def main():
         try:
             print(f"  モデル: {model}")
             article = generate_article(
-                client, model, target_date, azure_news, tech_news, business_news, sns_news, itops_news,
+                client, model, target_date, azure_news, tech_news, business_news, sns_news,
                 connpass_events, event_reports,
             )
             break
@@ -1028,7 +981,6 @@ def main():
         "tech": tech_news,
         "sns": sns_news,
         "business": business_news,
-        "itops": itops_news,
         "community": {
             "connpass イベント（東京・神奈川、申し込み受付中）": connpass_events,
             "コミュニティイベント参加レポート": event_reports,

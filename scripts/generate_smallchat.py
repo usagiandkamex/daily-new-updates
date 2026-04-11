@@ -562,6 +562,7 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 
 
 GITHUB_MODELS_CANDIDATES = [
+    "claude-opus-4-6",
     "gpt-4o",
     "gpt-4o-mini",
 ]
@@ -758,16 +759,31 @@ SECTION_MAX_INPUT_CHARS = {
 SECTION_MAX_OUTPUT_TOKENS = 3000
 
 
-def _build_section_prompt(section_def: dict, data: list[dict]) -> str:
-    """セクション固有のユーザープロンプトを組み立てる。"""
+def _build_section_prompt(section_def: dict, data: list[dict], since: "datetime | None" = None) -> str:
+    """セクション固有のユーザープロンプトを組み立てる。
+
+    since が指定された場合、LLM に対象期間の注意事項を付記する。
+    """
+    lines = []
+    if since is not None:
+        since_jst = since.astimezone(JST)
+        date_notice = (
+            f"【対象期間】{since_jst.strftime('%Y年%m月%d日 %H:%M')} (JST) 以降に公開された記事のみを対象としてください。\n"
+            "古い記事（対象期間より前に公開されたもの）は含めないでください。\n"
+            "もし取り上げる話題が以前の記事へのアップデートである場合は、"
+            "そのアップデートであることがわかるよう更新の経緯を明記し、元記事や関連リンクを記載してください。"
+        )
+        lines.append(date_notice)
+        lines.append("")
     label = section_def.get("data_label") or "データ"
-    return "\n".join([
+    lines.extend([
         section_def["instruction"],
         "",
         f"### {label}",
         json.dumps(data, ensure_ascii=False, indent=2),
         "",
     ])
+    return "\n".join(lines)
 
 
 def generate_section(
@@ -775,6 +791,7 @@ def generate_section(
     model: str,
     section_def: dict,
     data: list[dict],
+    since: "datetime | None" = None,
 ) -> str:
     """1 セクション分の記事を LLM で生成する。"""
     key = section_def["key"]
@@ -785,11 +802,11 @@ def generate_section(
         header = section_def.get("header", "")
         return f"{header}\n\n現在の対象期間に該当する情報はありません。"
 
-    user_prompt = _build_section_prompt(section_def, data)
+    user_prompt = _build_section_prompt(section_def, data, since=since)
     while len(user_prompt) > max_input:
         if len(data) > 3:
             data.pop()
-            user_prompt = _build_section_prompt(section_def, data)
+            user_prompt = _build_section_prompt(section_def, data, since=since)
         else:
             break
 
@@ -822,11 +839,13 @@ def generate_article(
     cloud_news: list[dict],
     itops_news: list[dict],
     techblog_ja_news: list[dict] | None = None,
+    since: "datetime | None" = None,
 ) -> str:
     """各セクションを個別の LLM 呼び出しで生成し、1 つの記事に組み立てる。
 
     セクションごとに独立した API コールを行うことで、各セクションが
     トークン上限を最大限に活用できるようにする。
+    since が指定された場合、各セクションに対象期間の注意事項を付記する。
     """
     formatted_date = f"{target_date[:4]}/{target_date[4:6]}/{target_date[6:]}"
     slot_label = "午前" if slot == "am" else "午後"
@@ -847,7 +866,7 @@ def generate_article(
         key = section_def["key"]
         data = section_data_map[key]
         print(f"  [{key}] セクション生成中...")
-        section_text = generate_section(client, model, section_def, data)
+        section_text = generate_section(client, model, section_def, data, since=since)
         article_parts.append(section_text)
 
     return "\n\n".join(article_parts)
@@ -922,6 +941,7 @@ def main():
                 client, model, target_date, slot,
                 microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news,
                 techblog_ja_news=techblog_ja_news,
+                since=since,
             )
             break
         except OpenAIError as e:

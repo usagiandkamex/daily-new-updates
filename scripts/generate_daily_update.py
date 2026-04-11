@@ -542,7 +542,22 @@ def fetch_category(category: str, since: datetime) -> list[dict]:
             print(f"    {source['name']}: {len(items)} 件")
         except Exception as e:
             print(f"    {source['name']}: 取得失敗 ({e})")
-    return all_articles
+
+    # URL 重複排除（異なるフィードが同じ記事を参照する場合）
+    seen_urls: set[str] = set()
+    deduped: list[dict] = []
+    for item in all_articles:
+        url = item.get("url", "")
+        if url and url in seen_urls:
+            continue
+        if url:
+            seen_urls.add(url)
+        deduped.append(item)
+
+    # 公開日時の降順でソート（新しい記事が先頭、日時なしは末尾）
+    deduped.sort(key=lambda x: x.get("datePublished", "") or "", reverse=True)
+
+    return deduped
 
 
 def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) -> list[dict]:
@@ -557,11 +572,16 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
             for item in items:
                 item["source"] = source["name"]
             all_articles.extend(items)
+            print(f"    {source['name']}: {len(items)} 件")
         except Exception as e:
             print(f"    {source['name']}: 取得失敗 ({e})")
-    if exclude_urls:
-        all_articles = [a for a in all_articles if a.get("url", "") not in exclude_urls]
-    return all_articles
+    new_items = [a for a in all_articles if a.get("url", "") not in (exclude_urls or set())]
+    # 公開日時の降順でソート（新しい記事が先頭、日時なしは末尾）して上位 20 件に制限
+    new_items.sort(key=lambda x: x.get("datePublished", "") or "", reverse=True)
+    if len(new_items) > 20:
+        print(f"  ※ 汎用ニュース {len(new_items)} 件 → 20 件に制限")
+        new_items = new_items[:20]
+    return new_items
 
 
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
@@ -763,6 +783,7 @@ def _limit_articles(articles: list[dict], category: str) -> list[dict]:
 
 
 GITHUB_MODELS_CANDIDATES = [
+    "claude-opus-4-6",
     "gpt-4o",
     "gpt-4o-mini",
 ]
@@ -940,8 +961,8 @@ def _build_section_prompt(section_def: dict, data: dict | list, since: datetime 
     if since is not None:
         since_jst = since.astimezone(JST)
         date_notice = (
-            f"【対象期間】{since_jst.strftime('%Y年%m月%d日 %H:%M')} (JST) 以降に公開された記事のみを対象としてください。"
-            "古い記事（対象期間より前に公開されたもの）は含めないでください。"
+            f"【対象期間】{since_jst.strftime('%Y年%m月%d日 %H:%M')} (JST) 以降に公開された記事のみを対象としてください。\n"
+            "古い記事（対象期間より前に公開されたもの）は含めないでください。\n"
             "もし取り上げる話題が以前の記事へのアップデートである場合は、"
             "そのアップデートであることがわかるよう更新の経緯を明記し、元記事や関連リンクを記載してください。"
         )

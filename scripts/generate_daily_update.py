@@ -220,6 +220,38 @@ def _search_alternative_url(query: str) -> str | None:
     return None
 
 
+def _format_bare_reference_links(markdown: str) -> str:
+    """**参考リンク**: の後に裸の URL または URL をラベルにしたリンクがある場合、
+    直近の ### 見出しをラベルにしたハイパーリンクへ変換する。"""
+    lines = markdown.splitlines()
+    current_heading = ""
+    result = []
+    for line in lines:
+        heading_match = re.match(r'^###\s+(.+)', line)
+        if heading_match:
+            current_heading = heading_match.group(1).strip()
+
+        # 裸の URL: **参考リンク**: https://...
+        ref_bare = re.match(r'^(\*\*参考リンク\*\*:\s*)(https?://\S+)\s*$', line)
+        # URL をラベルにしたリンク: **参考リンク**: [https://...](https://...)
+        ref_url_label = re.match(
+            r'^(\*\*参考リンク\*\*:\s*)\[(https?://[^\]]+)\]\((https?://[^)]+)\)\s*$', line
+        )
+        if ref_bare:
+            prefix = ref_bare.group(1)
+            url = ref_bare.group(2)
+            label = current_heading if current_heading else url
+            line = f"{prefix}[{label}]({url})"
+        elif ref_url_label:
+            prefix = ref_url_label.group(1)
+            url = ref_url_label.group(3)
+            label = current_heading if current_heading else url
+            line = f"{prefix}[{label}]({url})"
+
+        result.append(line)
+    return "\n".join(result)
+
+
 def validate_links(markdown: str) -> str:
     """マークダウン内の全リンクを検証し、代替ソースの検索またはトピック除去を行う。"""
     link_pattern = re.compile(r'\[([^\]]+)\]\((https?://[^)]+)\)')
@@ -972,6 +1004,7 @@ def main():
         raise RuntimeError(f"全ての LLM プロバイダーで生成に失敗しました。最後のエラー: {last_error}")
 
     print("\nリンクを検証中...")
+    article = _format_bare_reference_links(article)
     article = validate_links(article)
 
     # リンク除去で空になったセクションを時間窓を広げて再生成する

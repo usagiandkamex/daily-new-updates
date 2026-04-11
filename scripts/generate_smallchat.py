@@ -102,6 +102,8 @@ FEEDS = {
         {"name": "Reddit MSP (Managed Service Providers)", "url": "https://www.reddit.com/r/msp/.rss"},
         {"name": "Google News ITSM", "url": "https://news.google.com/rss/search?q=ITSM+ServiceNow+IT+service+management&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News Observability", "url": "https://news.google.com/rss/search?q=observability+monitoring+AIOps+OpenTelemetry&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News SRE Agent EN", "url": "https://news.google.com/rss/search?q=SRE+agent+AI+site+reliability+engineering&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News SRE Agent JP", "url": "https://news.google.com/rss/search?q=SRE+%E3%82%A8%E3%83%BC%E3%82%B8%E3%82%A7%E3%83%B3%E3%83%88+AI+%E3%82%B5%E3%82%A4%E3%83%88%E4%BF%A1%E9%A0%BC%E6%80%A7&hl=ja&gl=JP&ceid=JP:ja"},
     ],
 }
 
@@ -449,7 +451,7 @@ def build_user_prompt(
 
 ## 6. IT運用・管理
 
-(最大3つ。**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析）を重点的に取り上げること。Microsoft Azure Monitor・System Center等のMicrosoft製品によるAIOpsも優先的に含める。ITSM・DevOps・エンドポイント管理・MSP・オブザーバビリティなど、IT運用全般のトレンドも含める。各トピックは見出し・要約・影響・参考リンクで構成)
+(最大3つ。**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析）および**SRE Agent**（AI駆動のサイト信頼性エンジニアリングエージェント）を重点的に取り上げること。Microsoft Azure Monitor・System Center等のMicrosoft製品によるAIOpsも優先的に含める。ITSM・DevOps・エンドポイント管理・MSP・オブザーバビリティなど、IT運用全般のトレンドも含める。各トピックは見出し・要約・影響・参考リンクで構成)
 
 ---
 

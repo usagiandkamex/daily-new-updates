@@ -544,6 +544,7 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 
 
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
+CONNPASS_RSS_URL = "https://connpass.com/search/"
 # v2 API では prefecture パラメータが廃止されたため keyword で都道府県名を検索する
 CONNPASS_TARGET_PREFECTURES = ["東京都", "神奈川県"]
 # 取得する最大イベント数
@@ -552,16 +553,81 @@ CONNPASS_MAX_EVENTS = 20
 CONNPASS_LOOKAHEAD_DAYS = 60
 
 
+def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
+    """connpass RSS フィードを使用してイベントを取得する（API キー不要）。
+
+    RSS で取得できる情報はイベントタイトル・URL・概要のみです。
+    開催日時・定員・場所などの詳細情報は取得できません。
+    """
+    target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
+
+    events = []
+    seen_urls: set[str] = set()
+
+    # 今月と翌月のイベントを検索する
+    search_months = sorted({
+        target_dt.strftime("%Y%m"),
+        (target_dt + timedelta(days=30)).strftime("%Y%m"),
+    })
+
+    for pref in CONNPASS_TARGET_PREFECTURES:
+        for ym in search_months:
+            params = {
+                "format": "rss",
+                "keyword": pref,
+                "ym": ym,
+            }
+            try:
+                resp = requests.get(
+                    CONNPASS_RSS_URL,
+                    params=params,
+                    headers=HTTP_HEADERS,
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                feed = feedparser.parse(resp.content)
+                count = 0
+                for entry in feed.entries:
+                    url = entry.get("link", "")
+                    if not url or url in seen_urls:
+                        continue
+                    seen_urls.add(url)
+                    title = entry.get("title", "").strip()
+                    description = entry.get("summary", "").strip()
+                    events.append({
+                        "title": title,
+                        "catch": description[:200] if description else "",
+                        "event_url": url,
+                        "started_at": "",
+                        "place": "",
+                        "address": "",
+                        "accepted": 0,
+                        "limit": 0,
+                        "series": "",
+                    })
+                    count += 1
+                print(f"    connpass RSS ({pref} {ym}): {count} 件取得")
+            except Exception as e:
+                print(f"    connpass RSS ({pref} {ym}): 取得失敗 ({e})")
+
+    if len(events) > CONNPASS_MAX_EVENTS:
+        print(f"  ※ connpass RSS {len(events)} 件 → {CONNPASS_MAX_EVENTS} 件に制限")
+        events = events[:CONNPASS_MAX_EVENTS]
+
+    return events
+
+
 def fetch_connpass_events(target_date: str) -> list[dict]:
     """connpassから東京・神奈川の近日開催コミュニティイベントを取得する。
 
-    申し込みが開始されていて、まだ申し込み可能な（開催前の）イベントを返す。
-    connpass API v2 を使用。CONNPASS_API_KEY 環境変数に API キーが必要。
+    CONNPASS_API_KEY 環境変数が設定されている場合は API v2 を使用し、
+    未設定の場合は RSS フィード（API キー不要）にフォールバックする。
+    RSS フォールバック時は開催日時・定員・場所などの詳細情報は取得できない。
     """
     api_key = os.environ.get("CONNPASS_API_KEY", "")
     if not api_key:
-        print("    connpass: CONNPASS_API_KEY が未設定のためスキップします")
-        return []
+        print("    connpass: CONNPASS_API_KEY が未設定のため RSS フィードで取得します")
+        return _fetch_connpass_events_rss(target_date)
 
     target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
     cutoff_dt = target_dt + timedelta(days=CONNPASS_LOOKAHEAD_DAYS)

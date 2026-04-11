@@ -114,6 +114,20 @@ HTTP_HEADERS = {
 
 MAX_ARTICLES_PER_CATEGORY = 10
 
+# カテゴリ別フィードが空の場合に使う汎用 IT ニュースフィード
+GENERAL_NEWS_FEEDS = [
+    {"name": "ITmedia NEWS", "url": "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml"},
+    {"name": "Publickey", "url": "https://www.publickey1.jp/atom.xml"},
+    {"name": "GIGAZINE", "url": "https://gigazine.net/news/rss_2.0/"},
+    {"name": "INTERNET Watch", "url": "https://internet.watch.impress.co.jp/data/rss/1.0/iw/feed.rdf"},
+    {"name": "DevelopersIO", "url": "https://dev.classmethod.jp/feed/"},
+    {"name": "Zenn トレンド", "url": "https://zenn.dev/feed"},
+    {"name": "Hacker News (Best)", "url": "https://hnrss.org/best"},
+    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/"},
+    {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml"},
+    {"name": "Google News IT 日本", "url": "https://news.google.com/rss/search?q=IT+%E6%8A%80%E8%A1%93+%E6%9C%80%E6%96%B0&hl=ja&gl=JP&ceid=JP:ja"},
+]
+
 
 # --- URL 解決 -------------------------------------------------------------------
 
@@ -303,9 +317,10 @@ def _regenerate_empty_sections(
 ) -> str:
     """リンク除去により空になったセクション（トピックなし）を再取得・再生成する。
 
-    各セクションをチェックし、### 見出しが 0 件のセクションに対して
-    拡張時間窓でフィードを再取得し LLM でセクションを再生成する。
-    再取得しても情報が得られない場合は「情報なし」メッセージを記載する。
+    各セクションをチェックし、### 見出しが 0 件のセクションに対して以下を順に試みる:
+      1. 拡張時間窓（24h）でカテゴリ専用フィードを再取得して LLM 再生成
+      2. 汎用 IT ニュースフィードで LLM 再生成
+      3. それでも情報が得られない場合は「情報なし」メッセージを記載する
     """
     for section_def in section_definitions:
         key = section_def["key"]
@@ -329,8 +344,13 @@ def _regenerate_empty_sections(
         extended_data = fetch_category(key, extended_since)
         new_items = [item for item in extended_data if item.get("url", "") not in original_urls]
 
+        # カテゴリ専用フィードに新規データがなければ汎用ニュースにフォールバック
         if not new_items:
-            print(f"  [{key}] 新しいデータがありませんでした。情報なしメッセージを記載します。")
+            print(f"  [{key}] 専用フィードに新しいデータなし。汎用ニュースにフォールバックします...")
+            new_items = fetch_general_news(extended_since, exclude_urls=original_urls)
+
+        if not new_items:
+            print(f"  [{key}] 汎用ニュースにも新しいデータがありませんでした。情報なしメッセージを記載します。")
             no_info_section = f"{header}\n\n現在の対象期間に該当する情報はありません。"
             article = re.sub(
                 rf'{escaped_header}.*?(?=\n## |\Z)',
@@ -341,7 +361,7 @@ def _regenerate_empty_sections(
             )
             continue
 
-        print(f"  [{key}] 新規データ: {len(new_items)} 件。セクションを再生成します...")
+        print(f"  [{key}] 使用データ: {len(new_items)} 件。セクションを再生成します...")
 
         new_section = None
         for client, model in llm_clients:
@@ -437,6 +457,26 @@ def fetch_category(category: str, since: datetime) -> list[dict]:
         print(f"  ※ {len(all_articles)} 件 → {MAX_ARTICLES_PER_CATEGORY} 件に制限")
         all_articles = all_articles[:MAX_ARTICLES_PER_CATEGORY]
     return all_articles
+
+
+def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) -> list[dict]:
+    """汎用 IT ニュースフィードから記事を取得し、指定 URL を除いて返す。"""
+    exclude_urls = exclude_urls or set()
+    all_articles = []
+    for source in GENERAL_NEWS_FEEDS:
+        try:
+            items = _fetch_feed(source["url"], since)
+            for item in items:
+                item["source"] = source["name"]
+            all_articles.extend(items)
+            print(f"    {source['name']}: {len(items)} 件")
+        except Exception as e:
+            print(f"    {source['name']}: 取得失敗 ({e})")
+    new_items = [item for item in all_articles if item.get("url", "") not in exclude_urls]
+    if len(new_items) > MAX_ARTICLES_PER_CATEGORY:
+        print(f"  ※ 汎用ニュース {len(new_items)} 件 → {MAX_ARTICLES_PER_CATEGORY} 件に制限")
+        new_items = new_items[:MAX_ARTICLES_PER_CATEGORY]
+    return new_items
 
 
 # --- LLM クライアント -----------------------------------------------------------

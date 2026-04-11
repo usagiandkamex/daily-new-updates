@@ -396,14 +396,16 @@ class TestRegenerateEmptySections(unittest.TestCase):
         client.chat.completions.create.assert_not_called()
 
     def test_no_new_items_writes_no_info_message(self):
-        """拡張窓でも新規データがなければ LLM は呼ばれず、情報なしメッセージが記載される。"""
+        """専用フィードも汎用フィードも新規データなければ LLM は呼ばれず、情報なしメッセージが記載される。"""
         article = f"{self._HEADER}\n\n"
         original_items = [{"url": "https://old.example.com", "title": "既存"}]
         llm_clients = self._make_llm_clients()
         client = llm_clients[0][0]
 
         # fetch_category は元データと同じ URL だけ返す → new_items = []
-        with patch.object(sc, "fetch_category", return_value=original_items):
+        # fetch_general_news も空リストを返す
+        with (patch.object(sc, "fetch_category", return_value=original_items),
+              patch.object(sc, "fetch_general_news", return_value=[])):
             result = sc._regenerate_empty_sections(
                 article,
                 [self._SECTION_DEF],
@@ -414,6 +416,53 @@ class TestRegenerateEmptySections(unittest.TestCase):
 
         client.chat.completions.create.assert_not_called()
         self.assertIn("ありません", result)
+
+    def test_no_category_items_falls_back_to_general_news(self):
+        """専用フィードに新規データがなければ汎用ニュースにフォールバックして LLM を呼ぶ。"""
+        article = f"{self._HEADER}\n\n"
+        original_items = [{"url": "https://old.example.com", "title": "既存"}]
+        general_items = [{"url": "https://general.example.com", "title": "汎用ニュース"}]
+        new_content = f"{self._HEADER}\n\n### 汎用トピック\n内容"
+        llm_clients = self._make_llm_clients(new_content)
+        client = llm_clients[0][0]
+
+        # fetch_category は既存 URL のみ → new_items = []
+        # fetch_general_news は新規記事を返す
+        with (patch.object(sc, "fetch_category", return_value=original_items),
+              patch.object(sc, "fetch_general_news", return_value=general_items),
+              patch.object(sc, "validate_links", side_effect=lambda x: x)):
+            result = sc._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"cloud": original_items},
+                object(),
+                llm_clients,
+            )
+
+        client.chat.completions.create.assert_called_once()
+        self.assertIn("汎用トピック", result)
+
+    def test_general_news_fallback_excludes_original_urls(self):
+        """汎用ニュースフォールバック時も元データの URL が除外される。"""
+        article = f"{self._HEADER}\n\n"
+        original_items = [{"url": "https://old.example.com", "title": "既存"}]
+        captured_exclude = {}
+
+        def fake_fetch_general_news(since, exclude_urls=None):
+            captured_exclude["urls"] = set(exclude_urls or set())
+            return []
+
+        with (patch.object(sc, "fetch_category", return_value=original_items),
+              patch.object(sc, "fetch_general_news", side_effect=fake_fetch_general_news)):
+            sc._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"cloud": original_items},
+                object(),
+                self._make_llm_clients(),
+            )
+
+        self.assertIn("https://old.example.com", captured_exclude.get("urls", set()))
 
     def test_regenerated_section_links_are_validated(self):
         """再生成されたセクションのリンクも validate_links で検証される。"""

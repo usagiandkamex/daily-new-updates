@@ -494,7 +494,7 @@ SECTION_DEFINITIONS = [
     },
 ]
 
-# セクションごとの入力トークン上限（1 トークン ≈ 2.5 文字として概算）
+# セクションごとの入力文字数上限
 SECTION_MAX_INPUT_CHARS = {
     "microsoft": 20_000,
     "ai": 20_000,
@@ -537,6 +537,10 @@ def generate_section(
             user_prompt = _build_section_prompt(section_def, data)
         else:
             break
+
+    # リスト削減後もまだ上限を超える場合はプロンプトを文字数で切り詰める
+    if len(user_prompt) > max_input:
+        user_prompt = user_prompt[:max_input]
 
     print(f"    入力: 約 {len(user_prompt):,} 文字")
     response = client.chat.completions.create(

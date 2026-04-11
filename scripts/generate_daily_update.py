@@ -386,15 +386,16 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
 
     for pref in CONNPASS_TARGET_PREFECTURES:
         params = {
-            "prefectures": pref,
+            "prefecture": pref,
             "count": CONNPASS_MAX_EVENTS,
             "order": 2,  # 開催日順
         }
+        connpass_headers = {**HTTP_HEADERS, "Accept": "application/json"}
         try:
             resp = requests.get(
                 CONNPASS_API_URL,
                 params=params,
-                headers=HTTP_HEADERS,
+                headers=connpass_headers,
                 timeout=30,
             )
             resp.raise_for_status()
@@ -645,7 +646,7 @@ SECTION_DEFINITIONS = [
     },
 ]
 
-# セクションごとの入力トークン上限（1 トークン ≈ 2.5 文字として概算）
+# セクションごとの入力文字数上限
 SECTION_MAX_INPUT_CHARS = {
     "azure": 30_000,
     "tech": 40_000,
@@ -705,6 +706,10 @@ def generate_section(
         if not trimmed:
             break
         user_prompt = _build_section_prompt(section_def, data)
+
+    # リスト削減後もまだ上限を超える場合はプロンプトを文字数で切り詰める
+    if len(user_prompt) > max_input:
+        user_prompt = user_prompt[:max_input]
 
     print(f"    入力: 約 {len(user_prompt):,} 文字")
     response = client.chat.completions.create(

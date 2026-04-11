@@ -84,11 +84,33 @@ class TestGenerateSectionDailyUpdate(unittest.TestCase):
         self.assertEqual(client.chat.completions.create.call_count, 1)
         self.assertEqual(result, "## 1. Azureセクション")
 
+    def test_empty_list_returns_no_info_message_without_llm(self):
+        """空データの場合は LLM を呼ばずに「ありません」メッセージを返す。"""
+        client = _make_client("呼ばれないはず")
+        section = self._get_section("azure")
+        result = du.generate_section(client, "gpt-4o", section, [])
+        self.assertEqual(client.chat.completions.create.call_count, 0)
+        self.assertIn(section["header"], result)
+        self.assertIn("ありません", result)
+
+    def test_empty_list_result_contains_section_header(self):
+        """空データ時の戻り値にセクションヘッダーが含まれる（リスト型セクションのみ）。"""
+        client = _make_client("呼ばれないはず")
+        for section in du.SECTION_DEFINITIONS:
+            # community セクションは dict 型データのため空リストの早期返却対象外
+            if section["key"] == "community":
+                continue
+            result = du.generate_section(client, "gpt-4o", section, [])
+            self.assertTrue(
+                result.startswith(section["header"]),
+                f"セクション {section['key']} の空データ結果がヘッダーで始まっていない",
+            )
+
     def test_uses_section_system_prompt(self):
         """システムプロンプトにセクション固有のものが使われる。"""
         client = _make_client("出力")
         section = self._get_section("tech")
-        du.generate_section(client, "gpt-4o", section, [])
+        du.generate_section(client, "gpt-4o", section, [{"title": "記事1"}])
         call_kwargs = client.chat.completions.create.call_args
         messages = call_kwargs[1]["messages"] if call_kwargs[1] else call_kwargs[0][0]
         system_msg = next(m for m in messages if m["role"] == "system")
@@ -98,7 +120,7 @@ class TestGenerateSectionDailyUpdate(unittest.TestCase):
         """max_tokens に SECTION_MAX_OUTPUT_TOKENS が使われる。"""
         client = _make_client("出力")
         section = self._get_section("business")
-        du.generate_section(client, "gpt-4o", section, [])
+        du.generate_section(client, "gpt-4o", section, [{"title": "記事1"}])
         call_kwargs = client.chat.completions.create.call_args
         kwargs = call_kwargs[1] if call_kwargs[1] else {}
         self.assertEqual(kwargs.get("max_tokens"), du.SECTION_MAX_OUTPUT_TOKENS)
@@ -132,17 +154,17 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
     """generate_article() のテスト（セッション分割）"""
 
     def test_calls_llm_once_per_section(self):
-        """generate_article は SECTION_DEFINITIONS の数だけ LLM を呼び出す。"""
+        """generate_article は データがある SECTION_DEFINITIONS の数だけ LLM を呼び出す。"""
         client = _make_client("セクション出力")
         result = du.generate_article(
             client, "gpt-4o", "20260401",
-            azure_news=[],
-            tech_news=[],
-            business_news=[],
-            sns_news=[],
-            itops_news=[],
-            connpass_events=[],
-            event_reports=[],
+            azure_news=[{"title": "a"}],
+            tech_news=[{"title": "b"}],
+            business_news=[{"title": "c"}],
+            sns_news=[{"title": "d"}],
+            itops_news=[{"title": "e"}],
+            connpass_events=[{"title": "f"}],
+            event_reports=[{"title": "g"}],
         )
         expected_calls = len(du.SECTION_DEFINITIONS)
         self.assertEqual(client.chat.completions.create.call_count, expected_calls)
@@ -161,6 +183,27 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
             event_reports=[],
         )
         self.assertIn("# 2026/04/01 デイリーアップデート", result)
+
+    def test_empty_list_sections_show_no_info_message(self):
+        """空データのリスト型セクションは「ありません」メッセージを含む。"""
+        client = _make_client("コミュニティ出力")
+        result = du.generate_article(
+            client, "gpt-4o", "20260401",
+            azure_news=[],
+            tech_news=[],
+            business_news=[],
+            sns_news=[],
+            itops_news=[],
+            connpass_events=[],
+            event_reports=[],
+        )
+        # リスト型セクションは LLM を呼ばずに「ありません」が含まれる
+        # community セクションは dict 型データのため LLM を経由し、ヘッダーはモック出力に含まれない
+        for section in du.SECTION_DEFINITIONS:
+            if section["key"] != "community":
+                self.assertIn(section["header"], result,
+                              f"セクション {section['key']} のヘッダーが記事に含まれない")
+        self.assertIn("ありません", result)
 
     def test_all_section_outputs_in_article(self):
         """各セクション出力が結合されて 1 つの記事になる。"""
@@ -194,13 +237,13 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
         client = _make_client("出力")
         du.generate_article(
             client, "gpt-4o", "20260401",
-            azure_news=[],
-            tech_news=[],
-            business_news=[],
-            sns_news=[],
-            itops_news=[],
-            connpass_events=[],
-            event_reports=[],
+            azure_news=[{"title": "a"}],
+            tech_news=[{"title": "b"}],
+            business_news=[{"title": "c"}],
+            sns_news=[{"title": "d"}],
+            itops_news=[{"title": "e"}],
+            connpass_events=[{"title": "f"}],
+            event_reports=[{"title": "g"}],
         )
         # 呼び出しごとのシステムプロンプトを収集
         system_prompts = []
@@ -220,7 +263,7 @@ class TestSectionDefinitions(unittest.TestCase):
 
     def test_all_sections_have_required_keys(self):
         """各セクション定義に必須キーが存在する。"""
-        required_keys = {"key", "system", "instruction"}
+        required_keys = {"key", "system", "instruction", "header"}
         for section in du.SECTION_DEFINITIONS:
             for k in required_keys:
                 self.assertIn(k, section, f"セクション {section.get('key')} に '{k}' がない")

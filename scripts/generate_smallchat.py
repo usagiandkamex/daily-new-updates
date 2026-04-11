@@ -394,85 +394,161 @@ def create_llm_client() -> tuple:
 
 # --- 記事生成 -------------------------------------------------------------------
 
-SYSTEM_PROMPT = """\
-あなたは IT 分野のテクニカルライターです。
-SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルなテクニカル雑談記事を作成してください。
+# セクションごとの LLM 呼び出し定義
+# 各セクションは独立した API コールで生成し、トークンを最大限に活用する。
+SECTION_DEFINITIONS = [
+    {
+        "key": "microsoft",
+        "system": (
+            "あなたは Microsoft 関連のテクニカルライターです。"
+            "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の Microsoft 関連ニュースから最大3つのトピックを選定し、マークダウン形式で出力してください。\n"
+            "先頭に「## 1. Microsoft」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "Microsoft 関連",
+    },
+    {
+        "key": "ai",
+        "system": (
+            "あなたは AI・機械学習分野のテクニカルライターです。"
+            "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の AI 関連ニュースから最大3つのトピックを選定し、マークダウン形式で出力してください。\n"
+            "先頭に「## 2. AI」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "AI 関連",
+    },
+    {
+        "key": "azure",
+        "system": (
+            "あなたは Microsoft Azure の専門テクニカルライターです。"
+            "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の Azure 関連ニュースから最大3つのトピックを選定し、マークダウン形式で出力してください。\n"
+            "先頭に「## 3. Azure」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "Azure 関連",
+    },
+    {
+        "key": "cloud",
+        "system": (
+            "あなたはクラウドサービス（AWS・GCP・OCI等）のテクニカルライターです。"
+            "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下のクラウド関連ニュースから最大3つのトピックを選定し、マークダウン形式で出力してください。\n"
+            "Azure 以外のクラウドサービス（AWS、GCP、OCI 等）のトレンドを対象にしてください。\n"
+            "先頭に「## 4. クラウド（AWS / GCP / OCI）」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "クラウド（AWS / GCP / OCI）関連",
+    },
+    {
+        "key": "security",
+        "system": (
+            "あなたはサイバーセキュリティのテクニカルライターです。"
+            "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下のセキュリティ関連ニュースから最大3つのトピックを選定し、マークダウン形式で出力してください。\n"
+            "先頭に「## 5. セキュリティ」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "セキュリティ関連",
+    },
+    {
+        "key": "itops",
+        "system": (
+            "あなたは IT 運用・管理の専門テクニカルライターです。"
+            "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の IT 運用・管理ニュースから最大3つのトピックを選定し、マークダウン形式で出力してください。\n"
+            "**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析）および"
+            "**SRE Agent**（AI駆動のサイト信頼性エンジニアリングエージェント）を重点的に取り上げてください。"
+            "Microsoft Azure Monitor・System Center 等の Microsoft 製品による AIOps も優先的に含めてください。"
+            "ITSM・DevOps・エンドポイント管理・MSP・オブザーバビリティなど IT 運用全般のトレンドも含めてください。\n"
+            "先頭に「## 6. IT運用・管理」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "IT運用・管理（AIOps / ITSM / DevOps / エンドポイント管理）",
+    },
+]
 
-## ルール
-- 読むのに約5分かかる分量で書いてください（2000〜3000文字程度）。
-- 各トピックは「見出し」「要約」「影響」「参考リンク」の4項目で構成してください。
-- 各項目（**要約**、**影響**、**参考リンク**）の間には必ず空行を入れてください。
-- 要約は簡潔かつ具体的に。影響はエンジニアや開発者にとっての意味を記載してください。
-- 参考リンクは提供されたソースの URL をそのまま使用してください。
-- 情報が不足している場合は無理に水増しせず、取得できた範囲で記載してください。
-- マークダウン形式で出力してください。コードブロックで囲まないでください。
-"""
+# セクションごとの入力トークン上限（1 トークン ≈ 2.5 文字として概算）
+SECTION_MAX_INPUT_CHARS = {
+    "microsoft": 20_000,
+    "ai": 20_000,
+    "azure": 20_000,
+    "cloud": 20_000,
+    "security": 20_000,
+    "itops": 20_000,
+}
+
+# セクションごとの出力トークン上限
+SECTION_MAX_OUTPUT_TOKENS = 2048
 
 
-def build_user_prompt(
-    target_date: str,
-    slot: str,
-    microsoft_news: list[dict],
-    ai_news: list[dict],
-    azure_news: list[dict],
-    security_news: list[dict],
-    cloud_news: list[dict],
-    itops_news: list[dict],
+def _build_section_prompt(section_def: dict, data: list[dict]) -> str:
+    """セクション固有のユーザープロンプトを組み立てる。"""
+    label = section_def.get("data_label") or "データ"
+    return "\n".join([
+        section_def["instruction"],
+        "",
+        f"### {label}",
+        json.dumps(data, ensure_ascii=False, indent=2),
+        "",
+    ])
+
+
+def generate_section(
+    client,
+    model: str,
+    section_def: dict,
+    data: list[dict],
 ) -> str:
-    formatted_date = f"{target_date[:4]}/{target_date[4:6]}/{target_date[6:]}"
-    slot_label = "午前" if slot == "am" else "午後"
-    return f"""\
-以下のニュースソースを元に、{formatted_date} {slot_label}のテクニカル雑談記事を作成してください。
-日本語・英語の両方のソースが含まれていますが、記事はすべて日本語で書いてください。
+    """1 セクション分の記事を LLM で生成する。"""
+    key = section_def["key"]
+    max_input = SECTION_MAX_INPUT_CHARS.get(key, 20_000)
 
-出力フォーマット（各項目の間には必ず空行を入れること。コードブロックで囲まず、マークダウンをそのまま出力すること）:
+    user_prompt = _build_section_prompt(section_def, data)
+    while len(user_prompt) > max_input:
+        if len(data) > 3:
+            data.pop()
+            user_prompt = _build_section_prompt(section_def, data)
+        else:
+            break
 
-# {formatted_date} テクニカル雑談（{slot_label}）
-
-## 1. Microsoft
-
-(最大3つ。各トピックは見出し・要約・影響・参考リンクで構成)
-
-## 2. AI
-
-(最大3つ。各トピックは見出し・要約・影響・参考リンクで構成)
-
-## 3. Azure
-
-(最大3つ。各トピックは見出し・要約・影響・参考リンクで構成)
-
-## 4. クラウド（AWS / GCP / OCI）
-
-(最大3つ。Azure以外のクラウドサービス（AWS、GCP、OCI等）のトレンド。各トピックは見出し・要約・影響・参考リンクで構成)
-
-## 5. セキュリティ
-
-(最大3つ。各トピックは見出し・要約・影響・参考リンクで構成)
-
-## 6. IT運用・管理
-
-(最大3つ。**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析）および**SRE Agent**（AI駆動のサイト信頼性エンジニアリングエージェント）を重点的に取り上げること。Microsoft Azure Monitor・System Center等のMicrosoft製品によるAIOpsも優先的に含める。ITSM・DevOps・エンドポイント管理・MSP・オブザーバビリティなど、IT運用全般のトレンドも含める。各トピックは見出し・要約・影響・参考リンクで構成)
-
----
-
-### Microsoft 関連
-{json.dumps(microsoft_news, ensure_ascii=False, indent=2)}
-
-### AI 関連
-{json.dumps(ai_news, ensure_ascii=False, indent=2)}
-
-### Azure 関連
-{json.dumps(azure_news, ensure_ascii=False, indent=2)}
-
-### クラウド（AWS / GCP / OCI）関連
-{json.dumps(cloud_news, ensure_ascii=False, indent=2)}
-
-### セキュリティ関連
-{json.dumps(security_news, ensure_ascii=False, indent=2)}
-
-### IT運用・管理（AIOps / ITSM / DevOps / エンドポイント管理）
-{json.dumps(itops_news, ensure_ascii=False, indent=2)}
-"""
+    print(f"    入力: 約 {len(user_prompt):,} 文字")
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": section_def["system"]},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.5,
+        max_tokens=SECTION_MAX_OUTPUT_TOKENS,
+    )
+    return response.choices[0].message.content.strip()
 
 
 def generate_article(
@@ -487,46 +563,33 @@ def generate_article(
     cloud_news: list[dict],
     itops_news: list[dict],
 ) -> str:
-    MAX_INPUT_CHARS = 15_000 * 2.5
+    """各セクションを個別の LLM 呼び出しで生成し、1 つの記事に組み立てる。
 
-    news_lists = [microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news]
-    user_prompt = build_user_prompt(
-        target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news
-    )
+    セクションごとに独立した API コールを行うことで、各セクションが
+    トークン上限を最大限に活用できるようにする。
+    """
+    formatted_date = f"{target_date[:4]}/{target_date[4:6]}/{target_date[6:]}"
+    slot_label = "午前" if slot == "am" else "午後"
 
-    while len(user_prompt) > MAX_INPUT_CHARS:
-        trimmed = False
-        for nl in news_lists:
-            if len(nl) > 3:
-                nl.pop()
-                trimmed = True
-        if not trimmed:
-            break
-        user_prompt = build_user_prompt(
-            target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news
-        )
+    section_data_map: dict[str, list[dict]] = {
+        "microsoft": microsoft_news,
+        "ai": ai_news,
+        "azure": azure_news,
+        "cloud": cloud_news,
+        "security": security_news,
+        "itops": itops_news,
+    }
 
-    if len(user_prompt) > MAX_INPUT_CHARS:
-        print("  ⚠ プロンプトが大きいため description を除去します")
-        for nl in news_lists:
-            for article in nl:
-                article["description"] = ""
-        user_prompt = build_user_prompt(
-            target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news
-        )
+    article_parts = [f"# {formatted_date} テクニカル雑談（{slot_label}）"]
 
-    print(f"  プロンプトサイズ: 約 {len(user_prompt):,} 文字")
+    for section_def in SECTION_DEFINITIONS:
+        key = section_def["key"]
+        data = section_data_map[key]
+        print(f"  [{key}] セクション生成中...")
+        section_text = generate_section(client, model, section_def, data)
+        article_parts.append(section_text)
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.5,
-        max_tokens=4096,
-    )
-    return response.choices[0].message.content
+    return "\n\n".join(article_parts)
 
 
 # --- メイン処理 -----------------------------------------------------------------
@@ -572,12 +635,13 @@ def main():
     itops_news = fetch_category("itops", since)
     print(f"  → 合計: {len(itops_news)} 件")
 
-    print("\n記事を生成中...")
+    print("\n記事を生成中（セクションごとに個別生成）...")
     llm_clients = create_llm_clients()
     article = None
     last_error = None
     for client, model in llm_clients:
         try:
+            print(f"  モデル: {model}")
             article = generate_article(
                 client, model, target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news
             )

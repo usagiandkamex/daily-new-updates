@@ -398,7 +398,7 @@ def _regenerate_empty_sections(
         new_section = None
         for client, model in llm_clients:
             try:
-                new_section = generate_section(client, model, section_def, new_items)
+                new_section = generate_section(client, model, section_def, new_items, since=extended_since)
                 break
             except OpenAIError as e:
                 print(f"  [{key}] 再生成失敗 ({model}): {e}")
@@ -458,7 +458,7 @@ def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
                     pass
                 break
 
-        if pub_date and pub_date < since:
+        if not pub_date or pub_date < since:
             continue
 
         article_url = _resolve_google_news_url(entry.get("link", ""))
@@ -790,13 +790,26 @@ SECTION_MAX_INPUT_CHARS = {
 SECTION_MAX_OUTPUT_TOKENS = 4096
 
 
-def _build_section_prompt(section_def: dict, data: dict | list) -> str:
+def _build_section_prompt(section_def: dict, data: dict | list, since: datetime | None = None) -> str:
     """セクション固有のユーザープロンプトを組み立てる。
 
     data が dict の場合は {ラベル: ペイロード} の形式、
     list の場合は section_def["data_label"] を使ってラベルを付ける。
+    since が指定された場合、LLM に対象期間の注意事項を付記する。
     """
-    lines = [section_def["instruction"], ""]
+    lines = []
+    if since is not None:
+        since_jst = since.astimezone(JST)
+        date_notice = (
+            f"【対象期間】{since_jst.strftime('%Y年%m月%d日 %H:%M')} (JST) 以降に公開された記事のみを対象としてください。"
+            "古い記事（対象期間より前に公開されたもの）は含めないでください。"
+            "もし取り上げる話題が以前の記事へのアップデートである場合は、"
+            "そのアップデートであることがわかるよう更新の経緯を明記し、元記事や関連リンクを記載してください。"
+        )
+        lines.append(date_notice)
+        lines.append("")
+    lines.append(section_def["instruction"])
+    lines.append("")
     if isinstance(data, dict):
         for label, payload in data.items():
             lines.append(f"### {label}")
@@ -815,6 +828,7 @@ def generate_section(
     model: str,
     section_def: dict,
     data: dict | list,
+    since: "datetime | None" = None,
 ) -> str:
     """1 セクション分の記事を LLM で生成する。"""
     key = section_def["key"]
@@ -831,7 +845,7 @@ def generate_section(
     else:
         all_lists = [data] if isinstance(data, list) else []
 
-    user_prompt = _build_section_prompt(section_def, data)
+    user_prompt = _build_section_prompt(section_def, data, since=since)
     while len(user_prompt) > max_input:
         trimmed = False
         for lst in all_lists:
@@ -840,7 +854,7 @@ def generate_section(
                 trimmed = True
         if not trimmed:
             break
-        user_prompt = _build_section_prompt(section_def, data)
+        user_prompt = _build_section_prompt(section_def, data, since=since)
 
     # リスト削減後もまだ上限を超える場合はプロンプトを文字数で切り詰める
     if len(user_prompt) > max_input:
@@ -869,11 +883,13 @@ def generate_article(
     sns_news: list[dict],
     connpass_events: list[dict],
     event_reports: list[dict],
+    since: "datetime | None" = None,
 ) -> str:
     """各セクションを個別の LLM 呼び出しで生成し、1 つの記事に組み立てる。
 
     セクションごとに独立した API コールを行うことで、各セクションが
     トークン上限を最大限に活用できるようにする。
+    since が指定された場合、各セクションに対象期間の注意事項を付記する。
     """
     formatted_date = f"{target_date[:4]}/{target_date[4:6]}/{target_date[6:]}"
 
@@ -894,7 +910,7 @@ def generate_article(
         key = section_def["key"]
         data = section_data_map[key]
         print(f"  [{key}] セクション生成中...")
-        section_text = generate_section(client, model, section_def, data)
+        section_text = generate_section(client, model, section_def, data, since=since)
         article_parts.append(section_text)
 
     return "\n\n".join(article_parts)
@@ -962,7 +978,7 @@ def main():
             print(f"  モデル: {model}")
             article = generate_article(
                 client, model, target_date, azure_news, tech_news, business_news, sns_news,
-                connpass_events, event_reports,
+                connpass_events, event_reports, since=since,
             )
             break
         except OpenAIError as e:

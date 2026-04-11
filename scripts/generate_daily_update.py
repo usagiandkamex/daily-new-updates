@@ -94,13 +94,19 @@ FEEDS = {
         {"name": "Reddit Artificial Intelligence", "url": "https://www.reddit.com/r/artificial/.rss"},
         {"name": "Reddit Cloud Computing", "url": "https://www.reddit.com/r/cloudcomputing/.rss"},
     ],
-    # --- コミュニティイベント参加レポ ---
+    # --- コミュニティイベント参加レポ・イベント宣伝 ---
     "event_reports": [
         {"name": "Google News connpass 参加レポ", "url": "https://news.google.com/rss/search?q=connpass+%E5%8F%82%E5%8A%A0+%E3%83%AC%E3%83%9D+%E6%9D%B1%E4%BA%AC+%E7%A5%9E%E5%A5%88%E5%B7%9D&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News 勉強会 参加レポ 東京", "url": "https://news.google.com/rss/search?q=%E5%8B%89%E5%BC%B7%E4%BC%9A+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D+%E6%9D%B1%E4%BA%AC&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Zenn connpass イベント", "url": "https://zenn.dev/api/rss_feed/topic/connpass"},
+        {"name": "Zenn 勉強会", "url": "https://zenn.dev/api/rss_feed/topic/勉強会"},
+        {"name": "Zenn LT イベント", "url": "https://zenn.dev/api/rss_feed/topic/lt"},
         {"name": "Qiita connpass", "url": "https://qiita.com/tags/connpass/feed"},
+        {"name": "Qiita 勉強会", "url": "https://qiita.com/tags/勉強会/feed"},
+        {"name": "Qiita イベント", "url": "https://qiita.com/tags/イベント/feed"},
         {"name": "はてなブックマーク 勉強会", "url": "https://b.hatena.ne.jp/q/%E5%8B%89%E5%BC%B7%E4%BC%9A%20%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D?mode=rss&sort=hot"},
+        {"name": "Google News note イベント宣伝", "url": "https://news.google.com/rss/search?q=site%3Anote.com+connpass+OR+%E5%8B%89%E5%BC%B7%E4%BC%9A+OR+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News Zenn 勉強会イベント", "url": "https://news.google.com/rss/search?q=site%3Azenn.dev+%E5%8B%89%E5%BC%B7%E4%BC%9A+OR+connpass+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
     ],
 }
 
@@ -873,7 +879,7 @@ SECTION_DEFINITIONS = [
             "提供されたデータを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
         ),
         "instruction": (
-            "以下の connpass イベントデータと参加レポートを元に"
+            "以下の connpass イベントデータと参加レポート・イベント宣伝記事を元に"
             "「## 5. コミュニティイベント情報（東京・神奈川）」セクションを作成してください。\n\n"
             "先頭に「## 5. コミュニティイベント情報（東京・神奈川）」を出力し、"
             "以下の 2 サブセクション構成で出力してください。\n\n"
@@ -882,9 +888,10 @@ SECTION_DEFINITIONS = [
             "各イベントに「イベント名（リンク付き）」「開催日時」「場所」「概要」"
             "「参加状況（申込数/定員）」を記載してください。"
             "イベントデータが空の場合は「現在取得できるイベント情報はありません」と記載してください。\n\n"
-            "### 📝 参加レポート・まとめ\n\n"
-            "参加レポートデータから最近の勉強会・コミュニティイベントの参加レポートや開催レポートをまとめてください。"
-            "各レポートは見出し・要約・参考リンクで構成してください。"
+            "### 📝 参加レポート・イベント宣伝まとめ\n\n"
+            "参加レポートデータには Zenn・Qiita・note・はてなブックマーク などで公開された"
+            "勉強会・コミュニティイベントの参加レポート、開催レポート、イベント告知記事が含まれます。"
+            "これらをまとめ、各記事は見出し・要約・参考リンクで構成してください。"
             "レポートが少ない場合は取得できた範囲で記載してください。\n\n"
             "コードブロックで囲まないこと。"
         ),

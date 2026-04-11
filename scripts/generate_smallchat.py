@@ -278,6 +278,16 @@ def validate_links(markdown: str) -> str:
 
         result = re.sub(r'\n{3,}', '\n\n', result)
 
+        # トピック除去後に残った孤立した --- セパレータを除去する
+        # 連続する --- を1つに集約する
+        result = re.sub(r'(\n---\n)(\n*---\n)+', r'\1', result)
+        # セクションヘッダー（## ...）の直後にある --- を除去する
+        result = re.sub(r'(## [^\n]+\n)\n*---\n', r'\1\n', result)
+        # セクションヘッダー（## ...）の直前または末尾にある --- を除去する
+        result = re.sub(r'\n---\n\n*(## |\Z)', r'\n\n\1', result)
+        # 最終的な余分な空行を整理する
+        result = re.sub(r'\n{3,}', '\n\n', result)
+
     removed = len(unfixable_urls)
     replaced = len(replacement_urls)
     print(f"  リンク検証完了: 代替リンク={replaced} 件, トピック除去={removed} 件")

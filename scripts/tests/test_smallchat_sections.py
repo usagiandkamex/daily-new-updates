@@ -4,8 +4,9 @@ generate_smallchat.py のセッション分割（セクションごと個別 LLM
 
 import sys
 import os
+import re
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # スクリプトのディレクトリをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -244,6 +245,98 @@ class TestGenerateArticleSmallchat(unittest.TestCase):
             self.assertIn(section["header"], result,
                           f"セクション {section['key']} のヘッダーが記事に含まれない")
         self.assertIn("ありません", result)
+
+
+class TestValidateLinksOrphanedSeparators(unittest.TestCase):
+    """validate_links() でトピック除去後に残る孤立した --- の除去テスト"""
+
+    def _run_validate_links_with_bad_urls(self, markdown: str, bad_urls: list[str]) -> str:
+        """指定 URL を無効として validate_links を実行するヘルパー。"""
+        def fake_validate(url: str):
+            if url in bad_urls:
+                return False, "HTTP 404"
+            return True, "OK"
+
+        with (patch.object(sc, "_validate_url", side_effect=fake_validate),
+              patch.object(sc, "_search_alternative_url", return_value=None)):
+            return sc.validate_links(markdown)
+
+    def test_consecutive_separators_removed_when_all_topics_deleted(self):
+        """全トピックが除去されたセクションから孤立した --- が除去される。"""
+        markdown = (
+            "## 4. クラウド（AWS / GCP / OCI）\n\n"
+            "---\n\n"
+            "### Topic 1\n\n"
+            "**要約**: 内容1\n\n"
+            "**参考リンク**: [Link](https://bad1.example.com)\n\n"
+            "---\n\n"
+            "### Topic 2\n\n"
+            "**要約**: 内容2\n\n"
+            "**参考リンク**: [Link](https://bad2.example.com)\n\n"
+            "---\n\n"
+            "## 5. セキュリティ\n"
+        )
+        result = self._run_validate_links_with_bad_urls(
+            markdown, ["https://bad1.example.com", "https://bad2.example.com"]
+        )
+        # 除去後に --- が残っていないこと
+        self.assertNotIn("---", result)
+
+    def test_leading_separator_removed_when_first_topics_deleted(self):
+        """先頭のトピックが除去された場合、セクションヘッダー直後の --- が除去される。"""
+        markdown = (
+            "## 1. Microsoft\n\n"
+            "---\n\n"
+            "### Removed Topic\n\n"
+            "**要約**: 内容\n\n"
+            "**参考リンク**: [Link](https://bad.example.com)\n\n"
+            "---\n\n"
+            "### Kept Topic\n\n"
+            "**要約**: 残った内容\n\n"
+            "**参考リンク**: [Link](https://good.example.com)\n"
+        )
+        result = self._run_validate_links_with_bad_urls(
+            markdown, ["https://bad.example.com"]
+        )
+        # セクションヘッダーの直後に --- がないこと
+        self.assertNotIn("## 1. Microsoft\n\n---", result)
+        # 残ったトピックは保持されていること
+        self.assertIn("Kept Topic", result)
+
+    def test_valid_separator_between_kept_topics_is_preserved(self):
+        """削除されなかったトピック間の --- は保持される。"""
+        markdown = (
+            "## 1. Microsoft\n\n"
+            "### Removed Topic\n\n"
+            "**要約**: 内容\n\n"
+            "**参考リンク**: [Link](https://bad.example.com)\n\n"
+            "---\n\n"
+            "### Kept Topic 1\n\n"
+            "**要約**: 内容1\n\n"
+            "**参考リンク**: [Link](https://good1.example.com)\n\n"
+            "---\n\n"
+            "### Kept Topic 2\n\n"
+            "**要約**: 内容2\n\n"
+            "**参考リンク**: [Link](https://good2.example.com)\n"
+        )
+        result = self._run_validate_links_with_bad_urls(
+            markdown, ["https://bad.example.com"]
+        )
+        # 残ったトピック間の --- は保持される
+        self.assertIn("---", result)
+        self.assertIn("Kept Topic 1", result)
+        self.assertIn("Kept Topic 2", result)
+
+    def test_no_change_when_no_topics_removed(self):
+        """除去するトピックがない場合、コンテンツは変更されない。"""
+        markdown = (
+            "## 1. Microsoft\n\n"
+            "### Topic 1\n\n"
+            "**要約**: 内容\n\n"
+            "**参考リンク**: [Link](https://good.example.com)\n"
+        )
+        result = self._run_validate_links_with_bad_urls(markdown, [])
+        self.assertEqual(result, markdown)
 
 
 class TestSectionDefinitionsSmallchat(unittest.TestCase):

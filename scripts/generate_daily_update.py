@@ -41,6 +41,14 @@ FEEDS = {
         {"name": "DevelopersIO", "url": "https://dev.classmethod.jp/feed/"},
         {"name": "日経クロステック IT", "url": "https://xtech.nikkei.com/rss/xtech-it.rdf"},
         {"name": "Impress Watch", "url": "https://www.watch.impress.co.jp/data/rss/1.0/ipw/feed.rdf"},
+        {"name": "Microsoft Japan Blog", "url": "https://news.microsoft.com/ja-jp/feed/"},
+        {"name": "Google Japan Blog", "url": "https://japan.googleblog.com/feeds/posts/default?alt=rss"},
+        {"name": "Cybozu Inside Out", "url": "https://blog.cybozu.io/feed"},
+        {"name": "Mercari Engineering Blog", "url": "https://engineering.mercari.com/blog/feed.xml"},
+        {"name": "LINE Engineering Blog", "url": "https://engineering.linecorp.com/ja/feed.xml"},
+        {"name": "ZOZO Tech Blog", "url": "https://techblog.zozo.com/feed"},
+        {"name": "Recruit Tech Blog", "url": "https://techblog.recruit.co.jp/feed"},
+        {"name": "DeNA Engineering Blog", "url": "https://engineering.dena.com/blog/index.xml"},
     ],
     # --- 技術系 (英語) ---
     "tech_en": [
@@ -54,6 +62,12 @@ FEEDS = {
         {"name": "ZDNet", "url": "https://www.zdnet.com/news/rss.xml"},
         {"name": "Dev.to", "url": "https://dev.to/feed"},
         {"name": "Slashdot", "url": "https://slashdot.org/index.rss"},
+        {"name": "Google Blog", "url": "https://blog.google/rss/"},
+        {"name": "Microsoft Blog", "url": "https://blogs.microsoft.com/feed/"},
+        {"name": "Google Developers Blog", "url": "https://developers.googleblog.com/feeds/posts/default?alt=rss"},
+        {"name": "Google Cloud Blog", "url": "https://cloud.google.com/feeds/gcp-blog-atom.xml"},
+        {"name": "AWS News Blog", "url": "https://aws.amazon.com/blogs/aws/feed/"},
+        {"name": "Wiz Blog", "url": "https://news.google.com/rss/search?q=wiz.io+security+cloud&hl=en&gl=US&ceid=US:en"},
     ],
     # --- ビジネス系 (日本語) ---
     "business_ja": [

@@ -35,6 +35,9 @@ FEEDS = {
         {"name": "Qiita Microsoft", "url": "https://qiita.com/tags/microsoft/feed"},
         {"name": "Google News Microsoft Japan", "url": "https://news.google.com/rss/search?q=Microsoft+%E6%97%A5%E6%9C%AC&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News Windows", "url": "https://news.google.com/rss/search?q=Windows+update+new&hl=en&gl=US&ceid=US:en"},
+        {"name": "Microsoft Blog", "url": "https://blogs.microsoft.com/feed/"},
+        {"name": "Microsoft Japan Blog", "url": "https://news.microsoft.com/ja-jp/feed/"},
+        {"name": "Microsoft Developer Blog", "url": "https://devblogs.microsoft.com/feed/"},
     ],
     # --- AI ---
     "ai": [
@@ -74,6 +77,8 @@ FEEDS = {
         {"name": "Google News サイバーセキュリティ JP", "url": "https://news.google.com/rss/search?q=%E3%82%B5%E3%82%A4%E3%83%90%E3%83%BC%E6%94%BB%E6%92%83+%E3%82%BB%E3%82%AD%E3%83%A5%E3%83%AA%E3%83%86%E3%82%A3&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "INTERNET Watch", "url": "https://internet.watch.impress.co.jp/data/rss/1.0/iw/feed.rdf"},
         {"name": "Slashdot Security", "url": "https://slashdot.org/index.rss"},
+        {"name": "Wiz Research Blog", "url": "https://news.google.com/rss/search?q=wiz+security+vulnerability+cloud&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google Project Zero", "url": "https://news.google.com/rss/search?q=Google+Project+Zero+security+vulnerability&hl=en&gl=US&ceid=US:en"},
     ],
     # --- クラウド (Azure以外) ---
     "cloud": [
@@ -86,6 +91,10 @@ FEEDS = {
         {"name": "Google News OCI", "url": "https://news.google.com/rss/search?q=Oracle+Cloud+Infrastructure&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News クラウド JP", "url": "https://news.google.com/rss/search?q=AWS+GCP+%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%89&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "DevelopersIO AWS", "url": "https://dev.classmethod.jp/feed/"},
+        {"name": "Google Cloud Blog", "url": "https://cloud.google.com/feeds/gcp-blog-atom.xml"},
+        {"name": "AWS News Blog", "url": "https://aws.amazon.com/blogs/aws/feed/"},
+        {"name": "Google Blog", "url": "https://blog.google/rss/"},
+        {"name": "Google News Google Cloud JP", "url": "https://news.google.com/rss/search?q=Google+Cloud+%E6%97%A5%E6%9C%AC+%E6%9C%80%E6%96%B0&hl=ja&gl=JP&ceid=JP:ja"},
     ],
     # --- IT運用・管理 ---
     "itops": [
@@ -104,6 +113,18 @@ FEEDS = {
         {"name": "Google News Observability", "url": "https://news.google.com/rss/search?q=observability+monitoring+AIOps+OpenTelemetry&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News SRE Agent EN", "url": "https://news.google.com/rss/search?q=SRE+agent+AI+site+reliability+engineering&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News SRE Agent JP", "url": "https://news.google.com/rss/search?q=SRE+%E3%82%A8%E3%83%BC%E3%82%B8%E3%82%A7%E3%83%B3%E3%83%88+AI+%E3%82%B5%E3%82%A4%E3%83%88%E4%BF%A1%E9%A0%BC%E6%80%A7&hl=ja&gl=JP&ceid=JP:ja"},
+    ],
+    # --- 日本企業テックブログ ---
+    "techblog_ja": [
+        {"name": "Cybozu Inside Out", "url": "https://blog.cybozu.io/feed"},
+        {"name": "Mercari Engineering Blog", "url": "https://engineering.mercari.com/blog/feed.xml"},
+        {"name": "LINE Engineering Blog", "url": "https://engineering.linecorp.com/ja/feed.xml"},
+        {"name": "ZOZO Tech Blog", "url": "https://techblog.zozo.com/feed"},
+        {"name": "Recruit Tech Blog", "url": "https://techblog.recruit.co.jp/feed"},
+        {"name": "DeNA Engineering Blog", "url": "https://engineering.dena.com/blog/index.xml"},
+        {"name": "Google Japan Blog", "url": "https://japan.googleblog.com/feeds/posts/default?alt=rss"},
+        {"name": "Zenn サイボウズ", "url": "https://zenn.dev/cybozu/feed"},
+        {"name": "Google News 企業テックブログ", "url": "https://news.google.com/rss/search?q=%E3%82%B5%E3%82%A4%E3%83%9C%E3%82%A6%E3%82%BA+OR+%E3%83%A1%E3%83%AB%E3%82%AB%E3%83%AA+OR+%E3%83%AA%E3%82%AF%E3%83%AB%E3%83%BC%E3%83%88+%E3%83%86%E3%83%83%E3%82%AF%E3%83%96%E3%83%AD%E3%82%B0&hl=ja&gl=JP&ceid=JP:ja"},
     ],
 }
 
@@ -681,6 +702,24 @@ SECTION_DEFINITIONS = [
         ),
         "data_label": "IT運用・管理（AIOps / ITSM / DevOps / エンドポイント管理）",
     },
+    {
+        "key": "techblog_ja",
+        "header": "## 7. 日本企業テックブログ",
+        "system": (
+            "あなたは日本の IT 企業テックブログのライターです。"
+            "国内の技術ブログから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の日本企業テックブログの記事から5〜6件程度（最大6件）のトピックを選定し、マークダウン形式で出力してください。\n"
+            "サイボウズ、メルカリ、LINE、ZOZO、リクルートなどの国内 IT 企業のエンジニアリングブログ記事を優先してください。\n"
+            "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
+            "先頭に「## 7. 日本企業テックブログ」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用し、必ず [タイトル](URL) 形式のハイパーリンクで記述してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "日本企業テックブログ関連",
+    },
 ]
 
 # セクションごとの入力文字数上限
@@ -691,6 +730,7 @@ SECTION_MAX_INPUT_CHARS = {
     "cloud": 20_000,
     "security": 20_000,
     "itops": 20_000,
+    "techblog_ja": 20_000,
 }
 
 # セクションごとの出力トークン上限
@@ -760,6 +800,7 @@ def generate_article(
     security_news: list[dict],
     cloud_news: list[dict],
     itops_news: list[dict],
+    techblog_ja_news: list[dict] | None = None,
 ) -> str:
     """各セクションを個別の LLM 呼び出しで生成し、1 つの記事に組み立てる。
 
@@ -776,6 +817,7 @@ def generate_article(
         "cloud": cloud_news,
         "security": security_news,
         "itops": itops_news,
+        "techblog_ja": techblog_ja_news if techblog_ja_news is not None else [],
     }
 
     article_parts = [f"# {formatted_date} テクニカル雑談（{slot_label}）"]
@@ -833,6 +875,10 @@ def main():
     itops_news = fetch_category("itops", since)
     print(f"  → 合計: {len(itops_news)} 件")
 
+    print("\n[日本企業テックブログ]")
+    techblog_ja_news = fetch_category("techblog_ja", since)
+    print(f"  → 合計: {len(techblog_ja_news)} 件")
+
     # 後でリトライ時に重複除外するためセクションキー → 元データのマッピングを保持
     section_data_map = {
         "microsoft": microsoft_news,
@@ -841,6 +887,7 @@ def main():
         "cloud": cloud_news,
         "security": security_news,
         "itops": itops_news,
+        "techblog_ja": techblog_ja_news,
     }
 
     print("\n記事を生成中（セクションごとに個別生成）...")
@@ -851,7 +898,9 @@ def main():
         try:
             print(f"  モデル: {model}")
             article = generate_article(
-                client, model, target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news
+                client, model, target_date, slot,
+                microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news,
+                techblog_ja_news=techblog_ja_news,
             )
             break
         except OpenAIError as e:

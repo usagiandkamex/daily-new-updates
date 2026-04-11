@@ -157,6 +157,7 @@ class TestGenerateArticleSmallchat(unittest.TestCase):
             security_news=[{"title": "d"}],
             cloud_news=[{"title": "e"}],
             itops_news=[{"title": "f"}],
+            techblog_ja_news=[{"title": "g"}],
         )
         expected_calls = len(sc.SECTION_DEFINITIONS)
         self.assertEqual(client.chat.completions.create.call_count, expected_calls)
@@ -202,6 +203,7 @@ class TestGenerateArticleSmallchat(unittest.TestCase):
             security_news=[{"title": "d"}],
             cloud_news=[{"title": "e"}],
             itops_news=[{"title": "f"}],
+            techblog_ja_news=[{"title": "g"}],
         )
         for s in sections:
             self.assertIn(f"section_{s['key']}_output", result)
@@ -217,6 +219,7 @@ class TestGenerateArticleSmallchat(unittest.TestCase):
             security_news=[{"title": "d"}],
             cloud_news=[{"title": "e"}],
             itops_news=[{"title": "f"}],
+            techblog_ja_news=[{"title": "g"}],
         )
         # 呼び出しごとのシステムプロンプトを収集
         system_prompts = []
@@ -617,11 +620,11 @@ class TestSectionDefinitionsSmallchat(unittest.TestCase):
                 f"SECTION_MAX_INPUT_CHARS にキー '{section['key']}' がない"
             )
 
-    def test_six_sections_defined(self):
-        """6 セクション（Microsoft・AI・Azure・クラウド・セキュリティ・IT運用管理）が定義されている。"""
+    def test_seven_sections_defined(self):
+        """7 セクション（Microsoft・AI・Azure・クラウド・セキュリティ・IT運用管理・日本企業テックブログ）が定義されている。"""
         keys = [s["key"] for s in sc.SECTION_DEFINITIONS]
-        self.assertEqual(len(keys), 6)
-        for expected in ["microsoft", "ai", "azure", "cloud", "security", "itops"]:
+        self.assertEqual(len(keys), 7)
+        for expected in ["microsoft", "ai", "azure", "cloud", "security", "itops", "techblog_ja"]:
             self.assertIn(expected, keys)
 
     def test_max_output_tokens_positive(self):

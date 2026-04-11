@@ -531,108 +531,192 @@ def create_llm_client() -> tuple:
 
 # --- 記事生成 -------------------------------------------------------------------
 
-SYSTEM_PROMPT = """\
-あなたは IT・ビジネスニュースの専門ライターです。
-提供されたニュースソースを元に、正確で分かりやすい日本語のデイリーアップデート記事を作成してください。
+# セクションごとの LLM 呼び出し定義
+# 各セクションは独立した API コールで生成し、トークンを最大限に活用する。
+SECTION_DEFINITIONS = [
+    {
+        "key": "azure",
+        "system": (
+            "あなたは Microsoft Azure の専門ライターです。"
+            "提供された Azure ニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の Azure 関連ニュースから 5〜6 個のトピックを選定し、マークダウン形式で出力してください。\n"
+            "先頭に「## 1. Azure アップデート情報」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "Azure 関連ニュース",
+    },
+    {
+        "key": "tech",
+        "system": (
+            "あなたは IT・テクノロジーニュースの専門ライターです。"
+            "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の技術系ニュース（日本語・英語混在）から IT・テクノロジー関連トピックを 5〜6 個選定し、"
+            "マークダウン形式で出力してください。\n"
+            "先頭に「## 2. ニュースで話題のテーマ」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "技術系ニュース（日本語 + 英語ソース）",
+    },
+    {
+        "key": "sns",
+        "system": (
+            "あなたは SNS・トレンドニュースの専門ライターです。"
+            "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の SNS・トレンド情報（はてブ・Reddit 等）から 5〜6 個のトピックを選定し、"
+            "マークダウン形式で出力してください。\n"
+            "先頭に「## 3. SNSで話題のテーマ」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "SNS / トレンド（はてブ・Reddit）",
+    },
+    {
+        "key": "business",
+        "system": (
+            "あなたはビジネスニュースの専門ライターです。"
+            "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下のビジネスニュース（日本語・英語混在）から IT 以外のトピックを 5〜6 個選定し、"
+            "マークダウン形式で出力してください。\n"
+            "世界情勢、経済・金融、政治、社会問題、産業動向など IT 以外のビジネス話題を選定してください。"
+            "IT企業の決算・AI・半導体など IT 関連はこのセクションに含めないでください。\n"
+            "先頭に「## 4. ビジネスホットトピック」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "ビジネスニュース（日本語 + 英語ソース）",
+    },
+    {
+        "key": "itops",
+        "system": (
+            "あなたは IT 運用・管理の専門ライターです。"
+            "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の IT 運用・管理ニュースから 3〜5 個のトピックを選定し、マークダウン形式で出力してください。\n"
+            "**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析）および"
+            "**SRE Agent**（AI駆動のサイト信頼性エンジニアリングエージェント）を重点的に取り上げてください。"
+            "Microsoft Azure Monitor・System Center 等の Microsoft 製品による AIOps も優先的に含めてください。"
+            "ITSM・DevOps・エンドポイント管理・MSP・オブザーバビリティなど IT 運用全般のトレンドも含めてください。\n"
+            "先頭に「## 5. IT運用・管理」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "IT運用・管理（AIOps / ITSM / DevOps / エンドポイント管理）",
+    },
+    {
+        "key": "community",
+        "system": (
+            "あなたはコミュニティイベント情報の専門ライターです。"
+            "提供されたデータを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の connpass イベントデータと参加レポートを元に"
+            "「## 6. コミュニティイベント情報（東京・神奈川）」セクションを作成してください。\n\n"
+            "先頭に「## 6. コミュニティイベント情報（東京・神奈川）」を出力し、"
+            "以下の 2 サブセクション構成で出力してください。\n\n"
+            "### 📅 申し込み受付中のイベント\n\n"
+            "connpass イベントデータから申し込み可能な近日開催イベントを箇条書きで列挙してください。"
+            "各イベントに「イベント名（リンク付き）」「開催日時」「場所」「概要」"
+            "「参加状況（申込数/定員）」を記載してください。"
+            "イベントデータが空の場合は「現在取得できるイベント情報はありません」と記載してください。\n\n"
+            "### 📝 参加レポート・まとめ\n\n"
+            "参加レポートデータから最近の勉強会・コミュニティイベントの参加レポートや開催レポートをまとめてください。"
+            "各レポートは見出し・要約・参考リンクで構成してください。"
+            "レポートが少ない場合は取得できた範囲で記載してください。\n\n"
+            "コードブロックで囲まないこと。"
+        ),
+        # community セクションは複数のデータソースを持つため data_label は使用しない
+        "data_label": None,
+    },
+]
 
-## ルール
-- 読むのに約8分かかる分量で書いてください（4000〜5000文字程度）。
-- 各セクションにつき **必ず5〜6個** のトピックを選定してください。ソースが少ない場合のみ減らしてよいですが、3個以下にならないようにしてください。
-- 「ニュースで話題のテーマ」には IT・テクノロジー関連のトピックのみを入れてください。ビジネスニュースの中に IT 関連のものがあれば、それもここに含めてください。
-- 「ビジネスホットトピック」には IT 以外のトピックのみを入れてください。世界情勢、経済・金融、政治、社会問題、産業動向など、IT 以外のビジネス話題を選定してください。
-- 各トピックは「見出し」「要約」「影響」「参考リンク」の4項目で構成してください。
-- 各項目（**要約**、**影響**、**参考リンク**）の間には必ず空行を入れてください。
-- 要約は簡潔かつ具体的に。影響はビジネスや開発者にとっての意味を記載してください。
-- 参考リンクは提供されたソースの URL をそのまま使用してください。
-- 情報が不足している場合は無理に水増しせず、取得できた範囲で記載してください。
-- マークダウン形式で出力してください。
-- 「コミュニティイベント情報」セクションでは、提供されたconnpassイベントデータをそのまま活用して、申し込み可能なイベントの一覧と参加レポートをまとめてください。
-"""
+# セクションごとの入力トークン上限（1 トークン ≈ 2.5 文字として概算）
+SECTION_MAX_INPUT_CHARS = {
+    "azure": 30_000,
+    "tech": 40_000,
+    "business": 40_000,
+    "sns": 30_000,
+    "itops": 30_000,
+    "community": 20_000,
+}
+
+# セクションごとの出力トークン上限
+SECTION_MAX_OUTPUT_TOKENS = 4096
 
 
-def build_user_prompt(
-    target_date: str,
-    azure_news: list[dict],
-    tech_news: list[dict],
-    business_news: list[dict],
-    sns_news: list[dict],
-    itops_news: list[dict],
-    connpass_events: list[dict],
-    event_reports: list[dict],
+def _build_section_prompt(section_def: dict, data: dict | list) -> str:
+    """セクション固有のユーザープロンプトを組み立てる。
+
+    data が dict の場合は {ラベル: ペイロード} の形式、
+    list の場合は section_def["data_label"] を使ってラベルを付ける。
+    """
+    lines = [section_def["instruction"], ""]
+    if isinstance(data, dict):
+        for label, payload in data.items():
+            lines.append(f"### {label}")
+            lines.append(json.dumps(payload, ensure_ascii=False, indent=2))
+            lines.append("")
+    else:
+        label = section_def.get("data_label") or "データ"
+        lines.append(f"### {label}")
+        lines.append(json.dumps(data, ensure_ascii=False, indent=2))
+        lines.append("")
+    return "\n".join(lines)
+
+
+def generate_section(
+    client,
+    model: str,
+    section_def: dict,
+    data: dict | list,
 ) -> str:
-    formatted_date = f"{target_date[:4]}/{target_date[4:6]}/{target_date[6:]}"
-    return f"""\
-以下のニュースソースを元に、{formatted_date} のデイリーアップデート記事を作成してください。
-日本語・英語の両方のソースが含まれていますが、記事はすべて日本語で書いてください。
-技術系ニュースとビジネスニュースの両方から IT・テクノロジー関連のトピックは「ニュースで話題のテーマ」に活用してください。
-SNS/トレンド情報は「SNSで話題のテーマ」に活用してください。
-「ビジネスホットトピック」には IT 以外のトピック（世界情勢、経済・金融、政治、社会問題、産業動向など）のみを入れてください。IT企業の決算やAI半導体の話題など IT 関連のビジネスニュースは「ニュースで話題のテーマ」に入れてください。
+    """1 セクション分の記事を LLM で生成する。"""
+    key = section_def["key"]
+    max_input = SECTION_MAX_INPUT_CHARS.get(key, 30_000)
 
-出力フォーマット（各項目の間には必ず空行を入れること。コードブロックで囲まず、マークダウンをそのまま出力すること）:
+    # 入力が大きすぎる場合はリストを末尾から削減する
+    if isinstance(data, dict):
+        all_lists = [v for v in data.values() if isinstance(v, list)]
+    else:
+        all_lists = [data] if isinstance(data, list) else []
 
-# {formatted_date} デイリーアップデート
+    user_prompt = _build_section_prompt(section_def, data)
+    while len(user_prompt) > max_input:
+        trimmed = False
+        for lst in all_lists:
+            if len(lst) > 3:
+                lst.pop()
+                trimmed = True
+        if not trimmed:
+            break
+        user_prompt = _build_section_prompt(section_def, data)
 
-## 1. Azure アップデート情報
-
-### <見出し>
-
-**要約**: ...
-
-**影響**: ...
-
-**参考リンク**: [タイトル](URL)
-
-(複数トピックがあれば繰り返し。5〜6個選定すること)
-
-## 2. ニュースで話題のテーマ
-
-(5〜6個。IT・テクノロジー関連のニュースから選定。技術系・ビジネス系両方のソースからIT関連を集める。各トピックは見出し・要約・影響・参考リンクで構成)
-
-## 3. SNSで話題のテーマ
-
-(5〜6個。はてブ・ Reddit 等のトレンドから選定。各トピックは見出し・要約・影響・参考リンクで構成)
-
-## 4. ビジネスホットトピック
-
-(5〜6個。IT以外のトピックのみ。世界情勢、経済・金融、政治、社会問題、産業動向など。各トピックは見出し・要約・影響・参考リンクで構成)
-
-## 5. IT運用・管理
-
-(3〜5個。**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析）および**SRE Agent**（AI駆動のサイト信頼性エンジニアリングエージェント）を重点的に取り上げること。Microsoft Azure Monitor・System Center等のMicrosoft製品によるAIOpsも優先的に含める。ITSM・DevOps・エンドポイント管理・MSP・オブザーバビリティなど、IT運用全般のトレンドも含める。各トピックは見出し・要約・影響・参考リンクで構成)
-
-## 6. コミュニティイベント情報（東京・神奈川）
-
-### 📅 申し込み受付中のイベント
-
-(connpassイベントデータから、申し込み可能な近日開催イベントを箇条書きで列挙すること。各イベントについて「イベント名（リンク付き）」「開催日時」「場所」「概要」「参加状況（申込数/定員）」を記載すること。イベントデータが空の場合は「現在取得できるイベント情報はありません」と記載すること)
-
-### 📝 参加レポート・まとめ
-
-(event_reportsから、最近の勉強会・コミュニティイベントの参加レポートや開催レポートをまとめること。各レポートは見出し・要約・参考リンクで構成すること。レポートが少ない場合は取得できた範囲で記載すること)
-
----
-
-### Azure 関連ニュース
-{json.dumps(azure_news, ensure_ascii=False, indent=2)}
-
-### 技術系ニュース（日本語 + 英語ソース）
-{json.dumps(tech_news, ensure_ascii=False, indent=2)}
-
-### ビジネスニュース（日本語 + 英語ソース）
-{json.dumps(business_news, ensure_ascii=False, indent=2)}
-
-### SNS / トレンド（はてブ・ Reddit）
-{json.dumps(sns_news, ensure_ascii=False, indent=2)}
-
-### IT運用・管理（AIOps / ITSM / DevOps / エンドポイント管理）
-{json.dumps(itops_news, ensure_ascii=False, indent=2)}
-
-### connpass イベント（東京・神奈川、申し込み受付中）
-{json.dumps(connpass_events, ensure_ascii=False, indent=2)}
-
-### コミュニティイベント参加レポート
-{json.dumps(event_reports, ensure_ascii=False, indent=2)}
-"""
+    print(f"    入力: 約 {len(user_prompt):,} 文字")
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": section_def["system"]},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.3,
+        max_tokens=SECTION_MAX_OUTPUT_TOKENS,
+    )
+    return response.choices[0].message.content.strip()
 
 
 def generate_article(
@@ -647,53 +731,35 @@ def generate_article(
     connpass_events: list[dict],
     event_reports: list[dict],
 ) -> str:
-    # プロンプトサイズの安全チェック
-    # 実運用ではモデル上限いっぱいまでは使わず、保守的な安全マージンとして
-    # 20,000 トークン相当を上限にする（日英混在で 1 トークン ≈ 2.5 文字として概算）。
-    MAX_INPUT_CHARS = 20_000 * 2.5  # ≈ 50,000 文字
+    """各セクションを個別の LLM 呼び出しで生成し、1 つの記事に組み立てる。
 
-    news_lists = [azure_news, tech_news, business_news, sns_news, itops_news, event_reports]
-    user_prompt = build_user_prompt(
-        target_date, azure_news, tech_news, business_news, sns_news, itops_news,
-        connpass_events, event_reports,
-    )
+    セクションごとに独立した API コールを行うことで、各セクションが
+    トークン上限を最大限に活用できるようにする。
+    """
+    formatted_date = f"{target_date[:4]}/{target_date[4:6]}/{target_date[6:]}"
 
-    # プロンプトが大きすぎる場合、各カテゴリから均等に記事を削る
-    while len(user_prompt) > MAX_INPUT_CHARS:
-        trimmed = False
-        for nl in news_lists + [connpass_events]:
-            if len(nl) > 3:
-                nl.pop()
-                trimmed = True
-        if not trimmed:
-            break
-        user_prompt = build_user_prompt(
-            target_date, azure_news, tech_news, business_news, sns_news, itops_news,
-            connpass_events, event_reports,
-        )
+    section_data_map: dict[str, dict | list] = {
+        "azure": azure_news,
+        "tech": tech_news,
+        "sns": sns_news,
+        "business": business_news,
+        "itops": itops_news,
+        "community": {
+            "connpass イベント（東京・神奈川、申し込み受付中）": connpass_events,
+            "コミュニティイベント参加レポート": event_reports,
+        },
+    }
 
-    if len(user_prompt) > MAX_INPUT_CHARS:
-        print(f"  ⚠ プロンプトが大きいため description を除去します")
-        for nl in news_lists:
-            for article in nl:
-                article["description"] = ""
-        user_prompt = build_user_prompt(
-            target_date, azure_news, tech_news, business_news, sns_news, itops_news,
-            connpass_events, event_reports,
-        )
+    article_parts = [f"# {formatted_date} デイリーアップデート"]
 
-    print(f"  プロンプトサイズ: 約 {len(user_prompt):,} 文字")
+    for section_def in SECTION_DEFINITIONS:
+        key = section_def["key"]
+        data = section_data_map[key]
+        print(f"  [{key}] セクション生成中...")
+        section_text = generate_section(client, model, section_def, data)
+        article_parts.append(section_text)
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.3,
-        max_tokens=8192,
-    )
-    return response.choices[0].message.content
+    return "\n\n".join(article_parts)
 
 
 # --- メイン処理 -----------------------------------------------------------------
@@ -753,12 +819,13 @@ def main():
     event_reports = _limit_articles(fetch_category("event_reports", since), "event_reports")
     print(f"  → 合計: {len(event_reports)} 件")
 
-    print("\n記事を生成中...")
+    print("\n記事を生成中（セクションごとに個別生成）...")
     llm_clients = create_llm_clients()
     article = None
     last_error = None
     for client, model in llm_clients:
         try:
+            print(f"  モデル: {model}")
             article = generate_article(
                 client, model, target_date, azure_news, tech_news, business_news, sns_news, itops_news,
                 connpass_events, event_reports,

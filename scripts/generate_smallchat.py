@@ -87,6 +87,19 @@ FEEDS = {
         {"name": "Google News クラウド JP", "url": "https://news.google.com/rss/search?q=AWS+GCP+%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%89&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "DevelopersIO AWS", "url": "https://dev.classmethod.jp/feed/"},
     ],
+    # --- IT運用・管理 ---
+    "itops": [
+        {"name": "Microsoft Tech Community - IT Ops", "url": "https://techcommunity.microsoft.com/plugins/custom/microsoft/o365/custom-blog-rss?tid=8&board=ITOpsTalkBlog"},
+        {"name": "Reddit SysAdmin", "url": "https://www.reddit.com/r/sysadmin/.rss"},
+        {"name": "Reddit DevOps", "url": "https://www.reddit.com/r/devops/.rss"},
+        {"name": "Google News AIOps", "url": "https://news.google.com/rss/search?q=AIOps+AI+operations&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News IT運用", "url": "https://news.google.com/rss/search?q=IT%E9%81%8B%E7%94%A8+%E7%AE%A1%E7%90%86+%E8%87%AA%E5%8B%95%E5%8C%96&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News IT Operations Management", "url": "https://news.google.com/rss/search?q=IT+operations+management+automation&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Microsoft Intune", "url": "https://news.google.com/rss/search?q=Microsoft+Intune+endpoint+management&hl=en&gl=US&ceid=US:en"},
+        {"name": "InfoQ DevOps", "url": "https://feed.infoq.com/DevOps"},
+        {"name": "Reddit MSP (Managed Service Providers)", "url": "https://www.reddit.com/r/msp/.rss"},
+        {"name": "Google News ITSM", "url": "https://news.google.com/rss/search?q=ITSM+ServiceNow+IT+service+management&hl=en&gl=US&ceid=US:en"},
+    ],
 }
 
 HTTP_HEADERS = {
@@ -399,6 +412,7 @@ def build_user_prompt(
     azure_news: list[dict],
     security_news: list[dict],
     cloud_news: list[dict],
+    itops_news: list[dict],
 ) -> str:
     formatted_date = f"{target_date[:4]}/{target_date[4:6]}/{target_date[6:]}"
     slot_label = "午前" if slot == "am" else "午後"
@@ -430,6 +444,10 @@ def build_user_prompt(
 
 (最大3つ。各トピックは見出し・要約・影響・参考リンクで構成)
 
+## 6. IT運用・管理
+
+(最大3つ。AIOps・ITSM・DevOps・エンドポイント管理・MSPなど、IT運用と管理に関するトレンド。Microsoft 関連（Intune、System Center、Azure Monitor 等）を優先しつつ、世界の業界トレンドも含める。各トピックは見出し・要約・影響・参考リンクで構成)
+
 ---
 
 ### Microsoft 関連
@@ -446,6 +464,9 @@ def build_user_prompt(
 
 ### セキュリティ関連
 {json.dumps(security_news, ensure_ascii=False, indent=2)}
+
+### IT運用・管理（AIOps / ITSM / DevOps / エンドポイント管理）
+{json.dumps(itops_news, ensure_ascii=False, indent=2)}
 """
 
 
@@ -459,12 +480,13 @@ def generate_article(
     azure_news: list[dict],
     security_news: list[dict],
     cloud_news: list[dict],
+    itops_news: list[dict],
 ) -> str:
     MAX_INPUT_CHARS = 15_000 * 2.5
 
-    news_lists = [microsoft_news, ai_news, azure_news, security_news, cloud_news]
+    news_lists = [microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news]
     user_prompt = build_user_prompt(
-        target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news
+        target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news
     )
 
     while len(user_prompt) > MAX_INPUT_CHARS:
@@ -476,7 +498,7 @@ def generate_article(
         if not trimmed:
             break
         user_prompt = build_user_prompt(
-            target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news
+            target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news
         )
 
     if len(user_prompt) > MAX_INPUT_CHARS:
@@ -485,7 +507,7 @@ def generate_article(
             for article in nl:
                 article["description"] = ""
         user_prompt = build_user_prompt(
-            target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news
+            target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news
         )
 
     print(f"  プロンプトサイズ: 約 {len(user_prompt):,} 文字")
@@ -541,6 +563,10 @@ def main():
     security_news = fetch_category("security", since)
     print(f"  → 合計: {len(security_news)} 件")
 
+    print("\n[IT運用・管理]")
+    itops_news = fetch_category("itops", since)
+    print(f"  → 合計: {len(itops_news)} 件")
+
     print("\n記事を生成中...")
     llm_clients = create_llm_clients()
     article = None
@@ -548,7 +574,7 @@ def main():
     for client, model in llm_clients:
         try:
             article = generate_article(
-                client, model, target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news
+                client, model, target_date, slot, microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news
             )
             break
         except OpenAIError as e:

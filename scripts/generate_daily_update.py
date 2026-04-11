@@ -68,6 +68,14 @@ FEEDS = {
         {"name": "Google Cloud Blog", "url": "https://cloud.google.com/feeds/gcp-blog-atom.xml"},
         {"name": "AWS News Blog", "url": "https://aws.amazon.com/blogs/aws/feed/"},
         {"name": "Google News - Wiz", "url": "https://news.google.com/rss/search?q=wiz.io+security+cloud&hl=en&gl=US&ceid=US:en"},
+        {"name": "Netflix Tech Blog", "url": "https://netflixtechblog.com/feed"},
+        {"name": "Uber Engineering Blog", "url": "https://eng.uber.com/feed/"},
+        {"name": "Meta Engineering Blog", "url": "https://engineering.fb.com/feed/"},
+        {"name": "GitHub Blog", "url": "https://github.blog/feed/"},
+        {"name": "Stripe Engineering Blog", "url": "https://stripe.com/blog/engineering.rss"},
+        {"name": "Airbnb Engineering Blog", "url": "https://medium.com/airbnb-engineering/feed"},
+        {"name": "Discord Engineering Blog", "url": "https://discord.com/category/engineering/rss"},
+        {"name": "InfoQ", "url": "https://feed.infoq.com/"},
     ],
     # --- ビジネス系 (日本語) ---
     "business_ja": [

@@ -92,13 +92,16 @@ FEEDS = {
         {"name": "Microsoft Tech Community - IT Ops", "url": "https://techcommunity.microsoft.com/plugins/custom/microsoft/o365/custom-blog-rss?tid=8&board=ITOpsTalkBlog"},
         {"name": "Reddit SysAdmin", "url": "https://www.reddit.com/r/sysadmin/.rss"},
         {"name": "Reddit DevOps", "url": "https://www.reddit.com/r/devops/.rss"},
-        {"name": "Google News AIOps", "url": "https://news.google.com/rss/search?q=AIOps+AI+operations&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News AIOps EN", "url": "https://news.google.com/rss/search?q=AIOps+AI+operations&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News AIOps JP", "url": "https://news.google.com/rss/search?q=AIOps+%E9%81%8B%E7%94%A8+AI&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News IT運用", "url": "https://news.google.com/rss/search?q=IT%E9%81%8B%E7%94%A8+%E7%AE%A1%E7%90%86+%E8%87%AA%E5%8B%95%E5%8C%96&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News IT Operations Management", "url": "https://news.google.com/rss/search?q=IT+operations+management+automation&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Azure Monitor AIOps", "url": "https://news.google.com/rss/search?q=Azure+Monitor+AIOps+observability&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News Microsoft Intune", "url": "https://news.google.com/rss/search?q=Microsoft+Intune+endpoint+management&hl=en&gl=US&ceid=US:en"},
         {"name": "InfoQ DevOps", "url": "https://feed.infoq.com/DevOps"},
         {"name": "Reddit MSP (Managed Service Providers)", "url": "https://www.reddit.com/r/msp/.rss"},
         {"name": "Google News ITSM", "url": "https://news.google.com/rss/search?q=ITSM+ServiceNow+IT+service+management&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Observability", "url": "https://news.google.com/rss/search?q=observability+monitoring+AIOps+OpenTelemetry&hl=en&gl=US&ceid=US:en"},
     ],
 }
 
@@ -446,7 +449,7 @@ def build_user_prompt(
 
 ## 6. IT運用・管理
 
-(最大3つ。AIOps・ITSM・DevOps・エンドポイント管理・MSPなど、IT運用と管理に関するトレンド。Microsoft 関連（Intune、System Center、Azure Monitor 等）を優先しつつ、世界の業界トレンドも含める。各トピックは見出し・要約・影響・参考リンクで構成)
+(最大3つ。**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析）を重点的に取り上げること。Microsoft Azure Monitor・System Center等のMicrosoft製品によるAIOpsも優先的に含める。ITSM・DevOps・エンドポイント管理・MSP・オブザーバビリティなど、IT運用全般のトレンドも含める。各トピックは見出し・要約・影響・参考リンクで構成)
 
 ---
 

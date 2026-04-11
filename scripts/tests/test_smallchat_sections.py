@@ -5,6 +5,7 @@ generate_smallchat.py のセッション分割（セクションごと個別 LLM
 import sys
 import os
 import unittest
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 # スクリプトのディレクトリをパスに追加
@@ -57,6 +58,21 @@ class TestBuildSectionPromptSmallchat(unittest.TestCase):
         section = self._get_section("azure")
         prompt = sc._build_section_prompt(section, [])
         self.assertIn(section["instruction"], prompt)
+
+    def test_since_adds_date_notice(self):
+        """since を指定するとプロンプトに対象期間の注意事項が追加される。"""
+        from datetime import timezone
+        since = datetime(2026, 4, 1, 3, 0, tzinfo=timezone.utc)
+        section = self._get_section("microsoft")
+        prompt = sc._build_section_prompt(section, [], since=since)
+        self.assertIn("対象期間", prompt)
+        self.assertIn("JST", prompt)
+
+    def test_no_since_omits_date_notice(self):
+        """since を指定しない場合は対象期間の注意事項が含まれない。"""
+        section = self._get_section("microsoft")
+        prompt = sc._build_section_prompt(section, [], since=None)
+        self.assertNotIn("対象期間", prompt)
 
 
 class TestGenerateSectionSmallchat(unittest.TestCase):

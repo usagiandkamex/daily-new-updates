@@ -339,6 +339,138 @@ class TestValidateLinksOrphanedSeparators(unittest.TestCase):
         self.assertEqual(result, markdown)
 
 
+
+
+class TestRegenerateEmptySections(unittest.TestCase):
+    """_regenerate_empty_sections() のテスト"""
+
+    _SECTION_DEF = next(s for s in sc.SECTION_DEFINITIONS if s["key"] == "cloud")
+    _HEADER = _SECTION_DEF["header"]  # "## 4. クラウド（AWS / GCP / OCI）"
+
+    def _make_llm_clients(self, content: str = "## 4. クラウド（AWS / GCP / OCI）\n\n### 新トピック\n\n内容"):
+        client = _make_client(content)
+        return [(client, "gpt-4o")]
+
+    def test_empty_section_is_regenerated(self):
+        """トピックのないセクションが再生成される。"""
+        article = (
+            "# Title\n\n"
+            f"{self._HEADER}\n\n"
+            "## 5. セキュリティ\n\n### 既存トピック\n内容\n"
+        )
+        new_content = f"{self._HEADER}\n\n### 新トピック\n\n**参考リンク**: https://new.example.com"
+        llm_clients = self._make_llm_clients(new_content)
+        new_items = [{"url": "https://new.example.com", "title": "新記事"}]
+        extended_since = object()  # dummy; fetch_category is patched
+
+        with (patch.object(sc, "fetch_category", return_value=new_items),
+              patch.object(sc, "validate_links", side_effect=lambda x: x)):
+            result = sc._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"cloud": []},
+                extended_since,
+                llm_clients,
+            )
+
+        self.assertIn("新トピック", result)
+
+    def test_section_with_topics_is_not_regenerated(self):
+        """トピックがあるセクションは再生成されない（LLM は呼ばれない）。"""
+        article = (
+            f"{self._HEADER}\n\n"
+            "### 既存トピック\n\n**参考リンク**: https://good.example.com\n"
+        )
+        llm_clients = self._make_llm_clients()
+        client = llm_clients[0][0]
+
+        with patch.object(sc, "fetch_category", return_value=[]):
+            sc._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"cloud": []},
+                object(),
+                llm_clients,
+            )
+
+        client.chat.completions.create.assert_not_called()
+
+    def test_no_new_items_skips_regeneration(self):
+        """拡張窓でも新規データがなければ LLM は呼ばれない。"""
+        article = f"{self._HEADER}\n\n"
+        original_items = [{"url": "https://old.example.com", "title": "既存"}]
+        llm_clients = self._make_llm_clients()
+        client = llm_clients[0][0]
+
+        # fetch_category は元データと同じ URL だけ返す → new_items = []
+        with patch.object(sc, "fetch_category", return_value=original_items):
+            sc._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"cloud": original_items},
+                object(),
+                llm_clients,
+            )
+
+        client.chat.completions.create.assert_not_called()
+
+    def test_regenerated_section_links_are_validated(self):
+        """再生成されたセクションのリンクも validate_links で検証される。"""
+        article = f"{self._HEADER}\n\n"
+        new_items = [{"url": "https://new.example.com", "title": "新記事"}]
+        new_content = f"{self._HEADER}\n\n### 新トピック\n内容"
+        llm_clients = self._make_llm_clients(new_content)
+
+        validate_calls = []
+
+        def fake_validate(md):
+            validate_calls.append(md)
+            return md
+
+        with (patch.object(sc, "fetch_category", return_value=new_items),
+              patch.object(sc, "validate_links", side_effect=fake_validate)):
+            sc._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"cloud": []},
+                object(),
+                llm_clients,
+            )
+
+        self.assertTrue(any("新トピック" in c for c in validate_calls))
+
+    def test_original_url_items_are_excluded_from_retry(self):
+        """元データの URL を持つ記事は再生成に使わない（重複除外）。"""
+        article = f"{self._HEADER}\n\n"
+        original_items = [{"url": "https://old.example.com", "title": "既存"}]
+        new_items = [
+            {"url": "https://old.example.com", "title": "既存"},  # 除外される
+            {"url": "https://new.example.com", "title": "新規"},   # 使われる
+        ]
+        new_content = f"{self._HEADER}\n\n### 新トピック\n内容"
+        llm_clients = self._make_llm_clients(new_content)
+        captured_data = []
+
+        def fake_generate_section(client, model, section_def, data):
+            captured_data.extend(data)
+            return new_content
+
+        with (patch.object(sc, "fetch_category", return_value=new_items),
+              patch.object(sc, "validate_links", side_effect=lambda x: x),
+              patch.object(sc, "generate_section", side_effect=fake_generate_section)):
+            sc._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"cloud": original_items},
+                object(),
+                llm_clients,
+            )
+
+        urls_used = [item["url"] for item in captured_data]
+        self.assertNotIn("https://old.example.com", urls_used)
+        self.assertIn("https://new.example.com", urls_used)
+
+
 class TestSectionDefinitionsSmallchat(unittest.TestCase):
     """SECTION_DEFINITIONS の構造テスト"""
 

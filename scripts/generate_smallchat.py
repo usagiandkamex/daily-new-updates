@@ -294,6 +294,74 @@ def validate_links(markdown: str) -> str:
     return result
 
 
+def _regenerate_empty_sections(
+    article: str,
+    section_definitions: list[dict],
+    section_data_map: dict,
+    extended_since: datetime,
+    llm_clients: list[tuple],
+) -> str:
+    """リンク除去により空になったセクション（トピックなし）を再取得・再生成する。
+
+    各セクションをチェックし、### 見出しが 0 件のセクションに対して
+    拡張時間窓でフィードを再取得し LLM でセクションを再生成する。
+    """
+    for section_def in section_definitions:
+        key = section_def["key"]
+        header = section_def["header"]
+        escaped_header = re.escape(header)
+
+        # セクション本文を抽出してトピック数を確認
+        m = re.search(rf'{escaped_header}(.*?)(?=\n## |\Z)', article, re.DOTALL)
+        if not m:
+            continue
+
+        section_body = m.group(1)
+        if re.search(r'^### ', section_body, re.MULTILINE):
+            # トピックが存在する → 再生成不要
+            continue
+
+        print(f"  [{key}] セクションにトピックがありません。時間窓を延長して再取得します...")
+
+        # 元データの URL を記録し、重複を除いた新規記事のみを使う
+        original_urls = {item.get("url", "") for item in section_data_map.get(key, [])}
+        extended_data = fetch_category(key, extended_since)
+        new_items = [item for item in extended_data if item.get("url", "") not in original_urls]
+
+        if not new_items:
+            print(f"  [{key}] 新しいデータがありませんでした。スキップします。")
+            continue
+
+        print(f"  [{key}] 新規データ: {len(new_items)} 件。セクションを再生成します...")
+
+        new_section = None
+        for client, model in llm_clients:
+            try:
+                new_section = generate_section(client, model, section_def, new_items)
+                break
+            except OpenAIError as e:
+                print(f"  [{key}] 再生成失敗 ({model}): {e}")
+
+        if new_section is None:
+            print(f"  [{key}] 全モデルで再生成に失敗しました。スキップします。")
+            continue
+
+        # 新しいセクションのリンクも検証
+        new_section = validate_links(new_section)
+
+        # 記事内の空セクションを新セクションで置換
+        article = re.sub(
+            rf'{escaped_header}.*?(?=\n## |\Z)',
+            new_section.rstrip(),
+            article,
+            count=1,
+            flags=re.DOTALL,
+        )
+        print(f"  [{key}] セクション再生成完了")
+
+    return article
+
+
 # --- フィード取得 -----------------------------------------------------------------
 
 
@@ -666,6 +734,16 @@ def main():
     itops_news = fetch_category("itops", since)
     print(f"  → 合計: {len(itops_news)} 件")
 
+    # 後でリトライ時に重複除外するためセクションキー → 元データのマッピングを保持
+    section_data_map = {
+        "microsoft": microsoft_news,
+        "ai": ai_news,
+        "azure": azure_news,
+        "cloud": cloud_news,
+        "security": security_news,
+        "itops": itops_news,
+    }
+
     print("\n記事を生成中（セクションごとに個別生成）...")
     llm_clients = create_llm_clients()
     article = None
@@ -685,6 +763,13 @@ def main():
 
     print("\nリンクを検証中...")
     article = validate_links(article)
+
+    # リンク除去で空になったセクションを時間窓を広げて再生成する
+    print("\n空セクションの確認...")
+    extended_since = target_dt - timedelta(hours=24)
+    article = _regenerate_empty_sections(
+        article, SECTION_DEFINITIONS, section_data_map, extended_since, llm_clients
+    )
 
     output_dir = "smallchat"
     os.makedirs(output_dir, exist_ok=True)

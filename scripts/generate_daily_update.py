@@ -94,13 +94,19 @@ FEEDS = {
         {"name": "Reddit Artificial Intelligence", "url": "https://www.reddit.com/r/artificial/.rss"},
         {"name": "Reddit Cloud Computing", "url": "https://www.reddit.com/r/cloudcomputing/.rss"},
     ],
-    # --- コミュニティイベント参加レポ ---
+    # --- コミュニティイベント参加レポ・イベント宣伝 ---
     "event_reports": [
         {"name": "Google News connpass 参加レポ", "url": "https://news.google.com/rss/search?q=connpass+%E5%8F%82%E5%8A%A0+%E3%83%AC%E3%83%9D+%E6%9D%B1%E4%BA%AC+%E7%A5%9E%E5%A5%88%E5%B7%9D&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News 勉強会 参加レポ 東京", "url": "https://news.google.com/rss/search?q=%E5%8B%89%E5%BC%B7%E4%BC%9A+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D+%E6%9D%B1%E4%BA%AC&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "Zenn connpass イベント", "url": "https://zenn.dev/feed?topicname=connpass"},
+        {"name": "Zenn connpass イベント", "url": "https://zenn.dev/api/rss_feed/topic/connpass"},
+        {"name": "Zenn 勉強会", "url": "https://zenn.dev/api/rss_feed/topic/勉強会"},
+        {"name": "Zenn LT イベント", "url": "https://zenn.dev/api/rss_feed/topic/lt"},
         {"name": "Qiita connpass", "url": "https://qiita.com/tags/connpass/feed"},
+        {"name": "Qiita 勉強会", "url": "https://qiita.com/tags/勉強会/feed"},
+        {"name": "Qiita イベント", "url": "https://qiita.com/tags/イベント/feed"},
         {"name": "はてなブックマーク 勉強会", "url": "https://b.hatena.ne.jp/q/%E5%8B%89%E5%BC%B7%E4%BC%9A%20%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D?mode=rss&sort=hot"},
+        {"name": "Google News note イベント宣伝", "url": "https://news.google.com/rss/search?q=site%3Anote.com+connpass+OR+%E5%8B%89%E5%BC%B7%E4%BC%9A+OR+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News Zenn 勉強会イベント", "url": "https://news.google.com/rss/search?q=site%3Azenn.dev+%E5%8B%89%E5%BC%B7%E4%BC%9A+OR+connpass+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
     ],
 }
 
@@ -543,33 +549,110 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
     return all_articles
 
 
-CONNPASS_API_URL = "https://connpass.com/api/v1/event/"
-CONNPASS_TARGET_PREFECTURES = ["tokyo", "kanagawa"]
+CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
+CONNPASS_RSS_URL = "https://connpass.com/search/"
+# v2 API では prefecture パラメータが廃止されたため keyword で都道府県名を検索する
+CONNPASS_TARGET_PREFECTURES = ["東京都", "神奈川県"]
 # 取得する最大イベント数
 CONNPASS_MAX_EVENTS = 20
 # 先読み日数（今日から何日先まで）
 CONNPASS_LOOKAHEAD_DAYS = 60
 
 
+def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
+    """connpass RSS フィードを使用してイベントを取得する（API キー不要）。
+
+    RSS で取得できる情報はイベントタイトル・URL・概要のみです。
+    開催日時・定員・場所などの詳細情報は取得できません。
+    """
+    target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
+
+    events = []
+    seen_urls: set[str] = set()
+
+    # 今月と翌月のイベントを検索する
+    search_months = sorted({
+        target_dt.strftime("%Y%m"),
+        (target_dt + timedelta(days=30)).strftime("%Y%m"),
+    })
+
+    for pref in CONNPASS_TARGET_PREFECTURES:
+        for ym in search_months:
+            params = {
+                "format": "rss",
+                "keyword": pref,
+                "ym": ym,
+            }
+            try:
+                resp = requests.get(
+                    CONNPASS_RSS_URL,
+                    params=params,
+                    headers=HTTP_HEADERS,
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                feed = feedparser.parse(resp.content)
+                count = 0
+                for entry in feed.entries:
+                    url = entry.get("link", "")
+                    if not url or url in seen_urls:
+                        continue
+                    seen_urls.add(url)
+                    title = entry.get("title", "").strip()
+                    description = entry.get("summary", "").strip()
+                    events.append({
+                        "title": title,
+                        "catch": description[:200] if description else "",
+                        "event_url": url,
+                        "started_at": "",
+                        "place": "",
+                        "address": "",
+                        "accepted": 0,
+                        "limit": 0,
+                        "series": "",
+                    })
+                    count += 1
+                print(f"    connpass RSS ({pref} {ym}): {count} 件取得")
+            except Exception as e:
+                print(f"    connpass RSS ({pref} {ym}): 取得失敗 ({e})")
+
+    if len(events) > CONNPASS_MAX_EVENTS:
+        print(f"  ※ connpass RSS {len(events)} 件 → {CONNPASS_MAX_EVENTS} 件に制限")
+        events = events[:CONNPASS_MAX_EVENTS]
+
+    return events
+
+
 def fetch_connpass_events(target_date: str) -> list[dict]:
     """connpassから東京・神奈川の近日開催コミュニティイベントを取得する。
 
-    申し込みが開始されていて、まだ申し込み可能な（開催前の）イベントを返す。
+    CONNPASS_API_KEY 環境変数が設定されている場合は API v2 を使用し、
+    未設定の場合は RSS フィード（API キー不要）にフォールバックする。
+    RSS フォールバック時は開催日時・定員・場所などの詳細情報は取得できない。
     """
+    api_key = os.environ.get("CONNPASS_API_KEY", "")
+    if not api_key:
+        print("    connpass: CONNPASS_API_KEY が未設定のため RSS フィードで取得します")
+        return _fetch_connpass_events_rss(target_date)
+
     target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
     cutoff_dt = target_dt + timedelta(days=CONNPASS_LOOKAHEAD_DAYS)
 
-    all_events: list[dict] = []
     # (event_dt, event_dict) のリストで収集し、後でdatetimeでソートする
     events_with_dt: list[tuple] = []
+    seen_ids: set[int] = set()
 
     for pref in CONNPASS_TARGET_PREFECTURES:
         params = {
-            "prefecture": pref,
+            "keyword": pref,
             "count": CONNPASS_MAX_EVENTS,
             "order": 2,  # 開催日順
         }
-        connpass_headers = {**HTTP_HEADERS, "Accept": "application/json"}
+        connpass_headers = {
+            **HTTP_HEADERS,
+            "Accept": "application/json",
+            "X-API-Key": api_key,
+        }
         try:
             resp = requests.get(
                 CONNPASS_API_URL,
@@ -582,9 +665,12 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
             print(f"    connpass ({pref}): {data.get('results_returned', 0)} 件取得")
 
             for event in data.get("events", []):
-                # 参加受付型のみ対象（"advertisement" は申し込み不可）
-                if event.get("event_type") != "participation":
+                event_id = event.get("id")
+                # 重複排除（複数都道府県で同じイベントが出る場合）
+                if event_id and event_id in seen_ids:
                     continue
+                if event_id:
+                    seen_ids.add(event_id)
 
                 started_at_str = event.get("started_at", "")
                 if not started_at_str:
@@ -613,10 +699,13 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                 if isinstance(event.get("series"), dict):
                     series_title = event["series"].get("title", "")
 
+                # v2 API では event_url フィールドが url に変更された
+                event_url = event.get("url") or event.get("event_url", "")
+
                 events_with_dt.append((event_dt, {
                     "title": event.get("title", "").strip(),
                     "catch": event.get("catch", "").strip(),
-                    "event_url": event.get("event_url", ""),
+                    "event_url": event_url,
                     "started_at": event_dt.strftime("%Y/%m/%d %H:%M"),
                     "place": event.get("place", "").strip(),
                     "address": event.get("address", "").strip(),
@@ -790,7 +879,7 @@ SECTION_DEFINITIONS = [
             "提供されたデータを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
         ),
         "instruction": (
-            "以下の connpass イベントデータと参加レポートを元に"
+            "以下の connpass イベントデータと参加レポート・イベント宣伝記事を元に"
             "「## 5. コミュニティイベント情報（東京・神奈川）」セクションを作成してください。\n\n"
             "先頭に「## 5. コミュニティイベント情報（東京・神奈川）」を出力し、"
             "以下の 2 サブセクション構成で出力してください。\n\n"
@@ -799,9 +888,10 @@ SECTION_DEFINITIONS = [
             "各イベントに「イベント名（リンク付き）」「開催日時」「場所」「概要」"
             "「参加状況（申込数/定員）」を記載してください。"
             "イベントデータが空の場合は「現在取得できるイベント情報はありません」と記載してください。\n\n"
-            "### 📝 参加レポート・まとめ\n\n"
-            "参加レポートデータから最近の勉強会・コミュニティイベントの参加レポートや開催レポートをまとめてください。"
-            "各レポートは見出し・要約・参考リンクで構成してください。"
+            "### 📝 参加レポート・イベント宣伝まとめ\n\n"
+            "参加レポートデータには Zenn・Qiita・note・はてなブックマーク などで公開された"
+            "勉強会・コミュニティイベントの参加レポート、開催レポート、イベント告知記事が含まれます。"
+            "これらをまとめ、各記事は見出し・要約・参考リンクで構成してください。"
             "レポートが少ない場合は取得できた範囲で記載してください。\n\n"
             "コードブロックで囲まないこと。"
         ),

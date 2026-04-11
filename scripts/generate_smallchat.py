@@ -399,6 +399,7 @@ def create_llm_client() -> tuple:
 SECTION_DEFINITIONS = [
     {
         "key": "microsoft",
+        "header": "## 1. Microsoft",
         "system": (
             "あなたは Microsoft 関連のテクニカルライターです。"
             "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
@@ -414,6 +415,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "ai",
+        "header": "## 2. AI",
         "system": (
             "あなたは AI・機械学習分野のテクニカルライターです。"
             "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
@@ -429,6 +431,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "azure",
+        "header": "## 3. Azure",
         "system": (
             "あなたは Microsoft Azure の専門テクニカルライターです。"
             "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
@@ -444,6 +447,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "cloud",
+        "header": "## 4. クラウド（AWS / GCP / OCI）",
         "system": (
             "あなたはクラウドサービス（AWS・GCP・OCI等）のテクニカルライターです。"
             "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
@@ -460,6 +464,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "security",
+        "header": "## 5. セキュリティ",
         "system": (
             "あなたはサイバーセキュリティのテクニカルライターです。"
             "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
@@ -475,6 +480,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "itops",
+        "header": "## 6. IT運用・管理",
         "system": (
             "あなたは IT 運用・管理の専門テクニカルライターです。"
             "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
@@ -529,6 +535,11 @@ def generate_section(
     """1 セクション分の記事を LLM で生成する。"""
     key = section_def["key"]
     max_input = SECTION_MAX_INPUT_CHARS.get(key, 20_000)
+
+    # データが空リストの場合は LLM を呼ばずに「ありません」を返す
+    if len(data) == 0:
+        header = section_def.get("header", "")
+        return f"{header}\n\n現在の対象期間に該当する情報はありません。"
 
     user_prompt = _build_section_prompt(section_def, data)
     while len(user_prompt) > max_input:

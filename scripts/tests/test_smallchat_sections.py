@@ -80,7 +80,7 @@ class TestGenerateSectionSmallchat(unittest.TestCase):
         """システムプロンプトにセクション固有のものが使われる。"""
         client = _make_client("出力")
         section = self._get_section("ai")
-        sc.generate_section(client, "gpt-4o", section, [])
+        sc.generate_section(client, "gpt-4o", section, [{"title": "記事1"}])
         call_kwargs = client.chat.completions.create.call_args
         messages = call_kwargs[1]["messages"] if call_kwargs[1] else call_kwargs[0][0]
         system_msg = next(m for m in messages if m["role"] == "system")
@@ -90,7 +90,7 @@ class TestGenerateSectionSmallchat(unittest.TestCase):
         """max_tokens に SECTION_MAX_OUTPUT_TOKENS が使われる。"""
         client = _make_client("出力")
         section = self._get_section("cloud")
-        sc.generate_section(client, "gpt-4o", section, [])
+        sc.generate_section(client, "gpt-4o", section, [{"title": "記事1"}])
         call_kwargs = client.chat.completions.create.call_args
         kwargs = call_kwargs[1] if call_kwargs[1] else {}
         self.assertEqual(kwargs.get("max_tokens"), sc.SECTION_MAX_OUTPUT_TOKENS)
@@ -120,20 +120,43 @@ class TestGenerateSectionSmallchat(unittest.TestCase):
         """戻り値の前後の空白がトリムされている。"""
         client = _make_client("  前後に空白   ")
         section = self._get_section("itops")
-        result = sc.generate_section(client, "gpt-4o", section, [])
+        result = sc.generate_section(client, "gpt-4o", section, [{"title": "記事1"}])
         self.assertEqual(result, "前後に空白")
+
+    def test_empty_list_returns_no_info_message_without_llm(self):
+        """空データの場合は LLM を呼ばずに「ありません」メッセージを返す。"""
+        client = _make_client("呼ばれないはず")
+        section = self._get_section("microsoft")
+        result = sc.generate_section(client, "gpt-4o", section, [])
+        self.assertEqual(client.chat.completions.create.call_count, 0)
+        self.assertIn(section["header"], result)
+        self.assertIn("ありません", result)
+
+    def test_empty_list_result_starts_with_section_header(self):
+        """空データ時の戻り値はセクションヘッダーで始まる。"""
+        client = _make_client("呼ばれないはず")
+        for section in sc.SECTION_DEFINITIONS:
+            result = sc.generate_section(client, "gpt-4o", section, [])
+            self.assertTrue(
+                result.startswith(section["header"]),
+                f"セクション {section['key']} の空データ結果がヘッダーで始まっていない",
+            )
 
 
 class TestGenerateArticleSmallchat(unittest.TestCase):
     """generate_article() のテスト（セッション分割）"""
 
     def test_calls_llm_once_per_section(self):
-        """generate_article は SECTION_DEFINITIONS の数だけ LLM を呼び出す。"""
+        """generate_article は データがある SECTION_DEFINITIONS の数だけ LLM を呼び出す。"""
         client = _make_client("セクション出力")
         sc.generate_article(
             client, "gpt-4o", "20260401", "am",
-            microsoft_news=[], ai_news=[], azure_news=[],
-            security_news=[], cloud_news=[], itops_news=[],
+            microsoft_news=[{"title": "a"}],
+            ai_news=[{"title": "b"}],
+            azure_news=[{"title": "c"}],
+            security_news=[{"title": "d"}],
+            cloud_news=[{"title": "e"}],
+            itops_news=[{"title": "f"}],
         )
         expected_calls = len(sc.SECTION_DEFINITIONS)
         self.assertEqual(client.chat.completions.create.call_count, expected_calls)
@@ -188,8 +211,12 @@ class TestGenerateArticleSmallchat(unittest.TestCase):
         client = _make_client("出力")
         sc.generate_article(
             client, "gpt-4o", "20260401", "am",
-            microsoft_news=[], ai_news=[], azure_news=[],
-            security_news=[], cloud_news=[], itops_news=[],
+            microsoft_news=[{"title": "a"}],
+            ai_news=[{"title": "b"}],
+            azure_news=[{"title": "c"}],
+            security_news=[{"title": "d"}],
+            cloud_news=[{"title": "e"}],
+            itops_news=[{"title": "f"}],
         )
         # 呼び出しごとのシステムプロンプトを収集
         system_prompts = []
@@ -204,12 +231,27 @@ class TestGenerateArticleSmallchat(unittest.TestCase):
         self.assertEqual(len(unique_prompts), len(sc.SECTION_DEFINITIONS))
 
 
+    def test_empty_sections_show_no_info_message(self):
+        """空データの全セクションは「ありません」メッセージを含む。"""
+        client = _make_client("呼ばれないはず")
+        result = sc.generate_article(
+            client, "gpt-4o", "20260401", "am",
+            microsoft_news=[], ai_news=[], azure_news=[],
+            security_news=[], cloud_news=[], itops_news=[],
+        )
+        self.assertEqual(client.chat.completions.create.call_count, 0)
+        for section in sc.SECTION_DEFINITIONS:
+            self.assertIn(section["header"], result,
+                          f"セクション {section['key']} のヘッダーが記事に含まれない")
+        self.assertIn("ありません", result)
+
+
 class TestSectionDefinitionsSmallchat(unittest.TestCase):
     """SECTION_DEFINITIONS の構造テスト"""
 
     def test_all_sections_have_required_keys(self):
         """各セクション定義に必須キーが存在する。"""
-        required_keys = {"key", "system", "instruction", "data_label"}
+        required_keys = {"key", "system", "instruction", "data_label", "header"}
         for section in sc.SECTION_DEFINITIONS:
             for k in required_keys:
                 self.assertIn(k, section, f"セクション {section.get('key')} に '{k}' がない")

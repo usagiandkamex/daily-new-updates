@@ -537,6 +537,7 @@ def create_llm_client() -> tuple:
 SECTION_DEFINITIONS = [
     {
         "key": "azure",
+        "header": "## 1. Azure アップデート情報",
         "system": (
             "あなたは Microsoft Azure の専門ライターです。"
             "提供された Azure ニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
@@ -552,6 +553,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "tech",
+        "header": "## 2. ニュースで話題のテーマ",
         "system": (
             "あなたは IT・テクノロジーニュースの専門ライターです。"
             "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
@@ -568,6 +570,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "sns",
+        "header": "## 3. SNSで話題のテーマ",
         "system": (
             "あなたは SNS・トレンドニュースの専門ライターです。"
             "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
@@ -584,6 +587,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "business",
+        "header": "## 4. ビジネスホットトピック",
         "system": (
             "あなたはビジネスニュースの専門ライターです。"
             "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
@@ -602,6 +606,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "itops",
+        "header": "## 5. IT運用・管理",
         "system": (
             "あなたは IT 運用・管理の専門ライターです。"
             "提供されたニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
@@ -621,6 +626,7 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "community",
+        "header": "## 6. コミュニティイベント情報（東京・神奈川）",
         "system": (
             "あなたはコミュニティイベント情報の専門ライターです。"
             "提供されたデータを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
@@ -689,6 +695,11 @@ def generate_section(
     """1 セクション分の記事を LLM で生成する。"""
     key = section_def["key"]
     max_input = SECTION_MAX_INPUT_CHARS.get(key, 30_000)
+
+    # データが空リストの場合は LLM を呼ばずに「ありません」を返す
+    if isinstance(data, list) and len(data) == 0:
+        header = section_def.get("header", "")
+        return f"{header}\n\n現在の対象期間に該当する情報はありません。"
 
     # 入力が大きすぎる場合はリストを末尾から削減する
     if isinstance(data, dict):

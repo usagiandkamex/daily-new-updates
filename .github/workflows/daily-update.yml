@@ -102,6 +102,7 @@ jobs:
           AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
           AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          CONNPASS_API_KEY: ${{ secrets.CONNPASS_API_KEY }}
         run: python scripts/generate_daily_update.py ${{ env.TARGET_DATE }}
 
       - name: コミット & プッシュ

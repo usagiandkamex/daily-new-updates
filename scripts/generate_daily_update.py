@@ -98,7 +98,7 @@ FEEDS = {
     "event_reports": [
         {"name": "Google News connpass 参加レポ", "url": "https://news.google.com/rss/search?q=connpass+%E5%8F%82%E5%8A%A0+%E3%83%AC%E3%83%9D+%E6%9D%B1%E4%BA%AC+%E7%A5%9E%E5%A5%88%E5%B7%9D&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News 勉強会 参加レポ 東京", "url": "https://news.google.com/rss/search?q=%E5%8B%89%E5%BC%B7%E4%BC%9A+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D+%E6%9D%B1%E4%BA%AC&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "Zenn connpass イベント", "url": "https://zenn.dev/feed?topicname=connpass"},
+        {"name": "Zenn connpass イベント", "url": "https://zenn.dev/api/rss_feed/topic/connpass"},
         {"name": "Qiita connpass", "url": "https://qiita.com/tags/connpass/feed"},
         {"name": "はてなブックマーク 勉強会", "url": "https://b.hatena.ne.jp/q/%E5%8B%89%E5%BC%B7%E4%BC%9A%20%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D?mode=rss&sort=hot"},
     ],
@@ -543,8 +543,9 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
     return all_articles
 
 
-CONNPASS_API_URL = "https://connpass.com/api/v1/event/"
-CONNPASS_TARGET_PREFECTURES = ["tokyo", "kanagawa"]
+CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
+# v2 API では prefecture パラメータが廃止されたため keyword で都道府県名を検索する
+CONNPASS_TARGET_PREFECTURES = ["東京都", "神奈川県"]
 # 取得する最大イベント数
 CONNPASS_MAX_EVENTS = 20
 # 先読み日数（今日から何日先まで）
@@ -555,21 +556,31 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     """connpassから東京・神奈川の近日開催コミュニティイベントを取得する。
 
     申し込みが開始されていて、まだ申し込み可能な（開催前の）イベントを返す。
+    connpass API v2 を使用。CONNPASS_API_KEY 環境変数に API キーが必要。
     """
+    api_key = os.environ.get("CONNPASS_API_KEY", "")
+    if not api_key:
+        print("    connpass: CONNPASS_API_KEY が未設定のためスキップします")
+        return []
+
     target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
     cutoff_dt = target_dt + timedelta(days=CONNPASS_LOOKAHEAD_DAYS)
 
-    all_events: list[dict] = []
     # (event_dt, event_dict) のリストで収集し、後でdatetimeでソートする
     events_with_dt: list[tuple] = []
+    seen_ids: set[int] = set()
 
     for pref in CONNPASS_TARGET_PREFECTURES:
         params = {
-            "prefecture": pref,
+            "keyword": pref,
             "count": CONNPASS_MAX_EVENTS,
             "order": 2,  # 開催日順
         }
-        connpass_headers = {**HTTP_HEADERS, "Accept": "application/json"}
+        connpass_headers = {
+            **HTTP_HEADERS,
+            "Accept": "application/json",
+            "X-API-Key": api_key,
+        }
         try:
             resp = requests.get(
                 CONNPASS_API_URL,
@@ -582,9 +593,12 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
             print(f"    connpass ({pref}): {data.get('results_returned', 0)} 件取得")
 
             for event in data.get("events", []):
-                # 参加受付型のみ対象（"advertisement" は申し込み不可）
-                if event.get("event_type") != "participation":
+                event_id = event.get("id")
+                # 重複排除（複数都道府県で同じイベントが出る場合）
+                if event_id and event_id in seen_ids:
                     continue
+                if event_id:
+                    seen_ids.add(event_id)
 
                 started_at_str = event.get("started_at", "")
                 if not started_at_str:
@@ -613,10 +627,13 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                 if isinstance(event.get("series"), dict):
                     series_title = event["series"].get("title", "")
 
+                # v2 API では event_url フィールドが url に変更された
+                event_url = event.get("url") or event.get("event_url", "")
+
                 events_with_dt.append((event_dt, {
                     "title": event.get("title", "").strip(),
                     "catch": event.get("catch", "").strip(),
-                    "event_url": event.get("event_url", ""),
+                    "event_url": event_url,
                     "started_at": event_dt.strftime("%Y/%m/%d %H:%M"),
                     "place": event.get("place", "").strip(),
                     "address": event.get("address", "").strip(),

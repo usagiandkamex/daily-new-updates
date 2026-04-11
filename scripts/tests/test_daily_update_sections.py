@@ -282,5 +282,180 @@ class TestSectionDefinitions(unittest.TestCase):
         self.assertGreater(du.SECTION_MAX_OUTPUT_TOKENS, 0)
 
 
+class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):
+    """validate_links() の孤立した --- セパレータ除去テスト"""
+
+    def _make_article_with_invalid_link(self, url: str = "https://bad.example.com") -> str:
+        return (
+            "## 1. Azure アップデート情報\n\n"
+            "### トピックA\n\n内容A\n\n**参考リンク**: [タイトルA](https://good.example.com)\n\n"
+            "---\n\n"
+            f"### トピックB\n\n内容B\n\n**参考リンク**: [タイトルB]({url})\n\n"
+            "---\n\n"
+            "## 2. ニュースで話題のテーマ\n\n"
+        )
+
+    def test_orphan_separators_removed_when_topic_deleted(self):
+        """リンク無効でトピック除去後に残った孤立 --- が除去される。"""
+        article = self._make_article_with_invalid_link()
+        with (
+            patch.object(du, "_validate_url", return_value=(False, "HTTP 404")),
+            patch.object(du, "_search_alternative_url", return_value=None),
+        ):
+            result = du.validate_links(article)
+        self.assertNotIn("\n---\n\n---\n", result)
+        self.assertNotIn("\n---\n\n## ", result)
+
+    def test_valid_separators_preserved(self):
+        """有効なリンクのみを含む記事では --- セパレータが保持される。"""
+        article = self._make_article_with_invalid_link()
+        with patch.object(du, "_validate_url", return_value=(True, "OK")):
+            result = du.validate_links(article)
+        self.assertIn("---", result)
+
+
+class TestRegenerateEmptySectionsDailyUpdate(unittest.TestCase):
+    """_regenerate_empty_sections() のテスト"""
+
+    _SECTION_DEF = next(s for s in du.SECTION_DEFINITIONS if s["key"] == "azure")
+    _HEADER = _SECTION_DEF["header"]
+
+    def _make_llm_clients(self, content: str = "## 1. Azure アップデート情報\n\n### 新トピック\n内容"):
+        client = MagicMock()
+        choice = MagicMock()
+        choice.message.content = content
+        client.chat.completions.create.return_value.choices = [choice]
+        return [(client, "gpt-4o")]
+
+    def test_section_with_topics_is_not_regenerated(self):
+        """トピックが存在するセクションは再生成されない。"""
+        article = f"{self._HEADER}\n\n### 既存トピック\n内容\n\n"
+        with patch.object(du, "fetch_general_news", return_value=[]):
+            result = du._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"azure": []},
+                MagicMock(),
+                self._make_llm_clients(),
+            )
+        self.assertIn("既存トピック", result)
+
+    def test_empty_section_is_regenerated(self):
+        """空セクション（トピックなし）は再生成される。"""
+        article = f"{self._HEADER}\n\n"
+        new_items = [{"url": "https://new.example.com", "title": "新Azure記事"}]
+        llm_clients = self._make_llm_clients()
+
+        with (
+            patch.object(du, "_fetch_section_category", return_value=new_items),
+            patch.object(du, "validate_links", side_effect=lambda x: x),
+        ):
+            result = du._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"azure": []},
+                MagicMock(),
+                llm_clients,
+            )
+        self.assertIn("新トピック", result)
+
+    def test_no_new_items_writes_no_info_message(self):
+        """専用フィードも汎用フィードも新規データなければ情報なしメッセージが記載される。"""
+        article = f"{self._HEADER}\n\n"
+
+        with (
+            patch.object(du, "_fetch_section_category", return_value=[]),
+            patch.object(du, "fetch_general_news", return_value=[]),
+        ):
+            result = du._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"azure": []},
+                MagicMock(),
+                self._make_llm_clients(),
+            )
+        self.assertIn("現在の対象期間に該当する情報はありません。", result)
+
+    def test_community_section_is_skipped(self):
+        """dict 型データの community セクションは再生成対象外。"""
+        community_def = next(s for s in du.SECTION_DEFINITIONS if s["key"] == "community")
+        header = community_def["header"]
+        article = f"{header}\n\n"  # no ### topics
+
+        llm_clients = self._make_llm_clients("コミュニティ出力")
+        with patch.object(du, "_fetch_section_category", return_value=[]) as mock_fetch:
+            du._regenerate_empty_sections(
+                article,
+                [community_def],
+                {"community": {"key": "value"}},
+                MagicMock(),
+                llm_clients,
+            )
+        mock_fetch.assert_not_called()
+
+    def test_no_category_items_falls_back_to_general_news(self):
+        """専用フィードに新規データがなければ汎用ニュースにフォールバックして LLM を呼ぶ。"""
+        article = f"{self._HEADER}\n\n"
+        original_items = [{"url": "https://old.example.com", "title": "既存"}]
+        general_items = [{"url": "https://general.example.com", "title": "汎用ニュース"}]
+        new_content = f"{self._HEADER}\n\n### 汎用トピック\n内容"
+        llm_clients = self._make_llm_clients(new_content)
+        client = llm_clients[0][0]
+
+        with (
+            patch.object(du, "_fetch_section_category", return_value=original_items),
+            patch.object(du, "fetch_general_news", return_value=general_items),
+            patch.object(du, "validate_links", side_effect=lambda x: x),
+        ):
+            result = du._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"azure": original_items},
+                MagicMock(),
+                llm_clients,
+            )
+
+        client.chat.completions.create.assert_called_once()
+        self.assertIn("汎用トピック", result)
+
+    def test_general_news_fallback_excludes_original_urls(self):
+        """汎用ニュースフォールバック時も元データの URL が除外される。"""
+        article = f"{self._HEADER}\n\n"
+        original_items = [{"url": "https://old.example.com", "title": "既存"}]
+        captured_exclude = {}
+
+        def fake_fetch_general_news(since, exclude_urls=None):
+            captured_exclude["urls"] = set(exclude_urls or set())
+            return []
+
+        with (
+            patch.object(du, "_fetch_section_category", return_value=original_items),
+            patch.object(du, "fetch_general_news", side_effect=fake_fetch_general_news),
+        ):
+            du._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"azure": original_items},
+                MagicMock(),
+                self._make_llm_clients(),
+            )
+
+        self.assertIn("https://old.example.com", captured_exclude.get("urls", set()))
+
+    def test_no_info_message_section_is_not_reprocessed(self):
+        """「情報なし」メッセージが既に記載されているセクションは再処理されない。"""
+        article = f"{self._HEADER}\n\n現在の対象期間に該当する情報はありません。"
+
+        with patch.object(du, "_fetch_section_category", return_value=[]) as mock_fetch:
+            du._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"azure": []},
+                MagicMock(),
+                self._make_llm_clients(),
+            )
+        mock_fetch.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

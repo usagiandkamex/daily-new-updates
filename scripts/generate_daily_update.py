@@ -576,6 +576,8 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
         except Exception as e:
             print(f"    {source['name']}: 取得失敗 ({e})")
     new_items = [a for a in all_articles if a.get("url", "") not in (exclude_urls or set())]
+    # 公開日時の降順でソート（新しい記事が先頭、日時なしは末尾）して上位 20 件に制限
+    new_items.sort(key=lambda x: x.get("datePublished", "") or "", reverse=True)
     if len(new_items) > 20:
         print(f"  ※ 汎用ニュース {len(new_items)} 件 → 20 件に制限")
         new_items = new_items[:20]

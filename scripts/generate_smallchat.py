@@ -420,6 +420,7 @@ def _regenerate_empty_sections(
             continue
 
         # 新しいセクションのリンクも検証
+        new_section = _format_bare_reference_links(new_section)
         new_section = validate_links(new_section)
 
         # 再生成後もトピックが0件なら「情報なし」メッセージを記載する

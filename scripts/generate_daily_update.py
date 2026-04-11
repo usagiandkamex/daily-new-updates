@@ -127,6 +127,20 @@ HTTP_HEADERS = {
     "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
 }
 
+# カテゴリ別フィードが空の場合に使う汎用 IT ニュースフィード
+GENERAL_NEWS_FEEDS = [
+    {"name": "ITmedia NEWS", "url": "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml"},
+    {"name": "Publickey", "url": "https://www.publickey1.jp/atom.xml"},
+    {"name": "GIGAZINE", "url": "https://gigazine.net/news/rss_2.0/"},
+    {"name": "INTERNET Watch", "url": "https://internet.watch.impress.co.jp/data/rss/1.0/iw/feed.rdf"},
+    {"name": "DevelopersIO", "url": "https://dev.classmethod.jp/feed/"},
+    {"name": "Zenn トレンド", "url": "https://zenn.dev/feed"},
+    {"name": "Hacker News (Best)", "url": "https://hnrss.org/best"},
+    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/"},
+    {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml"},
+    {"name": "Google News IT 日本", "url": "https://news.google.com/rss/search?q=IT+%E6%8A%80%E8%A1%93+%E6%9C%80%E6%96%B0&hl=ja&gl=JP&ceid=JP:ja"},
+]
+
 
 # --- URL 解決 -------------------------------------------------------------------
 
@@ -301,12 +315,144 @@ def validate_links(markdown: str) -> str:
         # 連続する空行を整理
         result = re.sub(r'\n{3,}', '\n\n', result)
 
+        # トピック除去後に残った孤立した --- セパレータを除去する
+        # 連続する --- を1つに集約する
+        result = re.sub(r'(\n---\n)(\n*---\n)+', r'\1', result)
+        # セクションヘッダー（## ...）の直後にある --- を除去する
+        result = re.sub(r'(## [^\n]+\n)\n*---\n', r'\1\n', result)
+        # セクションヘッダー（## ...）の直前または末尾にある --- を除去する
+        result = re.sub(r'\n---\n\n*(## |\Z)', r'\n\n\1', result)
+        # 最終的な余分な空行を整理する
+        result = re.sub(r'\n{3,}', '\n\n', result)
+
     removed = len(unfixable_urls)
     replaced = len(replacement_urls)
     print(f"  リンク検証完了: 代替リンク={replaced} 件, トピック除去={removed} 件")
-
-    print(f"  リンク検証完了: 代替リンク={replaced} 件, トピック除去={removed} 件")
     return result
+
+
+# セクションキー → フィードサブキーのマッピング（_fetch_section_category / _regenerate_empty_sections で使用）
+SECTION_FEED_KEYS: dict[str, list[str]] = {
+    "azure": ["azure"],
+    "tech": ["tech_ja", "tech_en"],
+    "sns": ["sns"],
+    "business": ["business_ja", "business_en"],
+    "itops": ["itops"],
+}
+
+
+def _fetch_section_category(key: str, since: datetime) -> list[dict]:
+    """セクションキーに対応するフィードカテゴリから記事を取得する。"""
+    sub_keys = SECTION_FEED_KEYS.get(key, [key])
+    all_items = []
+    for sub_key in sub_keys:
+        all_items.extend(fetch_category(sub_key, since))
+    return all_items
+
+
+def _regenerate_empty_sections(
+    article: str,
+    section_definitions: list[dict],
+    section_data_map: dict,
+    extended_since: datetime,
+    llm_clients: list[tuple],
+) -> str:
+    """リンク除去により空になったセクション（トピックなし）を再取得・再生成する。
+
+    各セクションをチェックし、### 見出しが 0 件のセクションに対して以下を順に試みる:
+      1. 拡張時間窓（24h）でカテゴリ専用フィードを再取得して LLM 再生成
+      2. 汎用 IT ニュースフィードで LLM 再生成
+      3. それでも情報が得られない場合は「情報なし」メッセージを記載する
+    """
+    for section_def in section_definitions:
+        key = section_def["key"]
+        header = section_def["header"]
+        escaped_header = re.escape(header)
+
+        # セクション本文を抽出してトピック数を確認
+        m = re.search(rf'{escaped_header}(.*?)(?=\n## |\Z)', article, re.DOTALL)
+        if not m:
+            continue
+
+        section_body = m.group(1)
+        if re.search(r'^### ', section_body, re.MULTILINE):
+            # トピックが存在する → 再生成不要
+            continue
+
+        # 「情報なし」メッセージが既に記載されている場合は再処理しない
+        if "現在の対象期間に該当する情報はありません。" in section_body:
+            continue
+
+        # dict 型データのセクション（community など）はスキップ
+        original_data = section_data_map.get(key, [])
+        if isinstance(original_data, dict):
+            continue
+
+        print(f"  [{key}] セクションにトピックがありません。時間窓を延長して再取得します...")
+
+        # 元データの URL を記録し、重複を除いた新規記事のみを使う
+        original_urls = {item.get("url", "") for item in original_data}
+        extended_data = _fetch_section_category(key, extended_since)
+        new_items = [item for item in extended_data if item.get("url", "") not in original_urls]
+
+        # カテゴリ専用フィードに新規データがなければ汎用ニュースにフォールバック
+        if not new_items:
+            print(f"  [{key}] 専用フィードに新しいデータなし。汎用ニュースにフォールバックします...")
+            new_items = fetch_general_news(extended_since, exclude_urls=original_urls)
+
+        if not new_items:
+            print(f"  [{key}] 汎用ニュースにも新しいデータがありませんでした。情報なしメッセージを記載します。")
+            no_info_section = f"{header}\n\n現在の対象期間に該当する情報はありません。"
+            article = re.sub(
+                rf'{escaped_header}.*?(?=\n## |\Z)',
+                no_info_section.rstrip(),
+                article,
+                count=1,
+                flags=re.DOTALL,
+            )
+            continue
+
+        print(f"  [{key}] 使用データ: {len(new_items)} 件。セクションを再生成します...")
+
+        new_section = None
+        for client, model in llm_clients:
+            try:
+                new_section = generate_section(client, model, section_def, new_items)
+                break
+            except OpenAIError as e:
+                print(f"  [{key}] 再生成失敗 ({model}): {e}")
+
+        if new_section is None:
+            print(f"  [{key}] 全モデルで再生成に失敗しました。情報なしメッセージを記載します。")
+            no_info_section = f"{header}\n\n現在の対象期間に該当する情報はありません。"
+            article = re.sub(
+                rf'{escaped_header}.*?(?=\n## |\Z)',
+                no_info_section.rstrip(),
+                article,
+                count=1,
+                flags=re.DOTALL,
+            )
+            continue
+
+        # 新しいセクションのリンクも検証
+        new_section = validate_links(new_section)
+
+        # 再生成後もトピックが0件なら「情報なし」メッセージを記載する
+        if not re.search(r'^### ', new_section, re.MULTILINE):
+            print(f"  [{key}] 再生成後もトピックがありません。情報なしメッセージを記載します。")
+            new_section = f"{header}\n\n現在の対象期間に該当する情報はありません。"
+
+        # 記事内の空セクションを新セクションで置換
+        article = re.sub(
+            rf'{escaped_header}.*?(?=\n## |\Z)',
+            new_section.rstrip(),
+            article,
+            count=1,
+            flags=re.DOTALL,
+        )
+        print(f"  [{key}] セクション再生成完了")
+
+    return article
 
 
 # --- フィード取得 -----------------------------------------------------------------
@@ -361,6 +507,25 @@ def fetch_category(category: str, since: datetime) -> list[dict]:
             print(f"    {source['name']}: {len(items)} 件")
         except Exception as e:
             print(f"    {source['name']}: 取得失敗 ({e})")
+    return all_articles
+
+
+def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) -> list[dict]:
+    """汎用 IT ニュースフィードから記事を収集する（フォールバック用）。
+
+    exclude_urls が指定された場合、その URL を持つ記事は除外する（重複排除用）。
+    """
+    all_articles = []
+    for source in GENERAL_NEWS_FEEDS:
+        try:
+            items = _fetch_feed(source["url"], since)
+            for item in items:
+                item["source"] = source["name"]
+            all_articles.extend(items)
+        except Exception as e:
+            print(f"    {source['name']}: 取得失敗 ({e})")
+    if exclude_urls:
+        all_articles = [a for a in all_articles if a.get("url", "") not in exclude_urls]
     return all_articles
 
 
@@ -855,6 +1020,24 @@ def main():
 
     print("\nリンクを検証中...")
     article = validate_links(article)
+
+    # リンク除去で空になったセクションを時間窓を広げて再生成する
+    print("\n空セクションの確認...")
+    section_data_map = {
+        "azure": azure_news,
+        "tech": tech_news,
+        "sns": sns_news,
+        "business": business_news,
+        "itops": itops_news,
+        "community": {
+            "connpass イベント（東京・神奈川、申し込み受付中）": connpass_events,
+            "コミュニティイベント参加レポート": event_reports,
+        },
+    }
+    extended_since = target_dt - timedelta(hours=24)
+    article = _regenerate_empty_sections(
+        article, SECTION_DEFINITIONS, section_data_map, extended_since, llm_clients
+    )
 
     output_dir = "updates"
     os.makedirs(output_dir, exist_ok=True)

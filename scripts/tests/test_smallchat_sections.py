@@ -559,6 +559,46 @@ class TestRegenerateEmptySections(unittest.TestCase):
         self.assertNotIn("新トピック", result)
 
 
+class TestFormatBareReferenceLinksSmallchat(unittest.TestCase):
+    """_format_bare_reference_links() のテスト"""
+
+    def test_bare_url_converted_using_heading(self):
+        """裸の URL が直近の ### 見出しをラベルにしたハイパーリンクへ変換される。"""
+        md = (
+            "### cuBLAS のバグ\n\n"
+            "**要約**: 内容\n\n"
+            "**参考リンク**: https://www.reddit.com/r/MachineLearning/comments/abc/\n"
+        )
+        result = sc._format_bare_reference_links(md)
+        self.assertIn("[cuBLAS のバグ](https://www.reddit.com/r/MachineLearning/comments/abc/)", result)
+        self.assertNotIn("**参考リンク**: https://", result)
+
+    def test_url_as_label_converted_using_heading(self):
+        """[https://...](https://...) 形式が見出しをラベルにしたリンクへ変換される。"""
+        md = (
+            "### Amazon EC2 vs Azure\n\n"
+            "**参考リンク**: [https://www.prnewswire.com/news.html](https://www.prnewswire.com/news.html)\n"
+        )
+        result = sc._format_bare_reference_links(md)
+        self.assertIn("[Amazon EC2 vs Azure](https://www.prnewswire.com/news.html)", result)
+        self.assertNotIn("[https://", result)
+
+    def test_already_formatted_link_unchanged(self):
+        """既に [タイトル](URL) 形式のリンクは変更されない。"""
+        md = (
+            "### トピック\n\n"
+            "**参考リンク**: [Read More](https://example.com/article)\n"
+        )
+        result = sc._format_bare_reference_links(md)
+        self.assertIn("[Read More](https://example.com/article)", result)
+
+    def test_no_heading_falls_back_to_url_as_label(self):
+        """直前に ### 見出しがない場合、URL 自身がラベルに使われる。"""
+        md = "**参考リンク**: https://example.com/fallback\n"
+        result = sc._format_bare_reference_links(md)
+        self.assertIn("[https://example.com/fallback](https://example.com/fallback)", result)
+
+
 class TestSectionDefinitionsSmallchat(unittest.TestCase):
     """SECTION_DEFINITIONS の構造テスト"""
 

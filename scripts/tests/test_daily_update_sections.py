@@ -452,5 +452,45 @@ class TestRegenerateEmptySectionsDailyUpdate(unittest.TestCase):
         mock_fetch.assert_not_called()
 
 
+class TestFormatBareReferenceLinksDailyUpdate(unittest.TestCase):
+    """_format_bare_reference_links() のテスト"""
+
+    def test_bare_url_converted_using_heading(self):
+        """裸の URL が直近の ### 見出しをラベルにしたハイパーリンクへ変換される。"""
+        md = (
+            "### Azure Monitor の新機能\n\n"
+            "**要約**: 内容\n\n"
+            "**参考リンク**: https://docs.microsoft.com/azure/monitor/\n"
+        )
+        result = du._format_bare_reference_links(md)
+        self.assertIn("[Azure Monitor の新機能](https://docs.microsoft.com/azure/monitor/)", result)
+        self.assertNotIn("**参考リンク**: https://", result)
+
+    def test_url_as_label_converted_using_heading(self):
+        """[https://...](https://...) 形式が見出しをラベルにしたリンクへ変換される。"""
+        md = (
+            "### AWS CLI の変更\n\n"
+            "**参考リンク**: [https://aws.amazon.com/blogs/news/](https://aws.amazon.com/blogs/news/)\n"
+        )
+        result = du._format_bare_reference_links(md)
+        self.assertIn("[AWS CLI の変更](https://aws.amazon.com/blogs/news/)", result)
+        self.assertNotIn("[https://", result)
+
+    def test_already_formatted_link_unchanged(self):
+        """既に [タイトル](URL) 形式のリンクは変更されない。"""
+        md = (
+            "### トピック\n\n"
+            "**参考リンク**: [詳細記事](https://example.com/article)\n"
+        )
+        result = du._format_bare_reference_links(md)
+        self.assertIn("[詳細記事](https://example.com/article)", result)
+
+    def test_no_heading_falls_back_to_url_as_label(self):
+        """直前に ### 見出しがない場合、URL 自身がラベルに使われる。"""
+        md = "**参考リンク**: https://example.com/fallback\n"
+        result = du._format_bare_reference_links(md)
+        self.assertIn("[https://example.com/fallback](https://example.com/fallback)", result)
+
+
 if __name__ == "__main__":
     unittest.main()

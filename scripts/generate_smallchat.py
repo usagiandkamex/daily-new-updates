@@ -221,6 +221,38 @@ def _search_alternative_url(query: str) -> str | None:
     return None
 
 
+def _format_bare_reference_links(markdown: str) -> str:
+    """**参考リンク**: の後に裸の URL または URL をラベルにしたリンクがある場合、
+    直近の ### 見出しをラベルにしたハイパーリンクへ変換する。"""
+    lines = markdown.splitlines()
+    current_heading = ""
+    result = []
+    for line in lines:
+        heading_match = re.match(r'^###\s+(.+)', line)
+        if heading_match:
+            current_heading = heading_match.group(1).strip()
+
+        # 裸の URL: **参考リンク**: https://...
+        ref_bare = re.match(r'^(\*\*参考リンク\*\*:\s*)(https?://\S+)\s*$', line)
+        # URL をラベルにしたリンク: **参考リンク**: [https://...](https://...)
+        ref_url_label = re.match(
+            r'^(\*\*参考リンク\*\*:\s*)\[(https?://[^\]]+)\]\((https?://[^)]+)\)\s*$', line
+        )
+        if ref_bare:
+            prefix = ref_bare.group(1)
+            url = ref_bare.group(2)
+            label = current_heading if current_heading else url
+            line = f"{prefix}[{label}]({url})"
+        elif ref_url_label:
+            prefix = ref_url_label.group(1)
+            url = ref_url_label.group(3)
+            label = current_heading if current_heading else url
+            line = f"{prefix}[{label}]({url})"
+
+        result.append(line)
+    return "\n".join(result)
+
+
 def validate_links(markdown: str) -> str:
     """マークダウン内の全リンクを検証し、代替ソースの検索またはトピック除去を行う。"""
     link_pattern = re.compile(r'\[([^\]]+)\]\((https?://[^)]+)\)')
@@ -388,6 +420,7 @@ def _regenerate_empty_sections(
             continue
 
         # 新しいセクションのリンクも検証
+        new_section = _format_bare_reference_links(new_section)
         new_section = validate_links(new_section)
 
         # 再生成後もトピックが0件なら「情報なし」メッセージを記載する
@@ -553,8 +586,8 @@ SECTION_DEFINITIONS = [
             "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
             "先頭に「## 1. Microsoft」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
-            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
-            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用し、必ず [タイトル](URL) 形式のハイパーリンクで記述してください。コードブロックで囲まないこと。"
         ),
         "data_label": "Microsoft 関連",
     },
@@ -570,8 +603,8 @@ SECTION_DEFINITIONS = [
             "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
             "先頭に「## 2. AI」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
-            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
-            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用し、必ず [タイトル](URL) 形式のハイパーリンクで記述してください。コードブロックで囲まないこと。"
         ),
         "data_label": "AI 関連",
     },
@@ -587,8 +620,8 @@ SECTION_DEFINITIONS = [
             "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
             "先頭に「## 3. Azure」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
-            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
-            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用し、必ず [タイトル](URL) 形式のハイパーリンクで記述してください。コードブロックで囲まないこと。"
         ),
         "data_label": "Azure 関連",
     },
@@ -605,8 +638,8 @@ SECTION_DEFINITIONS = [
             "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
             "先頭に「## 4. クラウド（AWS / GCP / OCI）」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
-            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
-            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用し、必ず [タイトル](URL) 形式のハイパーリンクで記述してください。コードブロックで囲まないこと。"
         ),
         "data_label": "クラウド（AWS / GCP / OCI）関連",
     },
@@ -622,8 +655,8 @@ SECTION_DEFINITIONS = [
             "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
             "先頭に「## 5. セキュリティ」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
-            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
-            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用し、必ず [タイトル](URL) 形式のハイパーリンクで記述してください。コードブロックで囲まないこと。"
         ),
         "data_label": "セキュリティ関連",
     },
@@ -643,8 +676,8 @@ SECTION_DEFINITIONS = [
             "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
             "先頭に「## 6. IT運用・管理」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
-            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: URL\n\n"
-            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用し、必ず [タイトル](URL) 形式のハイパーリンクで記述してください。コードブロックで囲まないこと。"
         ),
         "data_label": "IT運用・管理（AIOps / ITSM / DevOps / エンドポイント管理）",
     },
@@ -828,6 +861,7 @@ def main():
         raise RuntimeError(f"全ての LLM プロバイダーで生成に失敗しました。最後のエラー: {last_error}")
 
     print("\nリンクを検証中...")
+    article = _format_bare_reference_links(article)
     article = validate_links(article)
 
     # リンク除去で空になったセクションを時間窓を広げて再生成する

@@ -67,7 +67,7 @@ FEEDS = {
         {"name": "Google Developers Blog", "url": "https://developers.googleblog.com/feeds/posts/default?alt=rss"},
         {"name": "Google Cloud Blog", "url": "https://cloud.google.com/feeds/gcp-blog-atom.xml"},
         {"name": "AWS News Blog", "url": "https://aws.amazon.com/blogs/aws/feed/"},
-        {"name": "Wiz Blog", "url": "https://news.google.com/rss/search?q=wiz.io+security+cloud&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News - Wiz", "url": "https://news.google.com/rss/search?q=wiz.io+security+cloud&hl=en&gl=US&ceid=US:en"},
     ],
     # --- ビジネス系 (日本語) ---
     "business_ja": [

@@ -77,8 +77,8 @@ FEEDS = {
         {"name": "Google News サイバーセキュリティ JP", "url": "https://news.google.com/rss/search?q=%E3%82%B5%E3%82%A4%E3%83%90%E3%83%BC%E6%94%BB%E6%92%83+%E3%82%BB%E3%82%AD%E3%83%A5%E3%83%AA%E3%83%86%E3%82%A3&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "INTERNET Watch", "url": "https://internet.watch.impress.co.jp/data/rss/1.0/iw/feed.rdf"},
         {"name": "Slashdot Security", "url": "https://slashdot.org/index.rss"},
-        {"name": "Wiz Research Blog", "url": "https://news.google.com/rss/search?q=wiz+security+vulnerability+cloud&hl=en&gl=US&ceid=US:en"},
-        {"name": "Google Project Zero", "url": "https://news.google.com/rss/search?q=Google+Project+Zero+security+vulnerability&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Wiz Research", "url": "https://news.google.com/rss/search?q=wiz+security+vulnerability+cloud&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Project Zero", "url": "https://news.google.com/rss/search?q=Google+Project+Zero+security+vulnerability&hl=en&gl=US&ceid=US:en"},
     ],
     # --- クラウド (Azure以外) ---
     "cloud": [
@@ -124,7 +124,7 @@ FEEDS = {
         {"name": "DeNA Engineering Blog", "url": "https://engineering.dena.com/blog/index.xml"},
         {"name": "Google Japan Blog", "url": "https://japan.googleblog.com/feeds/posts/default?alt=rss"},
         {"name": "Zenn サイボウズ", "url": "https://zenn.dev/cybozu/feed"},
-        {"name": "Google News 企業テックブログ", "url": "https://news.google.com/rss/search?q=%E3%82%B5%E3%82%A4%E3%83%9C%E3%82%A6%E3%82%BA+OR+%E3%83%A1%E3%83%AB%E3%82%AB%E3%83%AA+OR+%E3%83%AA%E3%82%AF%E3%83%AB%E3%83%BC%E3%83%88+%E3%83%86%E3%83%83%E3%82%AF%E3%83%96%E3%83%AD%E3%82%B0&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News 企業テックブログ", "url": "https://news.google.com/rss/search?q=%E3%82%B5%E3%82%A4%E3%83%9C%E3%82%A6%E3%82%BA+OR+%E3%83%A1%E3%83%AB%E3%82%AB%E3%83%AA+OR+%E3%83%AA%E3%82%AF%E3%83%AB%E3%83%BC%E3%83%88+OR+LINE+OR+ZOZO+OR+DeNA+%E3%83%86%E3%83%83%E3%82%AF%E3%83%96%E3%83%AD%E3%82%B0&hl=ja&gl=JP&ceid=JP:ja"},
     ],
 }
 
@@ -134,6 +134,11 @@ HTTP_HEADERS = {
 }
 
 MAX_ARTICLES_PER_CATEGORY = 10
+
+# カテゴリごとの記事数上限オーバーライド（指定なし時は MAX_ARTICLES_PER_CATEGORY を使用）
+_CATEGORY_ARTICLE_CAPS: dict[str, int] = {
+    "techblog_ja": 15,
+}
 
 # カテゴリ別フィードが空の場合に使う汎用 IT ニュースフィード
 GENERAL_NEWS_FEEDS = [
@@ -511,10 +516,26 @@ def fetch_category(category: str, since: datetime) -> list[dict]:
             print(f"    {source['name']}: {len(items)} 件")
         except Exception as e:
             print(f"    {source['name']}: 取得失敗 ({e})")
-    if len(all_articles) > MAX_ARTICLES_PER_CATEGORY:
-        print(f"  ※ {len(all_articles)} 件 → {MAX_ARTICLES_PER_CATEGORY} 件に制限")
-        all_articles = all_articles[:MAX_ARTICLES_PER_CATEGORY]
-    return all_articles
+
+    # URL 重複排除（異なるフィードが同じ記事を参照する場合）
+    seen_urls: set[str] = set()
+    deduped: list[dict] = []
+    for item in all_articles:
+        url = item.get("url", "")
+        if url and url in seen_urls:
+            continue
+        if url:
+            seen_urls.add(url)
+        deduped.append(item)
+
+    # 公開日時の降順でソート（新しい記事が先頭、日時なしは末尾）
+    deduped.sort(key=lambda x: x.get("datePublished", "") or "", reverse=True)
+
+    cap = _CATEGORY_ARTICLE_CAPS.get(category, MAX_ARTICLES_PER_CATEGORY)
+    if len(deduped) > cap:
+        print(f"  ※ {len(deduped)} 件 → {cap} 件に制限")
+        deduped = deduped[:cap]
+    return deduped
 
 
 def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) -> list[dict]:

@@ -126,6 +126,20 @@ FEEDS = {
         {"name": "Zenn サイボウズ", "url": "https://zenn.dev/cybozu/feed"},
         {"name": "Google News 企業テックブログ", "url": "https://news.google.com/rss/search?q=%E3%82%B5%E3%82%A4%E3%83%9C%E3%82%A6%E3%82%BA+OR+%E3%83%A1%E3%83%AB%E3%82%AB%E3%83%AA+OR+%E3%83%AA%E3%82%AF%E3%83%AB%E3%83%BC%E3%83%88+OR+LINE+OR+ZOZO+OR+DeNA+%E3%83%86%E3%83%83%E3%82%AF%E3%83%96%E3%83%AD%E3%82%B0&hl=ja&gl=JP&ceid=JP:ja"},
     ],
+    # --- 海外企業テックブログ (英語) ---
+    "techblog_en": [
+        {"name": "Netflix Tech Blog", "url": "https://netflixtechblog.com/feed"},
+        {"name": "Uber Engineering Blog", "url": "https://eng.uber.com/feed/"},
+        {"name": "Meta Engineering Blog", "url": "https://engineering.fb.com/feed/"},
+        {"name": "GitHub Blog", "url": "https://github.blog/feed/"},
+        {"name": "Stripe Engineering Blog", "url": "https://stripe.com/blog/engineering.rss"},
+        {"name": "Airbnb Engineering Blog", "url": "https://medium.com/airbnb-engineering/feed"},
+        {"name": "Discord Engineering Blog", "url": "https://discord.com/category/engineering/rss"},
+        {"name": "Dev.to", "url": "https://dev.to/feed"},
+        {"name": "InfoQ", "url": "https://feed.infoq.com/"},
+        {"name": "Hacker News (Best)", "url": "https://hnrss.org/best"},
+        {"name": "Google News Engineering Blog EN", "url": "https://news.google.com/rss/search?q=engineering+blog+tech+Netflix+OR+Uber+OR+Meta+OR+GitHub+OR+Stripe&hl=en&gl=US&ceid=US:en"},
+    ],
 }
 
 HTTP_HEADERS = {
@@ -138,6 +152,7 @@ MAX_ARTICLES_PER_CATEGORY = 10
 # カテゴリごとの記事数上限オーバーライド（指定なし時は MAX_ARTICLES_PER_CATEGORY を使用）
 _CATEGORY_ARTICLE_CAPS: dict[str, int] = {
     "techblog_ja": 15,
+    "techblog_en": 15,
 }
 
 # カテゴリ別フィードが空の場合に使う汎用 IT ニュースフィード
@@ -742,6 +757,26 @@ SECTION_DEFINITIONS = [
         ),
         "data_label": "日本企業テックブログ関連",
     },
+    {
+        "key": "techblog_en",
+        "header": "## 8. 海外企業テックブログ",
+        "system": (
+            "あなたは海外の IT 企業テックブログのライターです。"
+            "Netflix、Uber、Meta、GitHub、Stripe などの海外企業の技術ブログから収集した情報を元に、"
+            "IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+        ),
+        "instruction": (
+            "以下の海外企業テックブログの記事から5〜6件程度（最大6件）のトピックを選定し、マークダウン形式で出力してください。\n"
+            "Netflix、Uber、Meta、GitHub、Stripe、Airbnb などの海外 IT 企業のエンジニアリングブログ記事を優先してください。\n"
+            "記事が英語の場合も、内容の要約・影響は日本語で記述してください。\n"
+            "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
+            "先頭に「## 8. 海外企業テックブログ」を出力し、各トピックを次の形式で構成してください"
+            "（各項目の間には必ず空行を入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用し、必ず [タイトル](URL) 形式のハイパーリンクで記述してください。コードブロックで囲まないこと。"
+        ),
+        "data_label": "海外企業テックブログ関連",
+    },
 ]
 
 # セクションごとの入力文字数上限
@@ -753,6 +788,7 @@ SECTION_MAX_INPUT_CHARS = {
     "security": 20_000,
     "itops": 20_000,
     "techblog_ja": 20_000,
+    "techblog_en": 20_000,
 }
 
 # セクションごとの出力トークン上限
@@ -839,6 +875,7 @@ def generate_article(
     cloud_news: list[dict],
     itops_news: list[dict],
     techblog_ja_news: list[dict] | None = None,
+    techblog_en_news: list[dict] | None = None,
     since: "datetime | None" = None,
 ) -> str:
     """各セクションを個別の LLM 呼び出しで生成し、1 つの記事に組み立てる。
@@ -858,6 +895,7 @@ def generate_article(
         "security": security_news,
         "itops": itops_news,
         "techblog_ja": techblog_ja_news if techblog_ja_news is not None else [],
+        "techblog_en": techblog_en_news if techblog_en_news is not None else [],
     }
 
     article_parts = [f"# {formatted_date} テクニカル雑談（{slot_label}）"]
@@ -919,6 +957,10 @@ def main():
     techblog_ja_news = fetch_category("techblog_ja", since)
     print(f"  → 合計: {len(techblog_ja_news)} 件")
 
+    print("\n[海外企業テックブログ]")
+    techblog_en_news = fetch_category("techblog_en", since)
+    print(f"  → 合計: {len(techblog_en_news)} 件")
+
     # 後でリトライ時に重複除外するためセクションキー → 元データのマッピングを保持
     section_data_map = {
         "microsoft": microsoft_news,
@@ -928,6 +970,7 @@ def main():
         "security": security_news,
         "itops": itops_news,
         "techblog_ja": techblog_ja_news,
+        "techblog_en": techblog_en_news,
     }
 
     print("\n記事を生成中（セクションごとに個別生成）...")
@@ -941,6 +984,7 @@ def main():
                 client, model, target_date, slot,
                 microsoft_news, ai_news, azure_news, security_news, cloud_news, itops_news,
                 techblog_ja_news=techblog_ja_news,
+                techblog_en_news=techblog_en_news,
                 since=since,
             )
             break

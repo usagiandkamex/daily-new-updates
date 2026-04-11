@@ -4,7 +4,6 @@ generate_smallchat.py のセッション分割（セクションごと個別 LLM
 
 import sys
 import os
-import re
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -381,6 +380,23 @@ class TestRegenerateEmptySections(unittest.TestCase):
             f"{self._HEADER}\n\n"
             "### 既存トピック\n\n**参考リンク**: https://good.example.com\n"
         )
+        llm_clients = self._make_llm_clients()
+        client = llm_clients[0][0]
+
+        with patch.object(sc, "fetch_category", return_value=[]):
+            sc._regenerate_empty_sections(
+                article,
+                [self._SECTION_DEF],
+                {"cloud": []},
+                object(),
+                llm_clients,
+            )
+
+        client.chat.completions.create.assert_not_called()
+
+    def test_no_info_message_section_is_not_reprocessed(self):
+        """「情報なし」メッセージが既に記載されているセクションは再処理されない。"""
+        article = f"{self._HEADER}\n\n現在の対象期間に該当する情報はありません。\n"
         llm_clients = self._make_llm_clients()
         client = llm_clients[0][0]
 

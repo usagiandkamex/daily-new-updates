@@ -61,7 +61,7 @@ class TestBuildSectionPromptDailyUpdate(unittest.TestCase):
 
     def test_instruction_included(self):
         """instruction テキストがプロンプトに含まれる。"""
-        section = self._get_section("itops")
+        section = self._get_section("tech")
         prompt = du._build_section_prompt(section, [])
         self.assertIn(section["instruction"], prompt)
 
@@ -162,7 +162,6 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
             tech_news=[{"title": "b"}],
             business_news=[{"title": "c"}],
             sns_news=[{"title": "d"}],
-            itops_news=[{"title": "e"}],
             connpass_events=[{"title": "f"}],
             event_reports=[{"title": "g"}],
         )
@@ -178,7 +177,6 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
             tech_news=[],
             business_news=[],
             sns_news=[],
-            itops_news=[],
             connpass_events=[],
             event_reports=[],
         )
@@ -193,7 +191,6 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
             tech_news=[],
             business_news=[],
             sns_news=[],
-            itops_news=[],
             connpass_events=[],
             event_reports=[],
         )
@@ -225,7 +222,6 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
             tech_news=[{"title": "b"}],
             business_news=[{"title": "c"}],
             sns_news=[{"title": "d"}],
-            itops_news=[{"title": "e"}],
             connpass_events=[{"title": "f"}],
             event_reports=[{"title": "g"}],
         )
@@ -241,7 +237,6 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
             tech_news=[{"title": "b"}],
             business_news=[{"title": "c"}],
             sns_news=[{"title": "d"}],
-            itops_news=[{"title": "e"}],
             connpass_events=[{"title": "f"}],
             event_reports=[{"title": "g"}],
         )

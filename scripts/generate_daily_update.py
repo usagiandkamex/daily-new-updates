@@ -705,7 +705,7 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
                     description = entry.get("summary", "").strip()
                     event = {
                         "title": title,
-                        # IT 判定は切り詰め前の description で行い、表示用のみ短縮する
+                        # 表示用は 200 文字に切り詰め（IT 判定には使わない）
                         "catch": description[:200] if description else "",
                         "event_url": url,
                         "started_at": "",
@@ -715,7 +715,7 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
                         "limit": 0,
                         "series": "",
                     }
-                    # IT 関連イベントのみを対象とする（判定は切り詰め前 description を使用）
+                    # IT 判定には切り詰め前の full description を使用する
                     if not _is_it_event({"title": title, "catch": description}):
                         continue
                     seen_urls.add(url)

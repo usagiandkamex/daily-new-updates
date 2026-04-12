@@ -603,44 +603,44 @@ CONNPASS_MAX_EVENTS = 20
 CONNPASS_LOOKAHEAD_DAYS = 60
 
 # IT 関連イベントを判定するキーワードリスト（タイトルや説明文に含まれるかチェック）
+# 汎用的すぎる語（勉強会・meetup・conference・tech・study 等）は除外し、
+# 明確に IT 技術に紐付く語のみを収録している。
 CONNPASS_IT_KEYWORDS = [
     # クラウド・インフラ
     "cloud", "クラウド", "azure", "aws", "gcp", "google cloud",
     "kubernetes", "k8s", "docker", "terraform", "ansible", "iac",
     "serverless", "サーバーレス", "container", "コンテナ",
-    # DevOps・SRE
+    # DevOps・SRE・運用
     "devops", "devsecops", "sre", "gitops", "cicd", "ci/cd",
     "mlops", "aiops", "finops", "platform engineering",
     # AI・機械学習
-    "ai", "ml", "llm", "機械学習", "深層学習", "deep learning",
+    "llm", "機械学習", "深層学習", "deep learning",
     "chatgpt", "openai", "anthropic", "copilot", "生成ai", "生成AI",
-    "rag", "langchain", "hugging face",
+    "langchain", "hugging face",
     # セキュリティ
-    "security", "セキュリティ", "siem", "soc", "脆弱性", "pentest",
+    "security", "セキュリティ", "siem", "脆弱性", "pentest",
     "zerotrust", "zero trust", "ゼロトラスト",
-    # プログラミング・開発
-    "python", "javascript", "typescript", "java", "rust", "go",
-    "react", "vue", "angular", "node", "django", "rails",
-    "api", "マイクロサービス", "microservices",
+    # プログラミング言語・フレームワーク
+    "python", "javascript", "typescript", "java", "rust",
+    "react", "vue", "angular", "django", "rails",
+    "マイクロサービス", "microservices",
     # データ・分析
-    "data", "データ", "analytics", "アナリティクス", "bi", "etl",
+    "データ", "analytics", "アナリティクス", "etl",
     "databricks", "snowflake", "bigquery",
     # IT全般
     "エンジニア", "engineer", "developer", "デベロッパー",
     "プログラミング", "programming", "iot", "5g",
     # コミュニティ・グループ名称
     "jaws", "jawsug", "azure user group", "jug", "gcpug", "jawsdays",
-    "microsoft", "google", "amazon", "meta", "openai",
-    # 勉強会・イベント種別
-    "勉強会", "lt大会", "lunchlt", "ハンズオン", "hands-on", "ハッカソン",
-    "hackathon", "tech", "テック", "エンジニアリング", "engineering",
-    "study", "meetup", "カンファレンス", "conference",
-    # その他 IT 系コミュニティ
-    "infra", "インフラ", "network", "ネットワーク", "database", "db",
-    "agile", "アジャイル", "scrum", "スクラム",
-    "ux", "ui", "デザイン", "design",
-    "blockchain", "ブロックチェーン", "web3",
+    "microsoft",
+    # IT インフラ・その他
+    "インフラ", "infra", "database",
+    "ブロックチェーン", "blockchain", "web3",
 ]
+
+# 単語境界マッチが必要な短い英数字キーワード（部分文字列としてヒットしやすいもの）
+# 例: "ai" が "painting" にヒットしないよう [a-z0-9] の境界でマッチする
+_CONNPASS_IT_KEYWORDS_WORD_BOUNDARY = frozenset({"ai", "ml", "go", "sre", "rag", "soc", "db"})
 
 
 def _is_it_event(event: dict) -> bool:
@@ -648,9 +648,19 @@ def _is_it_event(event: dict) -> bool:
 
     イベントのタイトルまたはキャッチコピーに CONNPASS_IT_KEYWORDS のいずれかが
     含まれる場合に True を返す。
+    短い英数字キーワード（_CONNPASS_IT_KEYWORDS_WORD_BOUNDARY）は部分文字列への
+    誤ヒットを防ぐため単語境界（[a-z0-9] 非隣接）でマッチする。
     """
     text = (event.get("title", "") + " " + event.get("catch", "")).lower()
-    return any(kw.lower() in text for kw in CONNPASS_IT_KEYWORDS)
+    # 通常の部分文字列マッチ
+    for kw in CONNPASS_IT_KEYWORDS:
+        if kw.lower() in text:
+            return True
+    # 短い英数字キーワードは誤ヒット防止のため単語境界マッチ
+    for kw in _CONNPASS_IT_KEYWORDS_WORD_BOUNDARY:
+        if re.search(r"(?<![a-z0-9])" + re.escape(kw) + r"(?![a-z0-9])", text):
+            return True
+    return False
 
 
 def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
@@ -695,6 +705,7 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
                     description = entry.get("summary", "").strip()
                     event = {
                         "title": title,
+                        # IT 判定は切り詰め前の description で行い、表示用のみ短縮する
                         "catch": description[:200] if description else "",
                         "event_url": url,
                         "started_at": "",
@@ -704,8 +715,8 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
                         "limit": 0,
                         "series": "",
                     }
-                    # IT 関連イベントのみを対象とする
-                    if not _is_it_event(event):
+                    # IT 関連イベントのみを対象とする（判定は切り詰め前 description を使用）
+                    if not _is_it_event({"title": title, "catch": description}):
                         continue
                     seen_urls.add(url)
                     events.append(event)

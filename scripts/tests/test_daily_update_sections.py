@@ -492,5 +492,115 @@ class TestFormatBareReferenceLinksDailyUpdate(unittest.TestCase):
         self.assertIn("[https://example.com/fallback](https://example.com/fallback)", result)
 
 
+class TestIsItEvent(unittest.TestCase):
+    """_is_it_event() のテスト"""
+
+    def _ev(self, title: str, catch: str = "") -> dict:
+        return {"title": title, "catch": catch}
+
+    # --- IT 関連イベント（True を返すべきもの） ---
+
+    def test_azure_in_title(self):
+        """Azure キーワードを含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("Azure User Group 東京 勉強会")))
+
+    def test_aws_jaws_in_title(self):
+        """AWS/JAWS キーワードを含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("JAWS-UG 東京 AWS re:Invent 報告会")))
+
+    def test_kubernetes_in_title(self):
+        """Kubernetes キーワードを含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("Kubernetes ハンズオン入門")))
+
+    def test_aiops_in_title(self):
+        """AIOps キーワードを含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("AIOps コミュニティ meetup")))
+
+    def test_finops_in_title(self):
+        """FinOps キーワードを含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("FinOps コミュニティ 勉強会")))
+
+    def test_llm_in_catch(self):
+        """LLM キーワードがキャッチコピーに含まれる場合も True。"""
+        self.assertTrue(du._is_it_event(self._ev("AIイベント", "LLM を使った RAG 実装入門")))
+
+    def test_ai_word_boundary_match(self):
+        """'ai' は単語境界マッチで IT イベントを正しく検出する。"""
+        self.assertTrue(du._is_it_event(self._ev("生成AI 活用事例")))
+        self.assertTrue(du._is_it_event(self._ev("Azure AI Studio ハンズオン")))
+
+    def test_ml_word_boundary_match(self):
+        """'ml' は単語境界マッチで ML イベントを正しく検出する。"""
+        self.assertTrue(du._is_it_event(self._ev("ML エンジニアのための勉強会")))
+
+    def test_go_word_boundary_match(self):
+        """'go' は単語境界マッチで Go 言語イベントを正しく検出する。"""
+        self.assertTrue(du._is_it_event(self._ev("Go 言語入門ハンズオン")))
+
+    def test_python_in_title(self):
+        """Python キーワードを含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("Python 初心者向けプログラミング")))
+
+    def test_security_in_title(self):
+        """セキュリティキーワードを含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("クラウドセキュリティ 脆弱性対策入門")))
+
+    def test_engineer_in_title(self):
+        """エンジニアキーワードを含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("インフラエンジニア向け勉強会")))
+
+    # --- 非 IT イベント（False を返すべきもの） ---
+
+    def test_cooking_event(self):
+        """料理教室は False。"""
+        self.assertFalse(du._is_it_event(self._ev("料理教室 夏のスイーツ特集")))
+
+    def test_sports_event(self):
+        """スポーツイベントは False。"""
+        self.assertFalse(du._is_it_event(self._ev("ラグビークラブ 6年生送り出しイベント")))
+
+    def test_childcare_event(self):
+        """育児・保育イベントは False。"""
+        self.assertFalse(du._is_it_event(self._ev("保育室プレオープンイベント", "子育て支援")))
+
+    def test_driving_event(self):
+        """ドライビングレッスンは False。"""
+        self.assertFalse(du._is_it_event(self._ev("ドライビングレッスン参加ガイド")))
+
+    def test_immigration_event(self):
+        """移住促進イベントは False。"""
+        self.assertFalse(du._is_it_event(self._ev("移住促進イベント 日ケ谷地区")))
+
+    def test_game_non_it_event(self):
+        """IT 系でないゲームイベントは False。"""
+        self.assertFalse(du._is_it_event(self._ev("ポケモンマスターズ ジムバトル大会")))
+
+    def test_psychology_event(self):
+        """心理学研究会は False。"""
+        self.assertFalse(du._is_it_event(self._ev("心理学研究会 生命過程としての心")))
+
+    def test_bmw_event(self):
+        """自動車イベントは False。"""
+        self.assertFalse(du._is_it_event(self._ev("BMW X Series 試乗イベント", "自動車")))
+
+    # --- 短いキーワードの誤ヒット防止 ---
+
+    def test_ai_no_false_positive_in_painting(self):
+        """'painting' 内の 'ai' で誤ヒットしない。"""
+        self.assertFalse(du._is_it_event(self._ev("Painting workshop", "アートと絵画")))
+
+    def test_ml_no_false_positive_in_html(self):
+        """'html' 内の 'ml' で誤ヒットしない。"""
+        self.assertFalse(du._is_it_event(self._ev("HTML 入門教室", "HTML/CSS でウェブを作ろう")))
+
+    def test_go_no_false_positive_in_ago(self):
+        """'ago' 内の 'go' で誤ヒットしない。"""
+        self.assertFalse(du._is_it_event(self._ev("2 weeks ago event recap", "料理の振り返り")))
+
+    def test_soc_no_false_positive_in_soccer(self):
+        """'soccer' 内の 'soc' で誤ヒットしない。"""
+        self.assertFalse(du._is_it_event(self._ev("Soccer team practice", "サッカー")))
+
+
 if __name__ == "__main__":
     unittest.main()

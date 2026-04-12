@@ -149,6 +149,9 @@ HTTP_HEADERS = {
 
 MAX_ARTICLES_PER_CATEGORY = 10
 
+# 記事の最大許容年齢（日数）。日付のない記事はすべて除外する。
+MAX_ARTICLE_AGE_DAYS = 30
+
 # カテゴリごとの記事数上限オーバーライド（指定なし時は MAX_ARTICLES_PER_CATEGORY を使用）
 _CATEGORY_ARTICLE_CAPS: dict[str, int] = {
     "techblog_ja": 15,
@@ -490,6 +493,8 @@ def _fetch_feed(url: str, since: datetime, max_items: int = 5) -> list[dict]:
     resp.raise_for_status()
     feed = feedparser.parse(resp.content)
 
+    max_age_cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_ARTICLE_AGE_DAYS)
+
     articles = []
     for entry in feed.entries:
         pub_date = None
@@ -502,7 +507,10 @@ def _fetch_feed(url: str, since: datetime, max_items: int = 5) -> list[dict]:
                     pass
                 break
 
-        if pub_date and pub_date < since:
+        # 日付のない記事は新鮮さを確認できないため除外する。
+        # `since` より古い記事も除外し、MAX_ARTICLE_AGE_DAYS は将来的に
+        # `since` が大幅に広げられた場合のための絶対的な上限として機能する。
+        if not pub_date or pub_date < since or pub_date < max_age_cutoff:
             continue
 
         article_url = _resolve_google_news_url(entry.get("link", ""))

@@ -4,7 +4,6 @@ generate_smallchat.py のセッション分割（セクションごと個別 LLM
 
 import sys
 import os
-import time
 import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch

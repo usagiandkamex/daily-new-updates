@@ -119,17 +119,18 @@ FEEDS = {
     ],
     # --- コミュニティイベント参加レポ・イベント宣伝 ---
     "event_reports": [
-        {"name": "Google News connpass 参加レポ", "url": "https://news.google.com/rss/search?q=connpass+%E5%8F%82%E5%8A%A0+%E3%83%AC%E3%83%9D+%E6%9D%B1%E4%BA%AC+%E7%A5%9E%E5%A5%88%E5%B7%9D&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "Google News 勉強会 参加レポ 東京", "url": "https://news.google.com/rss/search?q=%E5%8B%89%E5%BC%B7%E4%BC%9A+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D+%E6%9D%B1%E4%BA%AC&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News connpass IT 参加レポ", "url": "https://news.google.com/rss/search?q=connpass+IT+%E5%8B%89%E5%BC%B7%E4%BC%9A+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News Azure User Group", "url": "https://news.google.com/rss/search?q=Azure+User+Group+%E5%8B%89%E5%BC%B7%E4%BC%9A+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News AWS JAWS 勉強会", "url": "https://news.google.com/rss/search?q=JAWS+AWS+%E5%8B%89%E5%BC%B7%E4%BC%9A+connpass&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News クラウド DevOps IT 勉強会", "url": "https://news.google.com/rss/search?q=%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%89+DevOps+%E5%8B%89%E5%BC%B7%E4%BC%9A+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News AIOps FinOps コミュニティ", "url": "https://news.google.com/rss/search?q=AIOps+OR+FinOps+OR+MLOps+%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%83%86%E3%82%A3+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Zenn connpass イベント", "url": "https://zenn.dev/api/rss_feed/topic/connpass"},
         {"name": "Zenn 勉強会", "url": "https://zenn.dev/api/rss_feed/topic/勉強会"},
         {"name": "Zenn LT イベント", "url": "https://zenn.dev/api/rss_feed/topic/lt"},
         {"name": "Qiita connpass", "url": "https://qiita.com/tags/connpass/feed"},
         {"name": "Qiita 勉強会", "url": "https://qiita.com/tags/勉強会/feed"},
-        {"name": "Qiita イベント", "url": "https://qiita.com/tags/イベント/feed"},
-        {"name": "はてなブックマーク 勉強会", "url": "https://b.hatena.ne.jp/q/%E5%8B%89%E5%BC%B7%E4%BC%9A%20%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D?mode=rss&sort=hot"},
-        {"name": "Google News note イベント宣伝", "url": "https://news.google.com/rss/search?q=site%3Anote.com+connpass+OR+%E5%8B%89%E5%BC%B7%E4%BC%9A+OR+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "Google News Zenn 勉強会イベント", "url": "https://news.google.com/rss/search?q=site%3Azenn.dev+%E5%8B%89%E5%BC%B7%E4%BC%9A+OR+connpass+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "はてなブックマーク IT 勉強会", "url": "https://b.hatena.ne.jp/q/IT%20%E5%8B%89%E5%BC%B7%E4%BC%9A%20%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D?mode=rss&sort=hot"},
+        {"name": "Google News Zenn IT 勉強会イベント", "url": "https://news.google.com/rss/search?q=site%3Azenn.dev+%E5%8B%89%E5%BC%B7%E4%BC%9A+%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2+connpass&hl=ja&gl=JP&ceid=JP:ja"},
     ],
 }
 
@@ -601,6 +602,56 @@ CONNPASS_MAX_EVENTS = 20
 # 先読み日数（今日から何日先まで）
 CONNPASS_LOOKAHEAD_DAYS = 60
 
+# IT 関連イベントを判定するキーワードリスト（タイトルや説明文に含まれるかチェック）
+CONNPASS_IT_KEYWORDS = [
+    # クラウド・インフラ
+    "cloud", "クラウド", "azure", "aws", "gcp", "google cloud",
+    "kubernetes", "k8s", "docker", "terraform", "ansible", "iac",
+    "serverless", "サーバーレス", "container", "コンテナ",
+    # DevOps・SRE
+    "devops", "devsecops", "sre", "gitops", "cicd", "ci/cd",
+    "mlops", "aiops", "finops", "platform engineering",
+    # AI・機械学習
+    "ai", "ml", "llm", "機械学習", "深層学習", "deep learning",
+    "chatgpt", "openai", "anthropic", "copilot", "生成ai", "生成AI",
+    "rag", "langchain", "hugging face",
+    # セキュリティ
+    "security", "セキュリティ", "siem", "soc", "脆弱性", "pentest",
+    "zerotrust", "zero trust", "ゼロトラスト",
+    # プログラミング・開発
+    "python", "javascript", "typescript", "java", "rust", "go",
+    "react", "vue", "angular", "node", "django", "rails",
+    "api", "マイクロサービス", "microservices",
+    # データ・分析
+    "data", "データ", "analytics", "アナリティクス", "bi", "etl",
+    "databricks", "snowflake", "bigquery",
+    # IT全般
+    "エンジニア", "engineer", "developer", "デベロッパー",
+    "プログラミング", "programming", "iot", "5g",
+    # コミュニティ・グループ名称
+    "jaws", "jawsug", "azure user group", "jug", "gcpug", "jawsdays",
+    "microsoft", "google", "amazon", "meta", "openai",
+    # 勉強会・イベント種別
+    "勉強会", "lt大会", "lunchlt", "ハンズオン", "hands-on", "ハッカソン",
+    "hackathon", "tech", "テック", "エンジニアリング", "engineering",
+    "study", "meetup", "カンファレンス", "conference",
+    # その他 IT 系コミュニティ
+    "infra", "インフラ", "network", "ネットワーク", "database", "db",
+    "agile", "アジャイル", "scrum", "スクラム",
+    "ux", "ui", "デザイン", "design",
+    "blockchain", "ブロックチェーン", "web3",
+]
+
+
+def _is_it_event(event: dict) -> bool:
+    """イベントが IT 関連かどうかを判定する。
+
+    イベントのタイトルまたはキャッチコピーに CONNPASS_IT_KEYWORDS のいずれかが
+    含まれる場合に True を返す。
+    """
+    text = (event.get("title", "") + " " + event.get("catch", "")).lower()
+    return any(kw.lower() in text for kw in CONNPASS_IT_KEYWORDS)
+
 
 def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
     """connpass RSS フィードを使用してイベントを取得する（API キー不要）。
@@ -640,10 +691,9 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
                     url = entry.get("link", "")
                     if not url or url in seen_urls:
                         continue
-                    seen_urls.add(url)
                     title = entry.get("title", "").strip()
                     description = entry.get("summary", "").strip()
-                    events.append({
+                    event = {
                         "title": title,
                         "catch": description[:200] if description else "",
                         "event_url": url,
@@ -653,7 +703,12 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
                         "accepted": 0,
                         "limit": 0,
                         "series": "",
-                    })
+                    }
+                    # IT 関連イベントのみを対象とする
+                    if not _is_it_event(event):
+                        continue
+                    seen_urls.add(url)
+                    events.append(event)
                     count += 1
                 print(f"    connpass RSS ({pref} {ym}): {count} 件取得")
             except Exception as e:
@@ -745,7 +800,7 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                 # v2 API では event_url フィールドが url に変更された
                 event_url = event.get("url") or event.get("event_url", "")
 
-                events_with_dt.append((event_dt, {
+                event_dict = {
                     "title": event.get("title", "").strip(),
                     "catch": event.get("catch", "").strip(),
                     "event_url": event_url,
@@ -755,7 +810,13 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                     "accepted": accepted,
                     "limit": limit,
                     "series": series_title,
-                }))
+                }
+
+                # IT 関連イベントのみを対象とする
+                if not _is_it_event(event_dict):
+                    continue
+
+                events_with_dt.append((event_dt, event_dict))
         except Exception as e:
             print(f"    connpass ({pref}): 取得失敗 ({e})")
 
@@ -920,24 +981,33 @@ SECTION_DEFINITIONS = [
         "key": "community",
         "header": "## 5. コミュニティイベント情報（東京・神奈川）",
         "system": (
-            "あなたはコミュニティイベント情報の専門ライターです。"
+            "あなたは IT コミュニティイベント情報の専門ライターです。"
             "提供されたデータを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
+            "IT 関連（クラウド、AI、DevOps、セキュリティ、プログラミング、インフラ等）のイベントのみを対象とし、"
+            "IT と無関係なイベント（スポーツ、料理、育児、不動産、エンタメ等）は除外してください。"
         ),
         "instruction": (
             "以下の connpass イベントデータと参加レポート・イベント宣伝記事を元に"
             "「## 5. コミュニティイベント情報（東京・神奈川）」セクションを作成してください。\n\n"
+            "【重要】IT 関連のイベント・レポートのみを含めてください。"
+            "対象: クラウド（Azure・AWS・GCP）、AI/ML、DevOps/SRE、セキュリティ、プログラミング、"
+            "インフラ、データエンジニアリング、AIOps、FinOps、MLOps などの IT コミュニティ。"
+            "除外: スポーツ、料理、音楽、育児、不動産、ゲーム（IT 系除く）、その他 IT 無関係のイベント。\n\n"
             "先頭に「## 5. コミュニティイベント情報（東京・神奈川）」を出力し、"
             "以下の 2 サブセクション構成で出力してください。\n\n"
             "### 📅 申し込み受付中のイベント\n\n"
-            "connpass イベントデータから申し込み可能な近日開催イベントを箇条書きで列挙してください。"
+            "connpass イベントデータから申し込み可能な近日開催の IT 関連イベントを箇条書きで列挙してください。"
             "各イベントに「イベント名（リンク付き）」「開催日時」「場所」「概要」"
             "「参加状況（申込数/定員）」を記載してください。"
-            "イベントデータが空の場合は「現在取得できるイベント情報はありません」と記載してください。\n\n"
+            "IT 関連イベントがない場合は「現在取得できるイベント情報はありません」と記載してください。\n\n"
             "### 📝 参加レポート・イベント宣伝まとめ\n\n"
-            "参加レポートデータには Zenn・Qiita・note・はてなブックマーク などで公開された"
-            "勉強会・コミュニティイベントの参加レポート、開催レポート、イベント告知記事が含まれます。"
-            "これらをまとめ、各記事は見出し・要約・参考リンクで構成してください。"
-            "レポートが少ない場合は取得できた範囲で記載してください。\n\n"
+            "参加レポートデータには Zenn・Qiita・はてなブックマーク などで公開された"
+            "IT 系勉強会・コミュニティイベントの参加レポート、開催レポート、イベント告知記事が含まれます。"
+            "IT 関連のもののみをまとめ、各記事を次の形式で構成してください"
+            "（各項目の間には必ず空行と「---」区切りを入れること）。\n\n"
+            "### <見出し>\n\n**要約**: ...\n\n**参考リンク**: [タイトル](URL)\n\n---\n\n"
+            "参考リンクは提供されたソースの URL をそのまま使用してください。"
+            "IT 関連のレポートがない場合は「現在取得できる参加レポート情報はありません」と記載してください。\n\n"
             "コードブロックで囲まないこと。"
         ),
         # community セクションは複数のデータソースを持つため data_label は使用しない

@@ -299,7 +299,7 @@ def _format_bare_reference_links(markdown: str) -> str:
 
 def validate_links(markdown: str) -> str:
     """マークダウン内の全リンクを検証し、代替ソースの検索またはトピック除去を行う。"""
-    link_pattern = re.compile(r'\[([^\]]+)\]\((https?://[^)]+)\)')
+    link_pattern = re.compile(r'\[([^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*)\]\((https?://[^)]+)\)')
     matches = link_pattern.findall(markdown)
 
     if not matches:
@@ -360,7 +360,7 @@ def validate_links(markdown: str) -> str:
             topic_pattern = re.compile(
                 r'### [^\n]+\n'
                 r'(?:(?!###\s|##\s|---).)*?'
-                rf'(?:\[([^\]]*)\]\({escaped}\)|{escaped})'
+                rf'(?:\[(?:[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*)\]\({escaped}\)|{escaped})'
                 r'(?:(?!###\s|##\s|---).)*',
                 re.DOTALL,
             )

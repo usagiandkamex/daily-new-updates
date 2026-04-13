@@ -198,6 +198,11 @@ _RSS_CONTENT_TYPES = (
     "text/xml",
 )
 
+# マークダウンリンクのラベル部分に対応する正規表現フラグメント。
+# [In preview] のような角括弧を含むラベルも 1 段階までサポートする。
+# 例: [[In preview] Public Preview: Event Grid](https://...)
+_LINK_LABEL_RE = r'[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*'
+
 
 def _validate_url(url: str) -> tuple[bool, str]:
     """単一 URL を検証し、(OK, 理由) を返す。"""
@@ -299,7 +304,7 @@ def _format_bare_reference_links(markdown: str) -> str:
 
 def validate_links(markdown: str) -> str:
     """マークダウン内の全リンクを検証し、代替ソースの検索またはトピック除去を行う。"""
-    link_pattern = re.compile(r'\[([^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*)\]\((https?://[^)]+)\)')
+    link_pattern = re.compile(rf'\[({_LINK_LABEL_RE})\]\((https?://[^)]+)\)')
     matches = link_pattern.findall(markdown)
 
     if not matches:
@@ -360,7 +365,7 @@ def validate_links(markdown: str) -> str:
             topic_pattern = re.compile(
                 r'### [^\n]+\n'
                 r'(?:(?!###\s|##\s|---).)*?'
-                rf'(?:\[(?:[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*)\]\({escaped}\)|{escaped})'
+                rf'(?:\[(?:{_LINK_LABEL_RE})\]\({escaped}\)|{escaped})'
                 r'(?:(?!###\s|##\s|---).)*',
                 re.DOTALL,
             )

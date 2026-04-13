@@ -105,9 +105,9 @@
       .replace(/>/g, "&gt;");
     // Bold: **text**
     text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-    // Links: [label](url)
+    // Links: [label](url) - label may contain [] (e.g. [[In preview] text](url))
     text = text.replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
+      /\[([^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*)\]\(([^)]+)\)/g,
       (_, label, url) =>
         `<a href="${url.replace(/"/g, "&quot;")}" target="_blank" rel="noopener">${label}</a>`
     );

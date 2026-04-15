@@ -1173,15 +1173,20 @@ def generate_article(
 # --- メイン処理 -----------------------------------------------------------------
 
 
+def compute_since(target_date: str) -> datetime:
+    target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
+    return target_dt - timedelta(days=1) + timedelta(hours=7, minutes=30)
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python generate_daily_update.py YYYYMMDD")
         sys.exit(1)
 
     target_date = sys.argv[1]
-    # 前日 8:00 JST 以降の記事を対象とする
     target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
-    since = target_dt - timedelta(days=1) + timedelta(hours=8)
+    # 前日 7:30 JST 以降の記事を対象とする
+    since = compute_since(target_date)
 
     print(f"対象日: {target_date}")
     print(f"収集期間: {since.isoformat()} 以降")

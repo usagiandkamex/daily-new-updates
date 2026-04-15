@@ -4,7 +4,7 @@
 
 ## 仕組み
 
-毎日 8:00 (JST) に GitHub Actions が以下を自動実行します。
+毎日 7:30 (JST) に GitHub Actions が以下を自動実行します。
 
 1. **Issue 作成** — 「YYYY/MM/DD デイリーアップデート」という Issue を作成
 2. **ブランチ作成** — `YYYYMMDD_update` ブランチを作成

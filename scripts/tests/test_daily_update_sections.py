@@ -277,6 +277,15 @@ class TestSectionDefinitions(unittest.TestCase):
         self.assertGreater(du.SECTION_MAX_OUTPUT_TOKENS, 0)
 
 
+class TestDailyUpdateSinceWindow(unittest.TestCase):
+    """デイリー更新の収集開始時刻計算のテスト"""
+
+    def test_compute_since_is_previous_day_0730_jst(self):
+        """compute_since() は対象日の前日 07:30 JST を返す。"""
+        since = du.compute_since("20260415")
+        self.assertEqual(since.isoformat(), "2026-04-14T07:30:00+09:00")
+
+
 class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):
     """validate_links() の孤立した --- セパレータ除去テスト"""
 

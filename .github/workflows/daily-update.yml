@@ -2,8 +2,8 @@ name: デイリーアップデート
 
 on:
   schedule:
-    # 毎日 8:00 JST (= 23:00 UTC 前日)
-    - cron: '0 23 * * *'
+    # 毎日 7:30 JST (= 22:30 UTC 前日)
+    - cron: '30 22 * * *'
   workflow_dispatch:
     inputs:
       target_date:
@@ -80,7 +80,7 @@ jobs:
           - ビジネスホットトピック
 
           ### 対象期間
-          前日 8:00 〜 本日 8:00 (JST)
+          前日 7:30 〜 本日 7:30 (JST)
 
           ---
           > このIssueは GitHub Actions により自動作成されました。")

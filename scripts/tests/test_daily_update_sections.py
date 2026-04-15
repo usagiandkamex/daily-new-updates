@@ -276,6 +276,13 @@ class TestSectionDefinitions(unittest.TestCase):
         self.assertIsInstance(du.SECTION_MAX_OUTPUT_TOKENS, int)
         self.assertGreater(du.SECTION_MAX_OUTPUT_TOKENS, 0)
 
+    def test_instructions_enforce_heading_and_no_section_closing(self):
+        """各 instruction に見出し非リンク・セクション締め禁止の指示が含まれる。"""
+        for section in du.SECTION_DEFINITIONS:
+            instruction = section["instruction"]
+            self.assertIn("見出し（###）自体はハイパーリンクにせず", instruction)
+            self.assertIn("締めの文章は入れないでください", instruction)
+
 
 class TestDailyUpdateSinceWindow(unittest.TestCase):
     """デイリー更新の収集開始時刻計算のテスト"""

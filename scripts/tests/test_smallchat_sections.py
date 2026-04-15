@@ -651,6 +651,13 @@ class TestSectionDefinitionsSmallchat(unittest.TestCase):
         self.assertIsInstance(sc.SECTION_MAX_OUTPUT_TOKENS, int)
         self.assertGreater(sc.SECTION_MAX_OUTPUT_TOKENS, 0)
 
+    def test_instructions_enforce_heading_and_no_section_closing(self):
+        """各 instruction に見出し非リンク・セクション締め禁止の指示が含まれる。"""
+        for section in sc.SECTION_DEFINITIONS:
+            instruction = section["instruction"]
+            self.assertIn("見出し（###）自体はハイパーリンクにせず", instruction)
+            self.assertIn("締めの文章は入れないでください", instruction)
+
 
 class TestFetchFeedDateFilter(unittest.TestCase):
     """_fetch_feed() の日付フィルタリングのテスト"""

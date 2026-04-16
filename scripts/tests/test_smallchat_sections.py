@@ -4,6 +4,7 @@ generate_smallchat.py のセッション分割（セクションごと個別 LLM
 
 import sys
 import os
+import io
 import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
@@ -813,36 +814,42 @@ class TestVerifyContentSmallchat(unittest.TestCase):
         self.assertIn("### [In preview] New Feature", result)
 
     def test_missing_summary_detected(self):
-        """**要約** が欠落しているトピックが検出される。"""
+        """**要約** が欠落しているトピックが検出ログに出力される。"""
         md = (
             "## 1. Microsoft\n\n"
             "### トピックA\n\n"
             "内容のみ\n\n"
             "**参考リンク**: [タイトル](https://example.com)\n"
         )
-        result = sc.verify_content(md)
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = sc.verify_content(md)
         self.assertIsInstance(result, str)
+        self.assertIn("要約なし:", mock_out.getvalue())
 
     def test_missing_reference_link_detected(self):
-        """**参考リンク** が欠落しているトピックが検出される。"""
+        """**参考リンク** が欠落しているトピックが検出ログに出力される。"""
         md = (
             "## 1. Microsoft\n\n"
             "### トピックA\n\n"
             "**要約**: テスト\n"
         )
-        result = sc.verify_content(md)
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = sc.verify_content(md)
         self.assertIsInstance(result, str)
+        self.assertIn("参考リンクなし:", mock_out.getvalue())
 
     def test_malformed_reference_link_detected(self):
-        """**参考リンク** が [text](URL) 形式でないトピックが検出される。"""
+        """**参考リンク** が [text](URL) 形式でないトピックが検出ログに出力される。"""
         md = (
             "## 2. AI\n\n"
             "### トピックA\n\n"
             "**要約**: テスト\n\n"
             "**参考リンク**: https://example.com/bare\n"
         )
-        result = sc.verify_content(md)
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = sc.verify_content(md)
         self.assertIsInstance(result, str)
+        self.assertIn("参考リンク形式不正:", mock_out.getvalue())
 
     def test_closing_sentence_removed(self):
         """セクション末尾の締め文が除去される。"""

@@ -444,7 +444,10 @@ def verify_content(markdown: str) -> str:
             topic_title = topic_match.group(0).replace('### ', '').strip()
 
             # **要約** チェック — コミュニティイベントセクションの箇条書きサブセクションは除外
-            is_community_list = topic_title.startswith("📅") or topic_title.startswith("📝")
+            is_community_list = (
+                "コミュニティ" in section_name
+                and (topic_title.startswith("📅") or topic_title.startswith("📝"))
+            )
             if not is_community_list and '**要約**' not in topic_block:
                 issues.append(f"要約なし: [{section_name}] {topic_title}")
 
@@ -465,18 +468,21 @@ def verify_content(markdown: str) -> str:
     # 最後のトピックの **参考リンク** (または ---) 以降に余分なテキストがないかチェック
     _closing_re = re.compile(
         r'(\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\(https?://[^)]+\))'
-        r'\n\n(?!###\s|##\s|---|\Z)(.+)',
-        re.MULTILINE,
+        r'(\n\n(?!###\s|##\s|---|\Z).*?)(?=\n(?:###\s|##\s|---)\b|\Z)',
+        re.MULTILINE | re.DOTALL,
     )
-    for m in _closing_re.finditer(result):
+
+    def _remove_closing_text(m: re.Match[str]) -> str:
         trailing = m.group(2).strip()
         if trailing and not trailing.startswith('**') and not trailing.startswith('#'):
             issues.append(f"締め文検出: '{trailing[:60]}...'")
-            # 締め文を除去
-            result = result.replace(m.group(0), m.group(1))
+            return m.group(1)
+        return m.group(0)
+
+    result = _closing_re.sub(_remove_closing_text, result)
 
     # --- 4. 孤立・連続 --- セパレータの修正 ---
-    result = re.sub(r'(\n---\n)+(\n---\n)', r'\n---\n', result)
+    result = re.sub(r'(\n---\n)(\n*---\n)+', r'\n---\n', result)
     result = re.sub(r'(## [^\n]+\n)\n*---\n', r'\1\n', result)
     result = re.sub(r'\n---\n\n*(## |\Z)', r'\n\n\1', result)
     result = re.sub(r'\n{3,}', '\n\n', result)

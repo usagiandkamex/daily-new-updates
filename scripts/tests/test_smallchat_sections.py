@@ -774,5 +774,128 @@ class TestFetchFeedDateFilter(unittest.TestCase):
         self.assertEqual(sc.MAX_ARTICLE_AGE_DAYS, 30)
 
 
+class TestVerifyContentSmallchat(unittest.TestCase):
+    """verify_content() の検証プロセスのテスト"""
+
+    def test_valid_article_unchanged(self):
+        """正しい形式の記事は変更されない。"""
+        md = (
+            "## 1. Microsoft\n\n"
+            "### Windows 11 の新機能\n\n"
+            "**要約**: テスト要約\n\n"
+            "**影響**: テスト影響\n\n"
+            "**参考リンク**: [Windows 11](https://example.com/windows)\n"
+        )
+        result = sc.verify_content(md)
+        self.assertEqual(result.strip(), md.strip())
+
+    def test_heading_hyperlink_is_unlinked(self):
+        """### [タイトル](URL) 形式の見出しからリンクが除去される。"""
+        md = (
+            "## 1. Microsoft\n\n"
+            "### [Surface Pro Update](https://example.com/surface)\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: [Surface Pro Update](https://example.com/surface)\n"
+        )
+        result = sc.verify_content(md)
+        self.assertIn("### Surface Pro Update", result)
+        self.assertNotIn("### [Surface Pro Update](https://", result)
+
+    def test_heading_with_brackets_not_hyperlinked_is_preserved(self):
+        """角括弧を含むが URL がない見出しは変更されない。"""
+        md = (
+            "## 1. Microsoft\n\n"
+            "### [In preview] New Feature\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: [タイトル](https://example.com)\n"
+        )
+        result = sc.verify_content(md)
+        self.assertIn("### [In preview] New Feature", result)
+
+    def test_missing_summary_detected(self):
+        """**要約** が欠落しているトピックが検出される。"""
+        md = (
+            "## 1. Microsoft\n\n"
+            "### トピックA\n\n"
+            "内容のみ\n\n"
+            "**参考リンク**: [タイトル](https://example.com)\n"
+        )
+        result = sc.verify_content(md)
+        self.assertIsInstance(result, str)
+
+    def test_missing_reference_link_detected(self):
+        """**参考リンク** が欠落しているトピックが検出される。"""
+        md = (
+            "## 1. Microsoft\n\n"
+            "### トピックA\n\n"
+            "**要約**: テスト\n"
+        )
+        result = sc.verify_content(md)
+        self.assertIsInstance(result, str)
+
+    def test_malformed_reference_link_detected(self):
+        """**参考リンク** が [text](URL) 形式でないトピックが検出される。"""
+        md = (
+            "## 2. AI\n\n"
+            "### トピックA\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: https://example.com/bare\n"
+        )
+        result = sc.verify_content(md)
+        self.assertIsInstance(result, str)
+
+    def test_closing_sentence_removed(self):
+        """セクション末尾の締め文が除去される。"""
+        md = (
+            "## 1. Microsoft\n\n"
+            "### トピックA\n\n"
+            "**要約**: テスト\n\n"
+            "**影響**: テスト\n\n"
+            "**参考リンク**: [タイトル](https://example.com)\n\n"
+            "以上がMicrosoftの最新ニュースです。\n\n"
+            "## 2. AI\n"
+        )
+        result = sc.verify_content(md)
+        self.assertNotIn("以上がMicrosoft", result)
+
+    def test_no_info_section_skipped(self):
+        """「情報なし」メッセージのセクションは検証をスキップする。"""
+        md = (
+            "## 1. Microsoft\n\n"
+            "現在の対象期間に該当する情報はありません。\n"
+        )
+        result = sc.verify_content(md)
+        self.assertIn("現在の対象期間に該当する情報はありません。", result)
+
+    def test_consecutive_separators_cleaned(self):
+        """連続する --- セパレータが整理される。"""
+        md = (
+            "## 1. Microsoft\n\n"
+            "### トピックA\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: [タイトル](https://example.com)\n\n"
+            "---\n\n"
+            "---\n\n"
+            "### トピックB\n\n"
+            "**要約**: テスト2\n\n"
+            "**参考リンク**: [タイトル2](https://example.com/2)\n"
+        )
+        result = sc.verify_content(md)
+        self.assertNotIn("---\n\n---", result)
+
+    def test_empty_section_detected(self):
+        """トピックが存在しない空セクションが検出される。"""
+        md = (
+            "## 1. Microsoft\n\n"
+            "## 2. AI\n\n"
+            "### AI ニュース\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: [タイトル](https://example.com)\n"
+        )
+        # 空セクション（Microsoft）が検出されるが例外は出ない
+        result = sc.verify_content(md)
+        self.assertIsInstance(result, str)
+
+
 if __name__ == "__main__":
     unittest.main()

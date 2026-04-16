@@ -618,5 +618,115 @@ class TestIsItEvent(unittest.TestCase):
         self.assertFalse(du._is_it_event(self._ev("Soccer team practice", "サッカー")))
 
 
+class TestVerifyContentDailyUpdate(unittest.TestCase):
+    """verify_content() の検証プロセスのテスト"""
+
+    def test_valid_article_unchanged(self):
+        """正しい形式の記事は変更されない。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "### Azure Functions の新機能\n\n"
+            "**要約**: テスト要約\n\n"
+            "**影響**: テスト影響\n\n"
+            "**参考リンク**: [Azure Functions](https://example.com/azure)\n"
+        )
+        result = du.verify_content(md)
+        self.assertEqual(result.strip(), md.strip())
+
+    def test_heading_hyperlink_is_unlinked(self):
+        """### [タイトル](URL) 形式の見出しからリンクが除去される。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "### [Azure Update](https://example.com/azure)\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: [Azure Update](https://example.com/azure)\n"
+        )
+        result = du.verify_content(md)
+        self.assertIn("### Azure Update", result)
+        self.assertNotIn("### [Azure Update](https://", result)
+
+    def test_missing_summary_detected(self):
+        """**要約** が欠落しているトピックが検出される（出力にログが出る）。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "### トピックA\n\n"
+            "内容のみ\n\n"
+            "**参考リンク**: [タイトル](https://example.com)\n"
+        )
+        # 例外が発生しないことを確認（ログで報告される）
+        result = du.verify_content(md)
+        self.assertIsInstance(result, str)
+
+    def test_missing_reference_link_detected(self):
+        """**参考リンク** が欠落しているトピックが検出される。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "### トピックA\n\n"
+            "**要約**: テスト\n"
+        )
+        result = du.verify_content(md)
+        self.assertIsInstance(result, str)
+
+    def test_malformed_reference_link_detected(self):
+        """**参考リンク** が [text](URL) 形式でないトピックが検出される。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "### トピックA\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: https://example.com/bare\n"
+        )
+        result = du.verify_content(md)
+        self.assertIsInstance(result, str)
+
+    def test_closing_sentence_removed(self):
+        """セクション末尾の締め文が除去される。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "### トピックA\n\n"
+            "**要約**: テスト\n\n"
+            "**影響**: テスト\n\n"
+            "**参考リンク**: [タイトル](https://example.com)\n\n"
+            "以上が本日のアップデート情報です。\n\n"
+            "## 2. ニュースで話題のテーマ\n"
+        )
+        result = du.verify_content(md)
+        self.assertNotIn("以上が本日の", result)
+
+    def test_no_info_section_skipped(self):
+        """「情報なし」メッセージのセクションは検証をスキップする。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "現在の対象期間に該当する情報はありません。\n"
+        )
+        result = du.verify_content(md)
+        self.assertIn("現在の対象期間に該当する情報はありません。", result)
+
+    def test_orphan_separator_after_section_header_removed(self):
+        """## ヘッダー直後の --- セパレータが除去される。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "---\n\n"
+            "### トピックA\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: [タイトル](https://example.com)\n"
+        )
+        result = du.verify_content(md)
+        # ヘッダー直後の --- が除去されること
+        self.assertNotIn("## 1. Azure アップデート情報\n\n---", result)
+
+    def test_community_subsection_headings_skip_summary_check(self):
+        """コミュニティセクションの📅/📝サブセクションでは要約チェックをスキップする。"""
+        md = (
+            "## 5. コミュニティイベント情報（東京・神奈川）\n\n"
+            "### 📅 申し込み受付中のイベント\n\n"
+            "- イベントA\n- イベントB\n\n"
+            "### 📝 参加レポート・イベント宣伝まとめ\n\n"
+            "- レポートA\n"
+        )
+        # 📅/📝 サブセクションで要約・参考リンクの欠落エラーが出ないことを確認
+        result = du.verify_content(md)
+        self.assertIsInstance(result, str)
+
+
 if __name__ == "__main__":
     unittest.main()

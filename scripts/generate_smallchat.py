@@ -389,6 +389,120 @@ def validate_links(markdown: str) -> str:
     return result
 
 
+# --- コンテンツ検証 -------------------------------------------------------------
+
+
+def verify_content(markdown: str) -> str:
+    """生成されたマークダウンの形式とリンク整合性を検証・修正する。
+
+    生成やリンク検証とは独立した検証プロセスとして、以下の項目をチェックする:
+      1. 見出し（###）がハイパーリンク化されていないこと
+      2. 各トピックに **要約** と **参考リンク** が含まれること
+      3. **参考リンク** が [タイトル](URL) 形式であること
+      4. セクション末尾に不要な締め文がないこと
+      5. 連続 --- セパレータや孤立セパレータがないこと
+    修正可能な問題は自動修正し、全ての検出事項をログ出力する。
+    """
+    lines = markdown.split('\n')
+    fixed_lines: list[str] = []
+    issues: list[str] = []
+
+    # --- 1. 見出しのハイパーリンク解除 ---
+    _heading_link_re = re.compile(
+        r'^(###\s+)\[(' + _LINK_LABEL_RE + r')\]\(https?://[^)]+\)\s*$'
+    )
+    for line in lines:
+        m = _heading_link_re.match(line)
+        if m:
+            label = m.group(2).strip()
+            fixed_line = f"{m.group(1)}{label}"
+            fixed_lines.append(fixed_line)
+            issues.append(f"見出しリンク修正: '{label}'")
+        else:
+            fixed_lines.append(line)
+
+    result = '\n'.join(fixed_lines)
+
+    # --- 2. トピック構造の検証 ---
+    # セクション（## で始まる）ごとにトピック（### で始まる）を抽出して検証する
+    section_pattern = re.compile(r'^## .+', re.MULTILINE)
+    section_starts = [m.start() for m in section_pattern.finditer(result)]
+
+    for i, start in enumerate(section_starts):
+        end = section_starts[i + 1] if i + 1 < len(section_starts) else len(result)
+        section_text = result[start:end]
+        section_header_match = re.match(r'^## (.+)', section_text)
+        section_name = section_header_match.group(1).strip() if section_header_match else "不明"
+
+        # 「情報なし」セクションはスキップ
+        if "現在の対象期間に該当する情報はありません。" in section_text:
+            continue
+
+        # トピック（###）を抽出
+        topic_pattern = re.compile(r'^### .+', re.MULTILINE)
+        topics = list(topic_pattern.finditer(section_text))
+
+        if not topics:
+            issues.append(f"空セクション検出: {section_name}")
+            continue
+
+        for j, topic_match in enumerate(topics):
+            topic_start = topic_match.start()
+            topic_end = topics[j + 1].start() if j + 1 < len(topics) else (end - start)
+            topic_block = section_text[topic_start:topic_end]
+            topic_title = topic_match.group(0).replace('### ', '').strip()
+
+            # **要約** チェック
+            if '**要約**' not in topic_block:
+                issues.append(f"要約なし: [{section_name}] {topic_title}")
+
+            # **参考リンク** チェック
+            if '**参考リンク**' not in topic_block:
+                issues.append(f"参考リンクなし: [{section_name}] {topic_title}")
+            else:
+                # 参考リンクの形式チェック: [text](URL) が含まれるか
+                ref_line_re = re.compile(r'\*\*参考リンク\*\*:\s*(.*)', re.MULTILINE)
+                ref_match = ref_line_re.search(topic_block)
+                if ref_match:
+                    ref_value = ref_match.group(1).strip()
+                    link_re = re.compile(rf'\[{_LINK_LABEL_RE}\]\(https?://[^)]+\)')
+                    if not link_re.search(ref_value):
+                        issues.append(f"参考リンク形式不正: [{section_name}] {topic_title}")
+
+    # --- 3. セクション末尾の締め文検出 ---
+    # 最後のトピックの **参考リンク** (または ---) 以降に余分なテキストがないかチェック
+    _closing_re = re.compile(
+        r'(\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\(https?://[^)]+\))'
+        r'(\n\n(?!###\s|##\s|---|\Z).*?)(?=\n(?:###\s|##\s|---)\b|\Z)',
+        re.MULTILINE | re.DOTALL,
+    )
+
+    def _remove_closing_text(m: re.Match[str]) -> str:
+        trailing = m.group(2).strip()
+        if trailing and not trailing.startswith('**') and not trailing.startswith('#'):
+            issues.append(f"締め文検出: '{trailing[:60]}...'")
+            return m.group(1)
+        return m.group(0)
+
+    result = _closing_re.sub(_remove_closing_text, result)
+
+    # --- 4. 孤立・連続 --- セパレータの修正 ---
+    result = re.sub(r'(\n---\n)(\n*---\n)+', r'\n---\n', result)
+    result = re.sub(r'(## [^\n]+\n)\n*---\n', r'\1\n', result)
+    result = re.sub(r'\n---\n\n*(## |\Z)', r'\n\n\1', result)
+    result = re.sub(r'\n{3,}', '\n\n', result)
+
+    # --- 検証結果のレポート ---
+    if issues:
+        print(f"  コンテンツ検証: {len(issues)} 件の問題を検出（修正済み含む）")
+        for issue in issues:
+            print(f"    ⚠ {issue}")
+    else:
+        print("  コンテンツ検証: 問題なし")
+
+    return result
+
+
 def _regenerate_empty_sections(
     article: str,
     section_definitions: list[dict],
@@ -1033,6 +1147,10 @@ def main():
     article = _regenerate_empty_sections(
         article, SECTION_DEFINITIONS, section_data_map, extended_since, llm_clients
     )
+
+    # 生成・リンク検証・再生成とは独立したコンテンツ検証プロセス
+    print("\nコンテンツを検証中...")
+    article = verify_content(article)
 
     output_dir = "smallchat"
     os.makedirs(output_dir, exist_ok=True)

@@ -646,7 +646,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
         self.assertNotIn("### [Azure Update](https://", result)
 
     def test_missing_summary_detected(self):
-        """**要約** が欠落しているトピックが検出される（出力にログが出る）。"""
+        """**要約** が欠落しているトピックでもエラーにならずに文字列が返る。"""
         md = (
             "## 1. Azure アップデート情報\n\n"
             "### トピックA\n\n"
@@ -723,7 +723,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
             "### 📝 参加レポート・イベント宣伝まとめ\n\n"
             "- レポートA\n"
         )
-        # 📅/📝 サブセクションで要約・参考リンクの欠落エラーが出ないことを確認
+        # 📅/📝 サブセクションで要約・参考リンクの欠落が検出されないことを確認
         result = du.verify_content(md)
         self.assertIsInstance(result, str)
 

@@ -306,38 +306,46 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         self.assertIn("神奈川県", du.CONNPASS_TARGET_PREFECTURES)
 
     def test_fetch_connpass_uses_started_at_gte(self):
-        """fetch_connpass_events() が started_at_gte パラメータを API に送信する。"""
-        captured_params = {}
+        """CONNPASS_API_KEY が設定された場合、API に started_at_gte パラメータを送信する。"""
+        captured_params: dict = {}
 
         def fake_get(url, params=None, headers=None, timeout=None):
             captured_params.update(params or {})
             resp = MagicMock()
+            resp.raise_for_status.return_value = None
             resp.json.return_value = {"events": [], "results_returned": 0}
+            resp.content = b""
             return resp
 
         with (
             patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}),
             patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
         ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
             du.fetch_connpass_events("20260501")
 
         self.assertIn("started_at_gte", captured_params)
         self.assertEqual(captured_params["started_at_gte"], "2026-05-01")
 
     def test_fetch_connpass_uses_api_fetch_count(self):
-        """fetch_connpass_events() が CONNPASS_API_FETCH_COUNT を count に使う。"""
-        captured_params = {}
+        """CONNPASS_API_KEY が設定された場合、API に CONNPASS_API_FETCH_COUNT を送信する。"""
+        captured_params: dict = {}
 
         def fake_get(url, params=None, headers=None, timeout=None):
             captured_params.update(params or {})
             resp = MagicMock()
+            resp.raise_for_status.return_value = None
             resp.json.return_value = {"events": [], "results_returned": 0}
+            resp.content = b""
             return resp
 
         with (
             patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}),
             patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
         ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
             du.fetch_connpass_events("20260501")
 
         self.assertEqual(captured_params.get("count"), du.CONNPASS_API_FETCH_COUNT)
@@ -352,7 +360,6 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             resp = MagicMock()
             resp.raise_for_status.return_value = None
             resp.content = b""
-            # feedparser.parse(b"") returns an empty feed
             return resp
 
         with (
@@ -367,6 +374,78 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         self.assertIn("202601", unique_yms)
         self.assertIn("202602", unique_yms)
         self.assertIn("202603", unique_yms)
+
+    def test_discover_event_keywords_always_includes_seed_keywords(self):
+        """_discover_event_keywords_from_social() は常にシードキーワードを含む。"""
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
+            result = du._discover_event_keywords_from_social()
+
+        for seed in du._CONNPASS_COMMUNITY_SEED_KEYWORDS:
+            self.assertIn(seed, result)
+
+    def test_fetch_connpass_no_api_key_runs_multistep(self):
+        """CONNPASS_API_KEY 未設定でも多段検索（RSS + キーワード）が実行される。"""
+        rss_calls: list[str] = []
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            if params and "ym" in params:
+                rss_calls.append(params.get("keyword", ""))
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
+            result = du.fetch_connpass_events("20260501")
+
+        # 東京都・神奈川県 RSS 検索が呼ばれている
+        self.assertIn("東京都", rss_calls)
+        self.assertIn("神奈川県", rss_calls)
+        # 結果はリスト（空でも可）
+        self.assertIsInstance(result, list)
+
+    def test_search_connpass_rss_by_keyword_deduplicates(self):
+        """_search_connpass_rss_by_keyword() は seen_urls に登録済みの URL を除外する。"""
+        existing_url = "https://connpass.com/event/123/"
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            entry = MagicMock()
+            entry.get = lambda k, d="": {
+                "link": existing_url,
+                "title": "Python 勉強会",
+                "summary": "Python エンジニア向け",
+            }.get(k, d)
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+
+            seen: set[str] = {existing_url}
+            result = du._search_connpass_rss_by_keyword("Python", ["202605"], seen)
+
+        # 既登録 URL は返却リストに含まれない
+        self.assertEqual(result, [])
 
 
 class TestDailyUpdateSinceWindow(unittest.TestCase):

@@ -434,11 +434,12 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             patch.object(du, "feedparser") as mock_fp,
         ):
             entry = MagicMock()
-            entry.get = lambda k, d="": {
+            _entry_data = {
                 "link": existing_url,
                 "title": "Python 勉強会",
                 "summary": "Python エンジニア向け",
-            }.get(k, d)
+            }
+            entry.get.side_effect = lambda k, d="": _entry_data.get(k, d)
             mock_fp.parse.return_value = MagicMock(entries=[entry])
 
             seen: set[str] = {existing_url}

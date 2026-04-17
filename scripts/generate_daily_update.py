@@ -756,6 +756,13 @@ _CONNPASS_COMMUNITY_SEED_KEYWORDS = [
     "Kubernetes",
 ]
 
+# 発掘クエリ1件あたりに処理する RSS エントリの上限（クエリ数×この値がリクエスト負荷に影響）
+_SOCIAL_DISCOVERY_MAX_ENTRIES_PER_QUERY = 6
+# キーワード追加検索で対象とする直近月数（リクエスト数 = キーワード数 × この値）
+_KEYWORD_SEARCH_MONTHS = 3
+# キーワード追加検索で使用するキーワード数の上限
+_MAX_KEYWORDS_TO_SEARCH = 12
+
 # IT 関連イベントを判定するキーワードリスト（タイトルや説明文に含まれるかチェック）
 CONNPASS_IT_KEYWORDS = [
     # クラウド・インフラ
@@ -911,7 +918,7 @@ def _discover_event_keywords_from_social() -> list[str]:
             resp = requests.get(feed_url, headers=HTTP_HEADERS, timeout=15)
             resp.raise_for_status()
             feed = feedparser.parse(resp.content)
-            for entry in feed.entries[:6]:
+            for entry in feed.entries[:_SOCIAL_DISCOVERY_MAX_ENTRIES_PER_QUERY]:
                 combined = entry.get("title", "") + " " + entry.get("summary", "")
                 # 「【イベント名】」「「イベント名」」形式の固有名詞を抽出
                 for match in re.finditer(r"[「【]([^」】\n]{3,30})[」】]", combined):
@@ -1011,9 +1018,9 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
 
     # --- 段階 3: 発掘キーワードで connpass RSS を追加検索 ---
     # 直近 3 ヶ月・上位 12 キーワードに絞ってリクエスト数を抑制
-    kw_months = search_months[:3]
+    kw_months = search_months[:_KEYWORD_SEARCH_MONTHS]
     kw_added = 0
-    for kw in extra_keywords[:12]:
+    for kw in extra_keywords[:_MAX_KEYWORDS_TO_SEARCH]:
         new_events = _search_connpass_rss_by_keyword(kw, kw_months, seen_urls)
         all_events.extend(new_events)
         kw_added += len(new_events)

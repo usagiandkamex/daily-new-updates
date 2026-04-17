@@ -132,9 +132,22 @@ jobs:
             --base main \
             --head "${{ env.TARGET_DATE }}_update")
 
-          gh pr merge "$PR_URL" --merge --delete-branch
-
-          # --delete-branch オプションでマージ後にブランチ自動削除
+          # マージ失敗時は最大3回リトライ（GitHub側の一時的な競合やレート制限が解消されるよう90秒待機）
+          MAX_RETRIES=3
+          RETRY_WAIT=90
+          for i in $(seq 1 $MAX_RETRIES); do
+            if gh pr merge "$PR_URL" --merge --delete-branch; then
+              echo "マージ成功（試行 $i/$MAX_RETRIES）"
+              break
+            fi
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "マージ失敗（試行 $i/$MAX_RETRIES）。${RETRY_WAIT}秒後にリトライします..."
+              sleep $RETRY_WAIT
+            else
+              echo "マージが ${MAX_RETRIES} 回失敗しました。"
+              exit 1
+            fi
+          done
 
       - name: Issue をクローズ
         if: success()

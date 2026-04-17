@@ -157,7 +157,7 @@ jobs:
             --base main \
             --head "${{ env.TARGET_DATE }}_smallchat_${{ env.SLOT }}")
 
-          # マージ失敗時は最大3回、90秒待ってリトライ
+          # マージ失敗時は最大3回リトライ（GitHub側の一時的な競合やレート制限が解消されるよう90秒待機）
           MAX_RETRIES=3
           RETRY_WAIT=90
           for i in $(seq 1 $MAX_RETRIES); do

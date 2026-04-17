@@ -285,6 +285,64 @@ class TestSectionDefinitions(unittest.TestCase):
             self.assertIn("締めの文章は入れないでください", instruction)
 
 
+class TestConnpassEventFetchConfig(unittest.TestCase):
+    """connpass イベント取得設定のテスト"""
+
+    def test_api_fetch_count_greater_than_max_events(self):
+        """API フェッチ件数は最終出力件数より大きい（フィルタリング余裕を確保）。"""
+        self.assertGreater(du.CONNPASS_API_FETCH_COUNT, du.CONNPASS_MAX_EVENTS)
+
+    def test_api_fetch_count_within_connpass_limit(self):
+        """API フェッチ件数は connpass v2 API の上限（100）以内。"""
+        self.assertLessEqual(du.CONNPASS_API_FETCH_COUNT, 100)
+
+    def test_osaka_included_in_target_prefectures(self):
+        """大阪府がスコープ拡張として対象都道府県に含まれる。"""
+        self.assertIn("大阪府", du.CONNPASS_TARGET_PREFECTURES)
+
+    def test_tokyo_and_kanagawa_in_target_prefectures(self):
+        """東京都・神奈川県が引き続き対象都道府県に含まれる。"""
+        self.assertIn("東京都", du.CONNPASS_TARGET_PREFECTURES)
+        self.assertIn("神奈川県", du.CONNPASS_TARGET_PREFECTURES)
+
+    def test_fetch_connpass_uses_started_at_gte(self):
+        """fetch_connpass_events() が started_at_gte パラメータを API に送信する。"""
+        captured_params = {}
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            captured_params.update(params or {})
+            resp = MagicMock()
+            resp.json.return_value = {"events": [], "results_returned": 0}
+            return resp
+
+        with (
+            patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}),
+            patch("requests.get", side_effect=fake_get),
+        ):
+            du.fetch_connpass_events("20260501")
+
+        self.assertIn("started_at_gte", captured_params)
+        self.assertEqual(captured_params["started_at_gte"], "2026-05-01")
+
+    def test_fetch_connpass_uses_api_fetch_count(self):
+        """fetch_connpass_events() が CONNPASS_API_FETCH_COUNT を count に使う。"""
+        captured_params = {}
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            captured_params.update(params or {})
+            resp = MagicMock()
+            resp.json.return_value = {"events": [], "results_returned": 0}
+            return resp
+
+        with (
+            patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}),
+            patch("requests.get", side_effect=fake_get),
+        ):
+            du.fetch_connpass_events("20260501")
+
+        self.assertEqual(captured_params.get("count"), du.CONNPASS_API_FETCH_COUNT)
+
+
 class TestDailyUpdateSinceWindow(unittest.TestCase):
     """デイリー更新の収集開始時刻計算のテスト"""
 
@@ -617,6 +675,33 @@ class TestIsItEvent(unittest.TestCase):
     def test_soc_no_false_positive_in_soccer(self):
         """'soccer' 内の 'soc' で誤ヒットしない。"""
         self.assertFalse(du._is_it_event(self._ev("Soccer team practice", "サッカー")))
+
+    # --- 拡張キーワードのテスト（勉強会・ハンズオン・API） ---
+
+    def test_study_group_in_title(self):
+        """「勉強会」を含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("TypeScript 勉強会 Vol.3")))
+
+    def test_hands_on_in_title(self):
+        """「ハンズオン」を含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("Docker ハンズオン初心者向け")))
+
+    def test_open_source_ja_in_title(self):
+        """「オープンソース」を含むタイトルは True。"""
+        self.assertTrue(du._is_it_event(self._ev("オープンソース貢献入門")))
+
+    def test_open_source_en_in_catch(self):
+        """'open source' を含むキャッチは True。"""
+        self.assertTrue(du._is_it_event(self._ev("OSS イベント", "open source contribution")))
+
+    def test_api_word_boundary_match(self):
+        """'api' は単語境界マッチで API イベントを正しく検出する。"""
+        self.assertTrue(du._is_it_event(self._ev("REST API 設計入門")))
+        self.assertTrue(du._is_it_event(self._ev("API ゲートウェイ勉強会")))
+
+    def test_api_no_false_positive(self):
+        """'api' は部分文字列（例: 'capital'）で誤ヒットしない。"""
+        self.assertFalse(du._is_it_event(self._ev("Capital city tourism", "旅行")))
 
 
 class TestVerifyContentDailyUpdate(unittest.TestCase):

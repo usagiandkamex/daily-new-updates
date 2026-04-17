@@ -719,15 +719,15 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
 CONNPASS_RSS_URL = "https://connpass.com/search/"
 # v2 API では prefecture パラメータが廃止されたため keyword で都道府県名を検索する
-CONNPASS_TARGET_PREFECTURES = ["東京都", "神奈川県"]
-# 取得する最大イベント数
+CONNPASS_TARGET_PREFECTURES = ["東京都", "神奈川県", "大阪府"]
+# 最終出力に含めるイベント数の上限
 CONNPASS_MAX_EVENTS = 20
+# API 1 リクエストで取得する最大件数（connpass v2 API の上限は 100）
+CONNPASS_API_FETCH_COUNT = 100
 # 先読み日数（今日から何日先まで）
 CONNPASS_LOOKAHEAD_DAYS = 60
 
 # IT 関連イベントを判定するキーワードリスト（タイトルや説明文に含まれるかチェック）
-# 汎用的すぎる語（勉強会・meetup・conference・tech・study 等）は除外し、
-# 明確に IT 技術に紐付く語のみを収録している。
 CONNPASS_IT_KEYWORDS = [
     # クラウド・インフラ
     "cloud", "クラウド", "azure", "aws", "gcp", "google cloud",
@@ -753,6 +753,8 @@ CONNPASS_IT_KEYWORDS = [
     # IT全般
     "エンジニア", "engineer", "developer", "デベロッパー",
     "プログラミング", "programming", "iot", "5g",
+    # コミュニティ・イベント形式
+    "勉強会", "ハンズオン", "オープンソース", "open source",
     # コミュニティ・グループ名称
     "jaws", "jawsug", "azure user group", "jug", "gcpug", "jawsdays",
     "microsoft",
@@ -763,7 +765,7 @@ CONNPASS_IT_KEYWORDS = [
 
 # 単語境界マッチが必要な短い英数字キーワード（部分文字列としてヒットしやすいもの）
 # 例: "ai" が "painting" にヒットしないよう [a-z0-9] の境界でマッチする
-_CONNPASS_IT_KEYWORDS_WORD_BOUNDARY = frozenset({"ai", "ml", "go", "sre", "rag", "soc", "db"})
+_CONNPASS_IT_KEYWORDS_WORD_BOUNDARY = frozenset({"ai", "ml", "go", "sre", "rag", "soc", "db", "api"})
 
 
 def _is_it_event(event: dict) -> bool:
@@ -797,10 +799,11 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
     events = []
     seen_urls: set[str] = set()
 
-    # 今月と翌月のイベントを検索する
+    # 今月・翌月・翌々月のイベントを検索する（CONNPASS_LOOKAHEAD_DAYS=60 日分をカバー）
     search_months = sorted({
         target_dt.strftime("%Y%m"),
         (target_dt + timedelta(days=30)).strftime("%Y%m"),
+        (target_dt + timedelta(days=60)).strftime("%Y%m"),
     })
 
     for pref in CONNPASS_TARGET_PREFECTURES:
@@ -877,8 +880,9 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     for pref in CONNPASS_TARGET_PREFECTURES:
         params = {
             "keyword": pref,
-            "count": CONNPASS_MAX_EVENTS,
+            "count": CONNPASS_API_FETCH_COUNT,
             "order": 2,  # 開催日順
+            "started_at_gte": target_dt.strftime("%Y-%m-%d"),  # 今日以降のイベントのみ取得
         }
         connpass_headers = {
             **HTTP_HEADERS,

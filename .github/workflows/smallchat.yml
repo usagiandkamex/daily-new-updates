@@ -157,7 +157,22 @@ jobs:
             --base main \
             --head "${{ env.TARGET_DATE }}_smallchat_${{ env.SLOT }}")
 
-          gh pr merge "$PR_URL" --merge --admin
+          # マージ失敗時は最大3回、90秒待ってリトライ
+          MAX_RETRIES=3
+          RETRY_WAIT=90
+          for i in $(seq 1 $MAX_RETRIES); do
+            if gh pr merge "$PR_URL" --merge --admin; then
+              echo "マージ成功（試行 $i/$MAX_RETRIES）"
+              break
+            fi
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "マージ失敗（試行 $i/$MAX_RETRIES）。${RETRY_WAIT}秒後にリトライします..."
+              sleep $RETRY_WAIT
+            else
+              echo "マージが ${MAX_RETRIES} 回失敗しました。"
+              exit 1
+            fi
+          done
 
           # マージ後にブランチを削除
           git push origin --delete "${{ env.TARGET_DATE }}_smallchat_${{ env.SLOT }}"

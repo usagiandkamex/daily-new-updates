@@ -799,11 +799,16 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
     events = []
     seen_urls: set[str] = set()
 
-    # 今月から CONNPASS_LOOKAHEAD_DAYS 日先までの月をすべて検索する
-    search_months = sorted({
-        (target_dt + timedelta(days=d)).strftime("%Y%m")
-        for d in range(0, CONNPASS_LOOKAHEAD_DAYS + 1, 30)
-    })
+    # 今月から CONNPASS_LOOKAHEAD_DAYS 日先の月まで、月単位で列挙する
+    end_dt = target_dt + timedelta(days=CONNPASS_LOOKAHEAD_DAYS)
+    search_months = []
+    y, m = target_dt.year, target_dt.month
+    while (y, m) <= (end_dt.year, end_dt.month):
+        search_months.append(f"{y:04d}{m:02d}")
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
 
     for pref in CONNPASS_TARGET_PREFECTURES:
         for ym in search_months:

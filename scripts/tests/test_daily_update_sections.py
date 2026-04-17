@@ -342,6 +342,32 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
 
         self.assertEqual(captured_params.get("count"), du.CONNPASS_API_FETCH_COUNT)
 
+    def test_rss_search_months_no_skip_on_month_end(self):
+        """月末日起点でも途中の月が欠落しない（1/31 → 2月・3月・4月が全て含まれる）。"""
+        captured_yms: list[str] = []
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            if params and "ym" in params:
+                captured_yms.append(params["ym"])
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            # feedparser.parse(b"") returns an empty feed
+            return resp
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
+            du._fetch_connpass_events_rss("20260131")
+
+        # 1月末から CONNPASS_LOOKAHEAD_DAYS 日先（4月初旬）まで全月が揃う
+        unique_yms = sorted(set(captured_yms))
+        self.assertIn("202601", unique_yms)
+        self.assertIn("202602", unique_yms)
+        self.assertIn("202603", unique_yms)
+
 
 class TestDailyUpdateSinceWindow(unittest.TestCase):
     """デイリー更新の収集開始時刻計算のテスト"""

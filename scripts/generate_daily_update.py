@@ -719,13 +719,13 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
 CONNPASS_RSS_URL = "https://connpass.com/search/"
 # v2 API では prefecture パラメータが廃止されたため keyword で都道府県名を検索する
-CONNPASS_TARGET_PREFECTURES = ["東京都", "神奈川県", "大阪府"]
+CONNPASS_TARGET_PREFECTURES = ["東京都", "神奈川県"]
 # 最終出力に含めるイベント数の上限
 CONNPASS_MAX_EVENTS = 20
 # API 1 リクエストで取得する最大件数（connpass v2 API の上限は 100）
 CONNPASS_API_FETCH_COUNT = 100
 # 先読み日数（今日から何日先まで）
-CONNPASS_LOOKAHEAD_DAYS = 60
+CONNPASS_LOOKAHEAD_DAYS = 90
 
 # IT 関連イベントを判定するキーワードリスト（タイトルや説明文に含まれるかチェック）
 CONNPASS_IT_KEYWORDS = [
@@ -799,11 +799,10 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
     events = []
     seen_urls: set[str] = set()
 
-    # 今月・翌月・翌々月のイベントを検索する（CONNPASS_LOOKAHEAD_DAYS=60 日分をカバー）
+    # 今月から CONNPASS_LOOKAHEAD_DAYS 日先までの月をすべて検索する
     search_months = sorted({
-        target_dt.strftime("%Y%m"),
-        (target_dt + timedelta(days=30)).strftime("%Y%m"),
-        (target_dt + timedelta(days=60)).strftime("%Y%m"),
+        (target_dt + timedelta(days=d)).strftime("%Y%m")
+        for d in range(0, CONNPASS_LOOKAHEAD_DAYS + 1, 30)
     })
 
     for pref in CONNPASS_TARGET_PREFECTURES:

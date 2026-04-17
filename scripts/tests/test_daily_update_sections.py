@@ -296,9 +296,9 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         """API フェッチ件数は connpass v2 API の上限（100）以内。"""
         self.assertLessEqual(du.CONNPASS_API_FETCH_COUNT, 100)
 
-    def test_osaka_included_in_target_prefectures(self):
-        """大阪府がスコープ拡張として対象都道府県に含まれる。"""
-        self.assertIn("大阪府", du.CONNPASS_TARGET_PREFECTURES)
+    def test_osaka_not_in_target_prefectures(self):
+        """大阪府は対象都道府県に含まれない（東京・神奈川のみ）。"""
+        self.assertNotIn("大阪府", du.CONNPASS_TARGET_PREFECTURES)
 
     def test_tokyo_and_kanagawa_in_target_prefectures(self):
         """東京都・神奈川県が引き続き対象都道府県に含まれる。"""

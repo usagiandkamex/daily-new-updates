@@ -1135,7 +1135,7 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
         """title が None または空の場合はプレースホルダーを使う。"""
         events = [{"title": None, "event_url": "https://connpass.com/event/1/"}]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("タイトルなし", result)
+        self.assertIn("（タイトルなし）", result)
 
 
 class TestGenerateCommunitySectionHybrid(unittest.TestCase):

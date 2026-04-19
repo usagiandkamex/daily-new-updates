@@ -360,14 +360,10 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
                 captured_yms.append(params["ym"])
             resp = MagicMock()
             resp.raise_for_status.return_value = None
-            resp.content = b""
+            resp.json.return_value = {"events": [], "results_returned": 0}
             return resp
 
-        with (
-            patch("requests.get", side_effect=fake_get),
-            patch.object(du, "feedparser") as mock_fp,
-        ):
-            mock_fp.parse.return_value = MagicMock(entries=[])
+        with patch("requests.get", side_effect=fake_get):
             du._fetch_connpass_events_rss("20260131")
 
         # 1月末から CONNPASS_LOOKAHEAD_DAYS 日先（4月初旬）まで全月が揃う
@@ -395,14 +391,15 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             self.assertIn(seed, result)
 
     def test_fetch_connpass_no_api_key_runs_multistep(self):
-        """CONNPASS_API_KEY 未設定でも多段検索（RSS + キーワード）が実行される。"""
-        rss_calls: list[str] = []
+        """CONNPASS_API_KEY 未設定でも多段検索（API v1 + 段階3 キーワード RSS）が実行される。"""
+        captured_pref_ids: list[int] = []
 
         def fake_get(url, params=None, headers=None, timeout=None):
-            if params and "ym" in params:
-                rss_calls.append(params.get("keyword", ""))
+            if params and "pref_id" in params:
+                captured_pref_ids.append(params["pref_id"])
             resp = MagicMock()
             resp.raise_for_status.return_value = None
+            resp.json.return_value = {"events": [], "results_returned": 0}
             resp.content = b""
             return resp
 
@@ -414,9 +411,9 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             mock_fp.parse.return_value = MagicMock(entries=[])
             result = du.fetch_connpass_events("20260501")
 
-        # 東京都・神奈川県 RSS 検索が呼ばれている
-        self.assertIn("東京都", rss_calls)
-        self.assertIn("神奈川県", rss_calls)
+        # 東京都（pref_id=13）・神奈川県（pref_id=14）が検索されている
+        self.assertIn(du._CONNPASS_PREFECTURE_IDS["東京都"], captured_pref_ids)
+        self.assertIn(du._CONNPASS_PREFECTURE_IDS["神奈川県"], captured_pref_ids)
         # 結果はリスト（空でも可）
         self.assertIsInstance(result, list)
 

@@ -336,8 +336,8 @@ CONNPASS_TARGET_PREFECTURES = ["東京都", "神奈川県"]
 CONNPASS_MAX_EVENTS = 20
 # API 1 リクエストで取得する最大件数（connpass v2 API の上限は 100）
 CONNPASS_API_FETCH_COUNT = 100
-# 先読み日数（今日から何日先まで）
-CONNPASS_LOOKAHEAD_DAYS = 90
+# 遡及日数（実行日から何日前まで検索対象にするか）
+CONNPASS_LOOKBACK_DAYS = 30
 
 # connpass RSS 検索の都道府県ID（https://connpass.com/search/?pref_id=XX 参照）
 # connpass API v1 は 2024 年 7 月末に終了。RSS 検索エンドポイントが同じ pref_id を受け付ける。
@@ -503,15 +503,15 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
     含まれることがほとんどないため、常に 0 件になっていた。
     """
     target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
-    end_dt = target_dt + timedelta(days=CONNPASS_LOOKAHEAD_DAYS)
+    start_dt = target_dt - timedelta(days=CONNPASS_LOOKBACK_DAYS)
 
     events = []
     seen_urls: set[str] = set()
 
-    # 今月から CONNPASS_LOOKAHEAD_DAYS 日先の月まで、月単位で列挙する
+    # 遡及開始月から実行日の月まで、月単位で列挙する
     search_months = []
-    y, m = target_dt.year, target_dt.month
-    while (y, m) <= (end_dt.year, end_dt.month):
+    y, m = start_dt.year, start_dt.month
+    while (y, m) <= (target_dt.year, target_dt.month):
         search_months.append(f"{y:04d}{m:02d}")
         m += 1
         if m > 12:
@@ -694,8 +694,6 @@ def _search_connpass_rss_by_keyword(
 
 
 def _fetch_other_platform_events(
-    target_dt: "datetime",
-    end_dt: "datetime",
     seen_urls: set[str],
 ) -> list[dict]:
     """Doorkeeper・TECH PLAY など connpass 以外のプラットフォームから IT イベントを取得する。
@@ -767,19 +765,19 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     1. connpass RSS 月別 × 都道府県 検索（東京・神奈川、pref_id 指定）+ オンラインイベント検索（online=1）
        ※ connpass API v1 は 2024 年 7 月末終了。RSS 検索エンドポイントが pref_id / online に対応。
     2. Google News / X(Twitter) 言及からコミュニティキーワードを収集
-    3. 収集キーワードで connpass RSS を追加検索（直近 3 ヶ月、上位 20 キーワード）
+    3. 収集キーワードで connpass RSS を追加検索（直近 1 ヶ月、上位 20 キーワード）
     4. Doorkeeper / TECH PLAY など connpass 以外のプラットフォームから取得
     5. CONNPASS_API_KEY が設定されている場合は v2 API でも補完する
 
     ステップ 1〜4 は API キー不要のため、CONNPASS_API_KEY が未設定でも動作する。
     """
     target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
-    end_dt = target_dt + timedelta(days=CONNPASS_LOOKAHEAD_DAYS)
+    start_dt = target_dt - timedelta(days=CONNPASS_LOOKBACK_DAYS)
 
-    # 検索月リストを構築（全段階で共用）
+    # 検索月リストを構築（全段階で共用）：遡及開始月〜実行日の月
     search_months: list[str] = []
-    y, m = target_dt.year, target_dt.month
-    while (y, m) <= (end_dt.year, end_dt.month):
+    y, m = start_dt.year, start_dt.month
+    while (y, m) <= (target_dt.year, target_dt.month):
         search_months.append(f"{y:04d}{m:02d}")
         m += 1
         if m > 12:
@@ -808,7 +806,7 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
 
     # --- 段階 4: 他プラットフォーム（Doorkeeper / TECH PLAY など）から取得 ---
     print("    connpass: 段階4 — 他プラットフォームから取得")
-    other_events = _fetch_other_platform_events(target_dt, end_dt, seen_urls)
+    other_events = _fetch_other_platform_events(seen_urls)
     all_events.extend(other_events)
 
     # --- 段階 5 (任意): connpass v2 API で補完 ---

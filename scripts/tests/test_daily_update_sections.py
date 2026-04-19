@@ -352,7 +352,7 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         self.assertEqual(captured_params.get("count"), du.CONNPASS_API_FETCH_COUNT)
 
     def test_rss_search_months_no_skip_on_month_end(self):
-        """月末日起点でも途中の月が欠落しない（1/31 → 2月・3月・4月が全て含まれる）。"""
+        """遡及 30 日の範囲で途中の月が欠落しない（3/1 → 1月・2月・3月が全て含まれる）。"""
         captured_yms: list[str] = []
 
         def fake_get(url, params=None, headers=None, timeout=None):
@@ -368,9 +368,9 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             patch.object(du, "feedparser") as mock_fp,
         ):
             mock_fp.parse.return_value = MagicMock(entries=[])
-            du._fetch_connpass_events_rss("20260131")
+            du._fetch_connpass_events_rss("20260301")
 
-        # 1月末から CONNPASS_LOOKAHEAD_DAYS 日先（4月初旬）まで全月が揃う
+        # 3/1 から 30 日遡ると 1/30 → 1月・2月・3月が全て揃う
         unique_yms = sorted(set(captured_yms))
         self.assertIn("202601", unique_yms)
         self.assertIn("202602", unique_yms)
@@ -527,7 +527,7 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         ):
             mock_fp.parse.return_value = MagicMock(entries=[entry])
             seen: set[str] = set()
-            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+            result = du._fetch_other_platform_events(seen)
 
         self.assertTrue(len(result) > 0)
         self.assertEqual(result[0]["event_url"], "https://doorkeeper.jp/events/1")
@@ -561,7 +561,7 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         ):
             mock_fp.parse.return_value = MagicMock(entries=[entry])
             seen: set[str] = set()
-            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+            result = du._fetch_other_platform_events(seen)
 
         # publication date is not used for filtering; IT event should be included
         self.assertTrue(len(result) > 0)
@@ -594,7 +594,7 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         ):
             mock_fp.parse.return_value = MagicMock(entries=[entry])
             seen: set[str] = set()
-            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+            result = du._fetch_other_platform_events(seen)
 
         self.assertEqual(result, [])
 
@@ -626,7 +626,7 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         ):
             mock_fp.parse.return_value = MagicMock(entries=[entry])
             seen: set[str] = {existing_url}
-            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+            result = du._fetch_other_platform_events(seen)
 
         self.assertEqual(result, [])
 
@@ -663,7 +663,7 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
             du._IT_EVENT_PLATFORM_FEEDS = [{"name": "TECH PLAY", "url": techplay_url, "location_filter": True}]
             try:
                 seen: set[str] = set()
-                result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+                result = du._fetch_other_platform_events(seen)
             finally:
                 du._IT_EVENT_PLATFORM_FEEDS = original_feeds
 
@@ -701,7 +701,7 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
             du._IT_EVENT_PLATFORM_FEEDS = [{"name": "TECH PLAY", "url": techplay_url, "location_filter": True}]
             try:
                 seen: set[str] = set()
-                result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+                result = du._fetch_other_platform_events(seen)
             finally:
                 du._IT_EVENT_PLATFORM_FEEDS = original_feeds
 
@@ -715,7 +715,7 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
 
         with patch("requests.get", side_effect=req_mod.RequestException("timeout")):
             seen: set[str] = set()
-            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+            result = du._fetch_other_platform_events(seen)
 
         self.assertEqual(result, [])
 

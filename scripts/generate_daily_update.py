@@ -1647,12 +1647,13 @@ def main():
     if article is None:
         raise RuntimeError(f"全ての LLM プロバイダーで生成に失敗しました。最後のエラー: {last_error}")
 
+    print("\nリンクを検証中...")
+    article = _format_bare_reference_links(article)
+
     # ソース外参考リンクを検出・ログ出力（デバッグ・品質確認用）
     print("\nソース外参考リンクを確認中...")
     _log_unsourced_reference_links(article, source_urls)
 
-    print("\nリンクを検証中...")
-    article = _format_bare_reference_links(article)
     article = validate_links(article)
 
     # リンク除去で空になったセクションを時間窓を広げて再生成する

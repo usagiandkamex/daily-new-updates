@@ -56,7 +56,7 @@ class SourceUrlTracker:
             if m.group(1) not in source_urls
         ]
         if unsourced:
-            print(f"  ソース外参考リンク: {len(unsourced)} 件（HTTP 検証は validate_links() で実施済み）")
+            print(f"  ソース外参考リンク: {len(unsourced)} 件（HTTP 検証はこの後 validate_links() で実施）")
             for url in unsourced[:5]:
                 print(f"    ℹ {url[:80]}")
         else:

@@ -961,8 +961,6 @@ class TestSourceUrlTrackerDelegationInDailyUpdate(unittest.TestCase):
         self.assertIn("一致", mock_out.getvalue())
 
 
-if __name__ == "__main__":
-    unittest.main()
 class TestBuildConnpassSectionScripted(unittest.TestCase):
     """_build_connpass_section_scripted() のテスト"""
 

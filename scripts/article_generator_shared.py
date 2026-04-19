@@ -650,6 +650,8 @@ class SourceUrlTracker:
         URL のバリエーションを同一視できる。
         """
         parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            return url
         return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
 
     @staticmethod

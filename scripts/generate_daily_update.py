@@ -337,7 +337,7 @@ CONNPASS_MAX_EVENTS = 20
 # API 1 リクエストで取得する最大件数（connpass v2 API の上限は 100）
 CONNPASS_API_FETCH_COUNT = 100
 # 遡及日数（実行日から何日前まで検索対象にするか）
-CONNPASS_LOOKBACK_DAYS = 30
+CONNPASS_LOOKBACK_DAYS = 90
 
 # connpass RSS 検索の都道府県ID（https://connpass.com/search/?pref_id=XX 参照）
 # connpass API v1 は 2024 年 7 月末に終了。RSS 検索エンドポイントが同じ pref_id を受け付ける。

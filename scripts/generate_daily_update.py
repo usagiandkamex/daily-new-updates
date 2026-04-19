@@ -419,6 +419,7 @@ _IT_EVENT_PLATFORM_FEEDS: list[dict] = [
     {"name": "Doorkeeper エンジニア", "url": "https://www.doorkeeper.jp/tags/エンジニア.atom"},
     {"name": "Doorkeeper 勉強会",     "url": "https://www.doorkeeper.jp/tags/勉強会.atom"},
     {"name": "Doorkeeper 東京",       "url": "https://www.doorkeeper.jp/tags/東京.atom"},
+    {"name": "Doorkeeper オンライン", "url": "https://www.doorkeeper.jp/tags/オンライン.atom"},
     # TECH PLAY — 全国対象 Atom フィード。location_filter で東京・神奈川・オンラインに限定
     {"name": "TECH PLAY", "url": "https://techplay.jp/atom/events", "location_filter": True},
 ]

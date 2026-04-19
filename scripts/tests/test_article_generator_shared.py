@@ -616,5 +616,148 @@ class TestValidateLinksSoftFail(unittest.TestCase):
         self.assertIn(url, result)
 
 
+
+class TestGenerateSectionRetry(unittest.TestCase):
+    """generate_section() の指数バックオフリトライ動作テスト"""
+
+    def _make_section(self):
+        return {
+            "key": "test",
+            "header": "## テスト",
+            "system": "sys",
+            "instruction": "inst",
+            "data_label": "データ",
+        }
+
+    def _make_client(self, content="出力"):
+        client = MagicMock()
+        choice = MagicMock()
+        choice.message.content = content
+        client.chat.completions.create.return_value.choices = [choice]
+        return client
+
+    def test_success_on_first_attempt_no_sleep(self):
+        """初回成功時はスリープなしで結果を返す。"""
+        import article_generator_shared as ags
+        client = self._make_client("出力")
+        section = self._make_section()
+        with patch("article_generator_shared.time") as mock_time:
+            result = ags.generate_section(client, "gpt-4o", section, [{"title": "記事"}])
+        self.assertEqual(result, "出力")
+        mock_time.sleep.assert_not_called()
+        self.assertEqual(client.chat.completions.create.call_count, 1)
+
+    def test_retries_on_rate_limit_error(self):
+        """RateLimitError が発生した場合、リトライして成功する。"""
+        import article_generator_shared as ags
+        from openai import RateLimitError
+        client = MagicMock()
+        choice = MagicMock()
+        choice.message.content = "成功"
+        rate_limit_err = RateLimitError(
+            message="rate limit", response=MagicMock(), body={}
+        )
+        client.chat.completions.create.side_effect = [
+            rate_limit_err,
+            MagicMock(choices=[choice]),
+        ]
+        section = self._make_section()
+        with patch("article_generator_shared.time") as mock_time:
+            result = ags.generate_section(client, "gpt-4o", section, [{"title": "記事"}])
+        self.assertEqual(result, "成功")
+        self.assertEqual(client.chat.completions.create.call_count, 2)
+        mock_time.sleep.assert_called_once_with(ags._LLM_RETRY_BASE_WAIT)
+
+    def test_retries_on_api_connection_error(self):
+        """APIConnectionError が発生した場合、リトライして成功する。"""
+        import article_generator_shared as ags
+        from openai import APIConnectionError
+        client = MagicMock()
+        choice = MagicMock()
+        choice.message.content = "成功"
+        conn_err = APIConnectionError(request=MagicMock())
+        client.chat.completions.create.side_effect = [
+            conn_err,
+            MagicMock(choices=[choice]),
+        ]
+        section = self._make_section()
+        with patch("article_generator_shared.time") as mock_time:
+            result = ags.generate_section(client, "gpt-4o", section, [{"title": "記事"}])
+        self.assertEqual(result, "成功")
+        self.assertEqual(client.chat.completions.create.call_count, 2)
+        mock_time.sleep.assert_called_once()
+
+    def test_retries_on_internal_server_error(self):
+        """InternalServerError が発生した場合、リトライして成功する。"""
+        import article_generator_shared as ags
+        from openai import InternalServerError
+        client = MagicMock()
+        choice = MagicMock()
+        choice.message.content = "成功"
+        server_err = InternalServerError(
+            message="internal server error", response=MagicMock(), body={}
+        )
+        client.chat.completions.create.side_effect = [
+            server_err,
+            MagicMock(choices=[choice]),
+        ]
+        section = self._make_section()
+        with patch("article_generator_shared.time") as mock_time:
+            result = ags.generate_section(client, "gpt-4o", section, [{"title": "記事"}])
+        self.assertEqual(result, "成功")
+        mock_time.sleep.assert_called_once()
+
+    def test_raises_after_max_retries_exhausted(self):
+        """全リトライが失敗した場合、最後のエラーを raise する。"""
+        import article_generator_shared as ags
+        from openai import RateLimitError
+        client = MagicMock()
+        rate_limit_err = RateLimitError(
+            message="rate limit", response=MagicMock(), body={}
+        )
+        client.chat.completions.create.side_effect = rate_limit_err
+        section = self._make_section()
+        with patch("article_generator_shared.time"):
+            with self.assertRaises(RateLimitError):
+                ags.generate_section(client, "gpt-4o", section, [{"title": "記事"}])
+        self.assertEqual(client.chat.completions.create.call_count, ags._LLM_MAX_RETRIES)
+
+    def test_exponential_backoff_wait_times(self):
+        """リトライのたびに待機時間が指数的に増加する。"""
+        import article_generator_shared as ags
+        from openai import RateLimitError
+        client = MagicMock()
+        rate_limit_err = RateLimitError(
+            message="rate limit", response=MagicMock(), body={}
+        )
+        client.chat.completions.create.side_effect = rate_limit_err
+        section = self._make_section()
+        with patch("article_generator_shared.time") as mock_time:
+            with self.assertRaises(RateLimitError):
+                ags.generate_section(client, "gpt-4o", section, [{"title": "記事"}])
+        expected_waits = [
+            ags._LLM_RETRY_BASE_WAIT * (2 ** i)
+            for i in range(ags._LLM_MAX_RETRIES - 1)
+        ]
+        actual_waits = [call.args[0] for call in mock_time.sleep.call_args_list]
+        self.assertEqual(actual_waits, expected_waits)
+
+    def test_non_transient_error_not_retried(self):
+        """一時的でないエラー（AuthenticationError 等）はリトライせずに即座に raise する。"""
+        import article_generator_shared as ags
+        from openai import AuthenticationError
+        client = MagicMock()
+        auth_err = AuthenticationError(
+            message="invalid api key", response=MagicMock(), body={}
+        )
+        client.chat.completions.create.side_effect = auth_err
+        section = self._make_section()
+        with patch("article_generator_shared.time") as mock_time:
+            with self.assertRaises(AuthenticationError):
+                ags.generate_section(client, "gpt-4o", section, [{"title": "記事"}])
+        mock_time.sleep.assert_not_called()
+        self.assertEqual(client.chat.completions.create.call_count, 1)
+
+
 if __name__ == "__main__":
     unittest.main()

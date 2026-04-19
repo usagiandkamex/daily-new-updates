@@ -472,6 +472,22 @@ CONNPASS_IT_KEYWORDS = [
 _CONNPASS_IT_KEYWORDS_WORD_BOUNDARY = frozenset({"ai", "ml", "go", "sre", "rag", "soc", "db", "api"})
 
 
+def _parse_rss_event_started_at(entry) -> str:
+    """feedparser エントリから開催日時文字列を取得する。
+
+    connpass RSS の published_parsed をイベント開始日時のプロキシとして使用する。
+    日時情報が取得できない場合、または変換に失敗した場合は空文字列を返す。
+    """
+    pub = entry.get("published_parsed")
+    if pub is None:
+        return ""
+    try:
+        event_dt = datetime(*pub[:6], tzinfo=timezone.utc).astimezone(JST)
+        return event_dt.strftime("%Y/%m/%d %H:%M")
+    except Exception:
+        return ""
+
+
 def _is_it_event(event: dict) -> bool:
     """イベントが IT 関連かどうかを判定する。
 
@@ -549,7 +565,7 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
                             "title": title,
                             "catch": desc[:200],
                             "event_url": url,
-                            "started_at": "",
+                            "started_at": _parse_rss_event_started_at(entry),
                             "place": "",
                             "address": "",
                             "accepted": 0,
@@ -589,7 +605,7 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
                         "title": title,
                         "catch": desc[:200],
                         "event_url": url,
-                        "started_at": "",
+                        "started_at": _parse_rss_event_started_at(entry),
                         "place": "オンライン",
                         "address": "",
                         "accepted": 0,
@@ -680,7 +696,7 @@ def _search_connpass_rss_by_keyword(
                         "title": title,
                         "catch": desc[:200],
                         "event_url": url,
-                        "started_at": "",
+                        "started_at": _parse_rss_event_started_at(entry),
                         "place": "",
                         "address": "",
                         "accepted": 0,
@@ -773,6 +789,8 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     """
     target_dt = datetime.strptime(target_date, "%Y%m%d").replace(tzinfo=JST)
     start_dt = target_dt - timedelta(days=CONNPASS_LOOKBACK_DAYS)
+    # 取得対象の未来側上限（実行日から CONNPASS_LOOKBACK_DAYS 日先まで）
+    end_dt = target_dt + timedelta(days=CONNPASS_LOOKBACK_DAYS)
 
     # 検索月リストを構築（全段階で共用）：遡及開始月〜実行日の月
     search_months: list[str] = []
@@ -820,6 +838,7 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                 "count": CONNPASS_API_FETCH_COUNT,
                 "order": 2,
                 "started_at_gte": target_dt.strftime("%Y-%m-%d"),
+                "accepted_end_at_gte": target_dt.strftime("%Y-%m-%d"),
             }
             connpass_headers = {
                 **HTTP_HEADERS,
@@ -887,6 +906,15 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                     all_events.append(event_dict)
             except Exception as e:
                 print(f"    connpass API ({pref}): 取得失敗 ({e})")
+
+    # 過去イベントを除外し、開始日の近い順（未来の早い順）にソートする
+    # started_at が空（日時不明）のイベントは有日時イベントの後に配置する
+    today_str = target_dt.strftime("%Y/%m/%d")
+    all_events = [
+        e for e in all_events
+        if not e.get("started_at") or e["started_at"][:10] >= today_str
+    ]
+    all_events.sort(key=lambda e: (0, e["started_at"]) if e.get("started_at") else (1, ""))
 
     if len(all_events) > CONNPASS_MAX_EVENTS:
         print(f"  ※ connpass {len(all_events)} 件 → {CONNPASS_MAX_EVENTS} 件に制限")

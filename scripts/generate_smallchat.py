@@ -18,6 +18,8 @@ from googlenewsdecoder import new_decoderv1
 from openai import AzureOpenAI, OpenAI
 from openai import OpenAIError
 
+from article_generator_shared import SourceUrlTracker
+
 JST = timezone(timedelta(hours=9))
 
 # --- ニュースソース定義 ---------------------------------------------------------------
@@ -710,6 +712,14 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
     return new_items
 
 
+# --- ソース URL 管理 ---------------------------------------------------------------
+
+# SourceUrlTracker を両ワークフローで共有して使用するためのモジュールレベルエイリアス。
+# 実装は article_generator_shared.py の SourceUrlTracker クラスで一元管理する。
+_collect_source_urls = SourceUrlTracker.collect_source_urls
+_log_unsourced_reference_links = SourceUrlTracker.log_unsourced_reference_links
+
+
 # --- LLM クライアント -----------------------------------------------------------
 
 
@@ -1131,6 +1141,13 @@ def main():
         "techblog_en": techblog_en_news,
     }
 
+    # ソースデータ URL を収集（LLM 生成後の参考リンク検証に使用）
+    source_urls = _collect_source_urls(
+        microsoft_news, ai_news, azure_news, cloud_news,
+        security_news, itops_news, techblog_ja_news, techblog_en_news,
+    )
+    print(f"\nソース URL 収集完了: {len(source_urls)} 件")
+
     print("\n記事を生成中（セクションごとに個別生成）...")
     llm_clients = create_llm_clients()
     article = None
@@ -1154,6 +1171,11 @@ def main():
 
     print("\nリンクを検証中...")
     article = _format_bare_reference_links(article)
+
+    # ソース外参考リンクを検出・ログ出力（デバッグ・品質確認用）
+    print("\nソース外参考リンクを確認中...")
+    _log_unsourced_reference_links(article, source_urls)
+
     article = validate_links(article)
 
     # リンク除去で空になったセクションを時間窓を広げて再生成する

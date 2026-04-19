@@ -184,7 +184,9 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
         self.assertIn("# 2026/04/01 デイリーアップデート", result)
 
     def test_empty_list_sections_show_no_info_message(self):
-        """空データのリスト型セクションは「ありません」メッセージを含む。"""
+        """空データの全セクションは「ありません」メッセージを含む。
+        コミュニティセクションはハイブリッド生成（スクリプト）のためヘッダーも含まれる。
+        """
         client = _make_client("コミュニティ出力")
         result = du.generate_article(
             client, "gpt-4o", "20260401",
@@ -195,12 +197,10 @@ class TestGenerateArticleDailyUpdate(unittest.TestCase):
             connpass_events=[],
             event_reports=[],
         )
-        # リスト型セクションは LLM を呼ばずに「ありません」が含まれる
-        # community セクションは dict 型データのため LLM を経由し、ヘッダーはモック出力に含まれない
+        # 全セクションのヘッダーが含まれること（コミュニティセクションはスクリプト生成）
         for section in du.SECTION_DEFINITIONS:
-            if section["key"] != "community":
-                self.assertIn(section["header"], result,
-                              f"セクション {section['key']} のヘッダーが記事に含まれない")
+            self.assertIn(section["header"], result,
+                          f"セクション {section['key']} のヘッダーが記事に含まれない")
         self.assertIn("ありません", result)
 
     def test_all_section_outputs_in_article(self):
@@ -927,6 +927,273 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
         output = mock_out.getvalue()
         self.assertNotIn("要約なし:", output)
         self.assertNotIn("参考リンクなし:", output)
+
+
+class TestSourceUrlTrackerDelegationInDailyUpdate(unittest.TestCase):
+    """generate_daily_update.py が SourceUrlTracker に委譲することの確認テスト
+
+    ロジックの詳細テストは test_article_generator_shared.py で一元管理する。
+    """
+
+    def test_collect_source_urls_is_tracker_method(self):
+        """_collect_source_urls は SourceUrlTracker.collect_source_urls に委譲する。"""
+        from article_generator_shared import SourceUrlTracker
+        self.assertIs(du._collect_source_urls, SourceUrlTracker.collect_source_urls)
+
+    def test_log_unsourced_is_tracker_method(self):
+        """_log_unsourced_reference_links は SourceUrlTracker.log_unsourced_reference_links に委譲する。"""
+        from article_generator_shared import SourceUrlTracker
+        self.assertIs(du._log_unsourced_reference_links, SourceUrlTracker.log_unsourced_reference_links)
+
+    def test_collect_source_urls_works_via_alias(self):
+        """エイリアス経由でも正しく URL を収集できる（統合確認）。"""
+        data = [{"url": "https://example.com/a"}, {"event_url": "https://connpass.com/event/1/"}]
+        result = du._collect_source_urls(data)
+        self.assertIn("https://example.com/a", result)
+        self.assertIn("https://connpass.com/event/1/", result)
+
+    def test_log_unsourced_works_via_alias(self):
+        """エイリアス経由でも正しくログ出力できる（統合確認）。"""
+        article = "### A\n\n**参考リンク**: [A](https://sourced.example.com)\n"
+        source_urls = frozenset({"https://sourced.example.com"})
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            du._log_unsourced_reference_links(article, source_urls)
+        self.assertIn("一致", mock_out.getvalue())
+
+
+class TestBuildConnpassSectionScripted(unittest.TestCase):
+    """_build_connpass_section_scripted() のテスト"""
+
+    def test_empty_events_returns_no_info_message(self):
+        """イベントなしの場合、情報なしメッセージを返す。"""
+        result = du._build_connpass_section_scripted([])
+        self.assertIn("### 📅 申し込み受付中のイベント", result)
+        self.assertIn("現在取得できるイベント情報はありません", result)
+
+    def test_section_starts_with_heading(self):
+        """出力は ### 📅 申し込み受付中のイベント で始まる。"""
+        events = [{"title": "テストイベント", "event_url": "https://connpass.com/event/1/"}]
+        result = du._build_connpass_section_scripted(events)
+        self.assertTrue(result.startswith("### 📅 申し込み受付中のイベント"))
+
+    def test_event_with_url_creates_hyperlink(self):
+        """event_url があるイベントはハイパーリンク形式で出力される。"""
+        events = [{"title": "Azure勉強会", "event_url": "https://connpass.com/event/123/"}]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("[Azure勉強会](https://connpass.com/event/123/)", result)
+
+    def test_event_without_url_uses_plain_title(self):
+        """event_url がないイベントはプレーンテキストで出力される。"""
+        events = [{"title": "URLなしイベント", "event_url": ""}]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("**URLなしイベント**", result)
+        self.assertNotIn("[URLなしイベント](", result)
+
+    def test_started_at_shown_when_present(self):
+        """started_at があれば開催日時が出力される。"""
+        events = [{
+            "title": "イベント", "event_url": "https://connpass.com/event/1/",
+            "started_at": "2026/05/15 19:00",
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("開催日時: 2026/05/15 19:00", result)
+
+    def test_started_at_omitted_when_empty(self):
+        """started_at が空の場合、開催日時行は出力されない。"""
+        events = [{"title": "イベント", "event_url": "https://connpass.com/event/1/", "started_at": ""}]
+        result = du._build_connpass_section_scripted(events)
+        self.assertNotIn("開催日時:", result)
+
+    def test_place_shown_when_present(self):
+        """place があれば場所が出力される。"""
+        events = [{
+            "title": "イベント", "event_url": "https://connpass.com/event/1/",
+            "place": "東京都渋谷区",
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("場所: 東京都渋谷区", result)
+
+    def test_address_used_when_place_empty(self):
+        """place が空で address がある場合、address が場所として使われる。"""
+        events = [{
+            "title": "イベント", "event_url": "https://connpass.com/event/1/",
+            "place": "", "address": "東京都新宿区1-1-1",
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("場所: 東京都新宿区1-1-1", result)
+
+    def test_catch_truncated_at_150_chars(self):
+        """catch が 150 文字を超える場合、省略記号で切り詰める。"""
+        long_catch = "A" * 200
+        events = [{"title": "イベント", "event_url": "https://connpass.com/event/1/", "catch": long_catch}]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("概要: " + "A" * 150 + "...", result)
+
+    def test_catch_not_truncated_when_short(self):
+        """catch が 150 文字以下の場合、省略記号なしでそのまま出力される。"""
+        short_catch = "短い概要"
+        events = [{"title": "イベント", "event_url": "https://connpass.com/event/1/", "catch": short_catch}]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("概要: 短い概要", result)
+        self.assertNotIn("概要: 短い概要...", result)
+
+    def test_participation_status_with_limit(self):
+        """accepted と limit がある場合、参加状況が出力される。"""
+        events = [{
+            "title": "イベント", "event_url": "https://connpass.com/event/1/",
+            "accepted": 15, "limit": 30,
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("参加状況: 15/30名", result)
+
+    def test_participation_status_accepted_only(self):
+        """limit が 0 で accepted だけある場合、定員なしで出力される。"""
+        events = [{
+            "title": "イベント", "event_url": "https://connpass.com/event/1/",
+            "accepted": 10, "limit": 0,
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("参加状況: 10名（定員なし）", result)
+
+    def test_participation_status_omitted_when_zero(self):
+        """accepted も limit も 0 の場合、参加状況行は出力されない。"""
+        events = [{
+            "title": "イベント", "event_url": "https://connpass.com/event/1/",
+            "accepted": 0, "limit": 0,
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertNotIn("参加状況:", result)
+
+    def test_series_shown_when_present(self):
+        """series（コミュニティ名）があれば出力される。"""
+        events = [{
+            "title": "イベント", "event_url": "https://connpass.com/event/1/",
+            "series": "JAWS-UG Tokyo",
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("コミュニティ: JAWS-UG Tokyo", result)
+
+    def test_multiple_events_all_listed(self):
+        """複数イベントがすべて出力される。"""
+        events = [
+            {"title": "イベントA", "event_url": "https://connpass.com/event/1/"},
+            {"title": "イベントB", "event_url": "https://connpass.com/event/2/"},
+            {"title": "イベントC", "event_url": "https://connpass.com/event/3/"},
+        ]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("イベントA", result)
+        self.assertIn("イベントB", result)
+        self.assertIn("イベントC", result)
+
+    def test_title_is_missing_uses_placeholder(self):
+        """title が None または空の場合はプレースホルダーを使う。"""
+        events = [{"title": None, "event_url": "https://connpass.com/event/1/"}]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("（タイトルなし）", result)
+
+
+class TestGenerateCommunitySectionHybrid(unittest.TestCase):
+    """_generate_community_section() のテスト（ハイブリッド生成）"""
+
+    def _get_community_def(self) -> dict:
+        return next(s for s in du.SECTION_DEFINITIONS if s["key"] == "community")
+
+    def _make_client(self, content: str = "### 📝 参加レポート・イベント宣伝まとめ\n\n### レポートA\n**要約**: ...\n**参考リンク**: [A](https://example.com/a)"):
+        client = MagicMock()
+        choice = MagicMock()
+        choice.message.content = content
+        client.chat.completions.create.return_value.choices = [choice]
+        return client
+
+    def test_connpass_part_scripted_no_llm_call_for_events(self):
+        """connpass イベント部分はスクリプト生成で LLM を呼ばない。"""
+        section_def = self._get_community_def()
+        events = [{"title": "Azure勉強会", "event_url": "https://connpass.com/event/1/"}]
+        client = self._make_client()
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, events, [])
+
+        # event_reports が空なので LLM は呼ばれない
+        client.chat.completions.create.assert_not_called()
+        # connpass イベントがスクリプトで出力される
+        self.assertIn("Azure勉強会", result)
+        self.assertIn("connpass.com/event/1/", result)
+
+    def test_llm_called_once_for_event_reports(self):
+        """event_reports がある場合、LLM が 1 回呼ばれる。"""
+        section_def = self._get_community_def()
+        event_reports = [{"title": "勉強会レポート", "url": "https://zenn.dev/post/1"}]
+        client = self._make_client()
+
+        du._generate_community_section(client, "gpt-4o", section_def, [], event_reports)
+
+        client.chat.completions.create.assert_called_once()
+
+    def test_empty_event_reports_no_llm_call(self):
+        """event_reports が空の場合、LLM は呼ばれない。"""
+        section_def = self._get_community_def()
+        client = self._make_client()
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, [], [])
+
+        client.chat.completions.create.assert_not_called()
+        # 「情報なし」メッセージが含まれる
+        self.assertIn("参加レポート情報はありません", result)
+
+    def test_output_contains_section_header(self):
+        """出力にセクションヘッダーが含まれる。"""
+        section_def = self._get_community_def()
+        client = self._make_client()
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, [], [])
+
+        self.assertIn(section_def["header"], result)
+
+    def test_output_contains_connpass_subsection(self):
+        """出力に 📅 サブセクションが含まれる。"""
+        section_def = self._get_community_def()
+        events = [{"title": "イベントA", "event_url": "https://connpass.com/event/1/"}]
+        client = self._make_client()
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, events, [])
+
+        self.assertIn("### 📅 申し込み受付中のイベント", result)
+
+    def test_output_contains_reports_subsection(self):
+        """出力に 📝 サブセクションが含まれる（空でも）。"""
+        section_def = self._get_community_def()
+        client = self._make_client()
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, [], [])
+
+        self.assertIn("📝 参加レポート", result)
+
+    def test_llm_output_header_stripped(self):
+        """LLM が誤って ## ヘッダーを出力した場合は除去される。"""
+        section_def = self._get_community_def()
+        event_reports = [{"title": "レポート", "url": "https://zenn.dev/1"}]
+        llm_output = "## 5. コミュニティイベント情報（東京・神奈川）\n\n### 📝 参加レポート・イベント宣伝まとめ\n内容"
+        client = self._make_client(llm_output)
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, [], event_reports)
+
+        # ## ヘッダーは1回だけ（_generate_community_section が追加する分）
+        self.assertEqual(result.count(section_def["header"]), 1)
+
+    def test_event_urls_not_hallucinated(self):
+        """スクリプト生成のため、connpass イベント URL はソースデータと完全一致する。"""
+        section_def = self._get_community_def()
+        events = [
+            {"title": "テストイベント", "event_url": "https://connpass.com/event/999/"},
+        ]
+        client = self._make_client()
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, events, [])
+
+        # 出力 URL がソースデータと完全一致
+        self.assertIn("https://connpass.com/event/999/", result)
+        # LLM が別の URL を作ることはない（スクリプト生成のため）
+        self.assertNotIn("https://connpass.com/event/000/", result)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,8 @@ from googlenewsdecoder import new_decoderv1
 from openai import AzureOpenAI, OpenAI
 from openai import OpenAIError
 
+from article_generator_shared import SourceUrlTracker
+
 JST = timezone(timedelta(hours=9))
 
 # --- ニュースソース定義 ---------------------------------------------------------------
@@ -716,6 +718,14 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
     return new_items
 
 
+# --- ソース URL 管理 ---------------------------------------------------------------
+
+# SourceUrlTracker を両ワークフローで共有して使用するためのモジュールレベルエイリアス。
+# 実装は article_generator_shared.py の SourceUrlTracker クラスで一元管理する。
+_collect_source_urls = SourceUrlTracker.collect_source_urls
+_log_unsourced_reference_links = SourceUrlTracker.log_unsourced_reference_links
+
+
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
 CONNPASS_RSS_URL = "https://connpass.com/search/"
 # v2 API では prefecture パラメータが廃止されたため keyword で都道府県名を検索する
@@ -1113,6 +1123,54 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     return all_events
 
 
+def _build_connpass_section_scripted(events: list[dict]) -> str:
+    """connpass イベントリストをスクリプトで直接マークダウン化する（LLM 不使用）。
+
+    取得したイベントデータをそのままフォーマットすることで、
+    LLM による日時・URL・タイトルの誤生成を防ぐ。
+    RSS 取得イベントは日時・場所が空の場合があるため、
+    存在するフィールドのみを出力する。
+    """
+    if not events:
+        return "### 📅 申し込み受付中のイベント\n\n現在取得できるイベント情報はありません。"
+
+    lines = ["### 📅 申し込み受付中のイベント", ""]
+    for event in events:
+        title = event.get("title") or "（タイトルなし）"
+        url = event.get("event_url", "")
+        started_at = event.get("started_at", "")
+        place = event.get("place", "") or event.get("address", "")
+        catch = event.get("catch", "")
+        accepted = event.get("accepted") or 0
+        limit = event.get("limit") or 0
+        series = event.get("series", "")
+
+        if url:
+            lines.append(f"- **[{title}]({url})**")
+        else:
+            lines.append(f"- **{title}**")
+
+        if series:
+            lines.append(f"  - コミュニティ: {series}")
+        if started_at:
+            lines.append(f"  - 開催日時: {started_at}")
+        if place:
+            lines.append(f"  - 場所: {place}")
+        if catch:
+            summary = catch[:150]
+            if len(catch) > 150:
+                summary += "..."
+            lines.append(f"  - 概要: {summary}")
+        if limit > 0:
+            lines.append(f"  - 参加状況: {accepted}/{limit}名")
+        elif accepted > 0:
+            lines.append(f"  - 参加状況: {accepted}名（定員なし）")
+
+        lines.append("")
+
+    return "\n".join(lines).rstrip()
+
+
 # カテゴリ別の記事数上限（プロンプトサイズ制御用）
 MAX_ARTICLES = {
     "azure": 20,
@@ -1404,6 +1462,58 @@ def generate_section(
     return response.choices[0].message.content.strip()
 
 
+# コミュニティセクション：参加レポート部分の LLM instruction（ハイブリッド生成用）
+_EVENT_REPORTS_LLM_INSTRUCTION = (
+    "以下の参加レポートデータには Zenn・Qiita・はてなブックマーク などで公開された"
+    "IT 系勉強会・コミュニティイベントの参加レポート、開催レポート、イベント告知記事が含まれます。\n"
+    "IT 関連のもののみを選定し、先頭に「### 📝 参加レポート・イベント宣伝まとめ」を出力してください。\n"
+    "その後、各記事を次の形式で構成してください"
+    "（各項目の間には必ず空行と「---」区切りを入れること）。\n\n"
+    "### <見出し>\n\n**要約**: ...\n\n**参考リンク**: [タイトル](URL)\n\n---\n\n"
+    "見出し（###）自体はハイパーリンクにせず、参考リンクのみを [タイトル](URL) 形式で記載してください。"
+    "また、サブセクション末尾に締めの文章は入れないでください。"
+    "参考リンクは提供されたソースの URL をそのまま使用してください。"
+    "IT 関連のレポートがない場合は「現在取得できる参加レポート情報はありません」と記載してください。"
+    "コードブロックで囲まないこと。"
+)
+
+
+def _generate_community_section(
+    client,
+    model: str,
+    section_def: dict,
+    connpass_events: list[dict],
+    event_reports: list[dict],
+    since: "datetime | None" = None,
+) -> str:
+    """コミュニティイベントセクションをハイブリッド生成する。
+
+    - connpass イベントリスト: スクリプトで直接マークダウン化（LLM 不使用）
+      → 日時・URL・タイトルの誤生成を防ぐ
+    - 参加レポート: LLM で要約・整形
+      → 非構造化テキストの選択・要約は LLM に委ねる
+    """
+    header = section_def["header"]
+
+    # connpass イベント部分: スクリプトで直接生成（LLM 不使用）
+    connpass_md = _build_connpass_section_scripted(connpass_events)
+
+    # 参加レポート部分: LLM で生成（データがある場合のみ）
+    if event_reports:
+        reports_section_def = {
+            **section_def,
+            "instruction": _EVENT_REPORTS_LLM_INSTRUCTION,
+            "data_label": "コミュニティイベント参加レポート",
+        }
+        reports_md = generate_section(client, model, reports_section_def, event_reports, since=since)
+        # LLM が先頭に ## ヘッダーを出力した場合は除去（後で追加するため）
+        reports_md = re.sub(r'^## [^\n]+\n\n?', '', reports_md, count=1).strip()
+    else:
+        reports_md = "### 📝 参加レポート・イベント宣伝まとめ\n\n現在取得できる参加レポート情報はありません。"
+
+    return f"{header}\n\n{connpass_md}\n\n{reports_md}"
+
+
 def generate_article(
     client,
     model: str,
@@ -1421,6 +1531,7 @@ def generate_article(
     セクションごとに独立した API コールを行うことで、各セクションが
     トークン上限を最大限に活用できるようにする。
     since が指定された場合、各セクションに対象期間の注意事項を付記する。
+    コミュニティセクションはハイブリッド生成（connpass スクリプト + レポート LLM）を使用する。
     """
     formatted_date = f"{target_date[:4]}/{target_date[4:6]}/{target_date[6:]}"
 
@@ -1441,7 +1552,14 @@ def generate_article(
         key = section_def["key"]
         data = section_data_map[key]
         print(f"  [{key}] セクション生成中...")
-        section_text = generate_section(client, model, section_def, data, since=since)
+        if key == "community":
+            # コミュニティセクションはハイブリッド生成:
+            # connpass イベントはスクリプト、参加レポートは LLM
+            section_text = _generate_community_section(
+                client, model, section_def, connpass_events, event_reports, since=since
+            )
+        else:
+            section_text = generate_section(client, model, section_def, data, since=since)
         article_parts.append(section_text)
 
     return "\n\n".join(article_parts)
@@ -1505,6 +1623,12 @@ def main():
     event_reports = _limit_articles(fetch_category("event_reports", since), "event_reports")
     print(f"  → 合計: {len(event_reports)} 件")
 
+    # ソースデータ URL を収集（LLM 生成後の参考リンク検証に使用）
+    source_urls = _collect_source_urls(
+        azure_news, tech_news, business_news, sns_news, event_reports, connpass_events
+    )
+    print(f"\nソース URL 収集完了: {len(source_urls)} 件")
+
     print("\n記事を生成中（セクションごとに個別生成）...")
     llm_clients = create_llm_clients()
     article = None
@@ -1525,6 +1649,11 @@ def main():
 
     print("\nリンクを検証中...")
     article = _format_bare_reference_links(article)
+
+    # ソース外参考リンクを検出・ログ出力（デバッグ・品質確認用）
+    print("\nソース外参考リンクを確認中...")
+    _log_unsourced_reference_links(article, source_urls)
+
     article = validate_links(article)
 
     # リンク除去で空になったセクションを時間窓を広げて再生成する

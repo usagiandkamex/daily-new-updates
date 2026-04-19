@@ -904,5 +904,36 @@ class TestVerifyContentSmallchat(unittest.TestCase):
         self.assertIsInstance(result, str)
 
 
+class TestSourceUrlTrackerDelegationInSmallchat(unittest.TestCase):
+    """generate_smallchat.py が SourceUrlTracker に委譲することの確認テスト
+
+    ロジックの詳細テストは test_article_generator_shared.py で一元管理する。
+    """
+
+    def test_collect_source_urls_is_tracker_method(self):
+        """_collect_source_urls は SourceUrlTracker.collect_source_urls に委譲する。"""
+        from article_generator_shared import SourceUrlTracker
+        self.assertIs(sc._collect_source_urls, SourceUrlTracker.collect_source_urls)
+
+    def test_log_unsourced_is_tracker_method(self):
+        """_log_unsourced_reference_links は SourceUrlTracker.log_unsourced_reference_links に委譲する。"""
+        from article_generator_shared import SourceUrlTracker
+        self.assertIs(sc._log_unsourced_reference_links, SourceUrlTracker.log_unsourced_reference_links)
+
+    def test_collect_source_urls_works_via_alias(self):
+        """エイリアス経由でも正しく URL を収集できる（統合確認）。"""
+        data = [{"url": "https://blogs.microsoft.com/post"}]
+        result = sc._collect_source_urls(data)
+        self.assertIn("https://blogs.microsoft.com/post", result)
+
+    def test_log_unsourced_works_via_alias(self):
+        """エイリアス経由でも正しくログ出力できる（統合確認）。"""
+        article = "### A\n\n**参考リンク**: [A](https://sourced.example.com)\n"
+        source_urls = frozenset({"https://sourced.example.com"})
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            sc._log_unsourced_reference_links(article, source_urls)
+        self.assertIn("一致", mock_out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

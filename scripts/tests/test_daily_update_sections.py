@@ -360,10 +360,14 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
                 captured_yms.append(params["ym"])
             resp = MagicMock()
             resp.raise_for_status.return_value = None
-            resp.json.return_value = {"events": [], "results_returned": 0}
+            resp.content = b""
             return resp
 
-        with patch("requests.get", side_effect=fake_get):
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
             du._fetch_connpass_events_rss("20260131")
 
         # 1月末から CONNPASS_LOOKAHEAD_DAYS 日先（4月初旬）まで全月が揃う
@@ -391,7 +395,7 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             self.assertIn(seed, result)
 
     def test_fetch_connpass_no_api_key_runs_multistep(self):
-        """CONNPASS_API_KEY 未設定でも多段検索（API v1 + 段階3 キーワード RSS）が実行される。"""
+        """CONNPASS_API_KEY 未設定でも多段検索（RSS pref_id + 段階3 キーワード RSS）が実行される。"""
         captured_pref_ids: list[int] = []
 
         def fake_get(url, params=None, headers=None, timeout=None):
@@ -399,7 +403,6 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
                 captured_pref_ids.append(params["pref_id"])
             resp = MagicMock()
             resp.raise_for_status.return_value = None
-            resp.json.return_value = {"events": [], "results_returned": 0}
             resp.content = b""
             return resp
 

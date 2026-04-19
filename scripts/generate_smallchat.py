@@ -5,20 +5,30 @@ SNS を中心に IT 関連の話題を収集し、
 GitHub Copilot (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
 """
 
-import json
 import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote_plus
 
 import feedparser
 import requests
-from googlenewsdecoder import new_decoderv1
 from openai import AzureOpenAI, OpenAI
 from openai import OpenAIError
 
-from article_generator_shared import SourceUrlTracker
+import article_generator_shared as _ags
+from article_generator_shared import (
+    HTTP_HEADERS,
+    GENERAL_NEWS_FEEDS,
+    SourceUrlTracker,
+    _RSS_CONTENT_TYPES,
+    _LINK_LABEL_RE,
+    _resolve_google_news_url,
+    _validate_url,
+    _search_alternative_url,
+    _format_bare_reference_links,
+    validate_links,
+    verify_content,
+)
 
 JST = timezone(timedelta(hours=9))
 
@@ -154,10 +164,8 @@ FEEDS = {
     ],
 }
 
-HTTP_HEADERS = {
-    "User-Agent": "daily-updates-bot/1.0 (GitHub Actions; +https://github.com)",
-    "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
-}
+# HTTP_HEADERS・GENERAL_NEWS_FEEDS・_RSS_CONTENT_TYPES・_LINK_LABEL_RE は
+# article_generator_shared から一括インポート済み。
 
 MAX_ARTICLES_PER_CATEGORY = 10
 
@@ -170,349 +178,13 @@ _CATEGORY_ARTICLE_CAPS: dict[str, int] = {
     "techblog_en": 15,
 }
 
-# カテゴリ別フィードが空の場合に使う汎用 IT ニュースフィード
-GENERAL_NEWS_FEEDS = [
-    {"name": "ITmedia NEWS", "url": "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml"},
-    {"name": "Publickey", "url": "https://www.publickey1.jp/atom.xml"},
-    {"name": "GIGAZINE", "url": "https://gigazine.net/news/rss_2.0/"},
-    {"name": "INTERNET Watch", "url": "https://internet.watch.impress.co.jp/data/rss/1.0/iw/feed.rdf"},
-    {"name": "DevelopersIO", "url": "https://dev.classmethod.jp/feed/"},
-    {"name": "Zenn トレンド", "url": "https://zenn.dev/feed"},
-    {"name": "Hacker News (Best)", "url": "https://hnrss.org/best"},
-    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/"},
-    {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml"},
-    {"name": "Google News IT 日本", "url": "https://news.google.com/rss/search?q=IT+%E6%8A%80%E8%A1%93+%E6%9C%80%E6%96%B0&hl=ja&gl=JP&ceid=JP:ja"},
-]
-
-
 # --- URL 解決 -------------------------------------------------------------------
+# _resolve_google_news_url・_validate_url・_search_alternative_url は
+# article_generator_shared から一括インポート済み。
 
-
-def _resolve_google_news_url(url: str) -> str:
-    """Google News RSS のリダイレクト URL を実際の記事 URL に解決する。"""
-    if "news.google.com/rss/articles/" not in url:
-        return url
-    try:
-        result = new_decoderv1(url)
-        if result.get("status") and result.get("decoded_url"):
-            return result["decoded_url"]
-    except Exception as e:
-        print(f"    URL 解決失敗 ({url}): {e}")
-    return url
-
-
-# --- リンク検証 ---------------------------------------------------------------
-
-_RSS_CONTENT_TYPES = (
-    "application/rss+xml",
-    "application/atom+xml",
-    "application/xml",
-    "text/xml",
-)
-
-# マークダウンリンクのラベル部分に対応する正規表現フラグメント。
-# [In preview] のような角括弧を含むラベルも 1 段階までサポートする。
-# 例: [[In preview] Public Preview: Event Grid](https://...)
-_LINK_LABEL_RE = r'[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*'
-
-
-def _validate_url(url: str) -> tuple[bool, str]:
-    """単一 URL を検証し、(OK, 理由) を返す。"""
-    try:
-        resp = requests.head(
-            url,
-            headers={"User-Agent": HTTP_HEADERS["User-Agent"]},
-            timeout=10,
-            allow_redirects=True,
-        )
-        if resp.status_code == 405:
-            resp = requests.get(
-                url,
-                headers={"User-Agent": HTTP_HEADERS["User-Agent"]},
-                timeout=10,
-                allow_redirects=True,
-                stream=True,
-            )
-            content_type = resp.headers.get("Content-Type", "")
-            resp.close()
-        else:
-            content_type = resp.headers.get("Content-Type", "")
-
-        if resp.status_code >= 400:
-            return False, f"HTTP {resp.status_code}"
-
-        ct_lower = content_type.lower().split(";")[0].strip()
-        if ct_lower in _RSS_CONTENT_TYPES:
-            return False, f"RSS/Atom フィード ({ct_lower})"
-
-        if "news.google.com/rss/articles/" in resp.url:
-            return False, "Google News RSS リダイレクト URL"
-
-        return True, "OK"
-    except requests.RequestException as e:
-        return False, f"接続エラー ({e.__class__.__name__})"
-
-
-def _search_alternative_url(query: str) -> str | None:
-    """Google News RSS で代替記事を検索し、最初の有効な URL を返す。"""
-    search_url = (
-        "https://news.google.com/rss/search?"
-        f"q={quote_plus(query)}&hl=ja&gl=JP&ceid=JP:ja"
-    )
-    try:
-        resp = requests.get(
-            search_url,
-            headers=HTTP_HEADERS,
-            timeout=15,
-        )
-        if resp.status_code != 200:
-            return None
-
-        feed = feedparser.parse(resp.content)
-        for entry in feed.entries[:5]:
-            raw_url = entry.get("link", "")
-            resolved = _resolve_google_news_url(raw_url)
-            if "news.google.com/rss/" in resolved:
-                continue
-            ok, _ = _validate_url(resolved)
-            if ok:
-                return resolved
-    except Exception as e:
-        print(f"    代替検索失敗: {e}")
-    return None
-
-
-def _format_bare_reference_links(markdown: str) -> str:
-    """**参考リンク**: の後に裸の URL または URL をラベルにしたリンクがある場合、
-    直近の ### 見出しをラベルにしたハイパーリンクへ変換する。"""
-    lines = markdown.splitlines()
-    current_heading = ""
-    result = []
-    for line in lines:
-        heading_match = re.match(r'^###\s+(.+)', line)
-        if heading_match:
-            current_heading = heading_match.group(1).strip()
-
-        # 裸の URL: **参考リンク**: https://...
-        ref_bare = re.match(r'^(\*\*参考リンク\*\*:\s*)(https?://\S+)\s*$', line)
-        # URL をラベルにしたリンク: **参考リンク**: [https://...](https://...)
-        ref_url_label = re.match(
-            r'^(\*\*参考リンク\*\*:\s*)\[(https?://[^\]]+)\]\((https?://[^)]+)\)\s*$', line
-        )
-        if ref_bare:
-            prefix = ref_bare.group(1)
-            url = ref_bare.group(2)
-            label = current_heading if current_heading else url
-            line = f"{prefix}[{label}]({url})"
-        elif ref_url_label:
-            prefix = ref_url_label.group(1)
-            url = ref_url_label.group(3)
-            label = current_heading if current_heading else url
-            line = f"{prefix}[{label}]({url})"
-
-        result.append(line)
-    return "\n".join(result)
-
-
-def validate_links(markdown: str) -> str:
-    """マークダウン内の全リンクを検証し、代替ソースの検索またはトピック除去を行う。"""
-    link_pattern = re.compile(rf'\[({_LINK_LABEL_RE})\]\((https?://[^)]+)\)')
-    matches = link_pattern.findall(markdown)
-
-    if not matches:
-        return markdown
-
-    seen_urls: set[str] = set()
-    unique_checks: list[tuple[str, str]] = []
-    for text, url in matches:
-        if url not in seen_urls:
-            seen_urls.add(url)
-            unique_checks.append((text, url))
-
-    print(f"  リンク検証: {len(unique_checks)} 件の URL をチェック中...")
-
-    invalid_urls: dict[str, str] = {}
-    for _text, url in unique_checks:
-        ok, reason = _validate_url(url)
-        if not ok:
-            invalid_urls[url] = reason
-            print(f"    ✗ {url[:80]} — {reason}")
-
-    if not invalid_urls:
-        print("  リンク検証: 全てのリンクが有効です")
-        return markdown
-
-    print(f"  リンク検証: {len(invalid_urls)} 件の無効リンクを検出、代替ソースを検索中...")
-
-    replacement_urls: dict[str, str] = {}
-    unfixable_urls: set[str] = set()
-
-    for text, url in matches:
-        if url not in invalid_urls:
-            continue
-        if url in replacement_urls or url in unfixable_urls:
-            continue
-
-        print(f"    🔍 代替検索: {text[:60]}...")
-        alt = _search_alternative_url(text)
-        if alt:
-            replacement_urls[url] = alt
-            print(f"       → 代替: {alt[:80]}")
-        else:
-            unfixable_urls.add(url)
-            print(f"       → 代替なし（トピックを除去します）")
-
-    def _replace_link(m: re.Match) -> str:
-        text = m.group(1)
-        url = m.group(2)
-        if url in replacement_urls:
-            return f"[{text}]({replacement_urls[url]})"
-        return m.group(0)
-
-    result = link_pattern.sub(_replace_link, markdown)
-
-    if unfixable_urls:
-        for url in unfixable_urls:
-            escaped = re.escape(url)
-            topic_pattern = re.compile(
-                r'### [^\n]+\n'
-                r'(?:(?!###\s|##\s|---).)*?'
-                rf'(?:\[(?:{_LINK_LABEL_RE})\]\({escaped}\)|{escaped})'
-                r'(?:(?!###\s|##\s|---).)*',
-                re.DOTALL,
-            )
-            result = topic_pattern.sub('', result)
-
-        result = re.sub(r'\n{3,}', '\n\n', result)
-
-        # トピック除去後に残った孤立した --- セパレータを除去する
-        # 連続する --- を1つに集約する
-        result = re.sub(r'(\n---\n)(\n*---\n)+', r'\1', result)
-        # セクションヘッダー（## ...）の直後にある --- を除去する
-        result = re.sub(r'(## [^\n]+\n)\n*---\n', r'\1\n', result)
-        # セクションヘッダー（## ...）の直前または末尾にある --- を除去する
-        result = re.sub(r'\n---\n\n*(## |\Z)', r'\n\n\1', result)
-        # 最終的な余分な空行を整理する
-        result = re.sub(r'\n{3,}', '\n\n', result)
-
-    removed = len(unfixable_urls)
-    replaced = len(replacement_urls)
-    print(f"  リンク検証完了: 代替リンク={replaced} 件, トピック除去={removed} 件")
-    return result
-
-
-# --- コンテンツ検証 -------------------------------------------------------------
-
-
-def verify_content(markdown: str) -> str:
-    """生成されたマークダウンの形式とリンク整合性を検証・修正する。
-
-    生成やリンク検証とは独立した検証プロセスとして、以下の項目をチェックする:
-      1. 見出し（###）がハイパーリンク化されていないこと
-      2. 各トピックに **要約** と **参考リンク** が含まれること
-      3. **参考リンク** が [タイトル](URL) 形式であること
-      4. セクション末尾に不要な締め文がないこと
-      5. 連続 --- セパレータや孤立セパレータがないこと
-    修正可能な問題は自動修正し、全ての検出事項をログ出力する。
-    """
-    lines = markdown.split('\n')
-    fixed_lines: list[str] = []
-    issues: list[str] = []
-
-    # --- 1. 見出しのハイパーリンク解除 ---
-    _heading_link_re = re.compile(
-        r'^(###\s+)\[(' + _LINK_LABEL_RE + r')\]\(https?://[^)]+\)\s*$'
-    )
-    for line in lines:
-        m = _heading_link_re.match(line)
-        if m:
-            label = m.group(2).strip()
-            fixed_line = f"{m.group(1)}{label}"
-            fixed_lines.append(fixed_line)
-            issues.append(f"見出しリンク修正: '{label}'")
-        else:
-            fixed_lines.append(line)
-
-    result = '\n'.join(fixed_lines)
-
-    # --- 2. トピック構造の検証 ---
-    # セクション（## で始まる）ごとにトピック（### で始まる）を抽出して検証する
-    section_pattern = re.compile(r'^## .+', re.MULTILINE)
-    section_starts = [m.start() for m in section_pattern.finditer(result)]
-
-    for i, start in enumerate(section_starts):
-        end = section_starts[i + 1] if i + 1 < len(section_starts) else len(result)
-        section_text = result[start:end]
-        section_header_match = re.match(r'^## (.+)', section_text)
-        section_name = section_header_match.group(1).strip() if section_header_match else "不明"
-
-        # 「情報なし」セクションはスキップ
-        if "現在の対象期間に該当する情報はありません。" in section_text:
-            continue
-
-        # トピック（###）を抽出
-        topic_pattern = re.compile(r'^### .+', re.MULTILINE)
-        topics = list(topic_pattern.finditer(section_text))
-
-        if not topics:
-            issues.append(f"空セクション検出: {section_name}")
-            continue
-
-        for j, topic_match in enumerate(topics):
-            topic_start = topic_match.start()
-            topic_end = topics[j + 1].start() if j + 1 < len(topics) else (end - start)
-            topic_block = section_text[topic_start:topic_end]
-            topic_title = topic_match.group(0).replace('### ', '').strip()
-
-            # **要約** チェック
-            if '**要約**' not in topic_block:
-                issues.append(f"要約なし: [{section_name}] {topic_title}")
-
-            # **参考リンク** チェック
-            if '**参考リンク**' not in topic_block:
-                issues.append(f"参考リンクなし: [{section_name}] {topic_title}")
-            else:
-                # 参考リンクの形式チェック: [text](URL) が含まれるか
-                ref_line_re = re.compile(r'\*\*参考リンク\*\*:\s*(.*)', re.MULTILINE)
-                ref_match = ref_line_re.search(topic_block)
-                if ref_match:
-                    ref_value = ref_match.group(1).strip()
-                    link_re = re.compile(rf'\[{_LINK_LABEL_RE}\]\(https?://[^)]+\)')
-                    if not link_re.search(ref_value):
-                        issues.append(f"参考リンク形式不正: [{section_name}] {topic_title}")
-
-    # --- 3. セクション末尾の締め文検出 ---
-    # 最後のトピックの **参考リンク** (または ---) 以降に余分なテキストがないかチェック
-    _closing_re = re.compile(
-        r'(\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\(https?://[^)]+\))'
-        r'(\n\n(?!###\s|##\s|---|\Z).*?)(?=\n(?:###\s|##\s|---)\b|\Z)',
-        re.MULTILINE | re.DOTALL,
-    )
-
-    def _remove_closing_text(m: re.Match[str]) -> str:
-        trailing = m.group(2).strip()
-        if trailing and not trailing.startswith('**') and not trailing.startswith('#'):
-            issues.append(f"締め文検出: '{trailing[:60]}...'")
-            return m.group(1)
-        return m.group(0)
-
-    result = _closing_re.sub(_remove_closing_text, result)
-
-    # --- 4. 孤立・連続 --- セパレータの修正 ---
-    result = re.sub(r'(\n---\n)(\n*---\n)+', r'\n---\n', result)
-    result = re.sub(r'(## [^\n]+\n)\n*---\n', r'\1\n', result)
-    result = re.sub(r'\n---\n\n*(## |\Z)', r'\n\n\1', result)
-    result = re.sub(r'\n{3,}', '\n\n', result)
-
-    # --- 検証結果のレポート ---
-    if issues:
-        print(f"  コンテンツ検証: {len(issues)} 件の問題を検出（修正済み含む）")
-        for issue in issues:
-            print(f"    ⚠ {issue}")
-    else:
-        print("  コンテンツ検証: 問題なし")
-
-    return result
+# --- リンク検証・コンテンツ検証 -------------------------------------------------------
+# _format_bare_reference_links・validate_links・verify_content は
+# article_generator_shared から一括インポート済み。
 
 
 def _regenerate_empty_sections(
@@ -620,76 +292,23 @@ def _regenerate_empty_sections(
 
 
 def _fetch_feed(url: str, since: datetime, max_items: int = 5) -> list[dict]:
-    resp = requests.get(url, headers=HTTP_HEADERS, timeout=30)
-    resp.raise_for_status()
-    feed = feedparser.parse(resp.content)
-
-    max_age_cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_ARTICLE_AGE_DAYS)
-
-    articles = []
-    for entry in feed.entries:
-        pub_date = None
-        for attr in ("published_parsed", "updated_parsed"):
-            parsed = getattr(entry, attr, None)
-            if parsed:
-                try:
-                    pub_date = datetime(*parsed[:6], tzinfo=timezone.utc)
-                except (ValueError, TypeError):
-                    pass
-                break
-
-        # 日付のない記事は新鮮さを確認できないため除外する。
-        # `since` より古い記事も除外し、MAX_ARTICLE_AGE_DAYS は将来的に
-        # `since` が大幅に広げられた場合のための絶対的な上限として機能する。
-        if not pub_date or pub_date < since or pub_date < max_age_cutoff:
-            continue
-
-        article_url = _resolve_google_news_url(entry.get("link", ""))
-        articles.append(
-            {
-                "title": entry.get("title", "").strip(),
-                "description": entry.get("summary", "").strip()[:150],
-                "url": article_url,
-                "datePublished": str(pub_date) if pub_date else "",
-            }
-        )
-        if len(articles) >= max_items:
-            break
-
-    return articles
+    """単一の RSS/Atom フィードを取得し、since 以降の記事を返す。
+    MAX_ARTICLE_AGE_DAYS より古い記事は絶対上限として除外する。
+    """
+    return _ags._fetch_feed(url, since, max_items=max_items, max_age_days=MAX_ARTICLE_AGE_DAYS)
 
 
 def fetch_category(category: str, since: datetime) -> list[dict]:
-    all_articles = []
-    for source in FEEDS.get(category, []):
-        try:
-            items = _fetch_feed(source["url"], since)
-            for item in items:
-                item["source"] = source["name"]
-            all_articles.extend(items)
-            print(f"    {source['name']}: {len(items)} 件")
-        except Exception as e:
-            print(f"    {source['name']}: 取得失敗 ({e})")
-
-    # URL 重複排除（異なるフィードが同じ記事を参照する場合）
-    seen_urls: set[str] = set()
-    deduped: list[dict] = []
-    for item in all_articles:
-        url = item.get("url", "")
-        if url and url in seen_urls:
-            continue
-        if url:
-            seen_urls.add(url)
-        deduped.append(item)
-
-    # 公開日時の降順でソート（新しい記事が先頭、日時なしは末尾）
-    deduped.sort(key=lambda x: x.get("datePublished", "") or "", reverse=True)
-
-    cap = _CATEGORY_ARTICLE_CAPS.get(category, MAX_ARTICLES_PER_CATEGORY)
-    if len(deduped) > cap:
-        print(f"  ※ {len(deduped)} 件 → {cap} 件に制限")
-        deduped = deduped[:cap]
-    return deduped
+    """カテゴリに属する全フィードから記事を収集する。"""
+    return _ags.fetch_category(
+        FEEDS,
+        category,
+        since,
+        max_items_per_feed=5,
+        max_age_days=MAX_ARTICLE_AGE_DAYS,
+        caps=_CATEGORY_ARTICLE_CAPS,
+        default_cap=MAX_ARTICLES_PER_CATEGORY,
+    )
 
 
 def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) -> list[dict]:
@@ -963,72 +582,29 @@ SECTION_MAX_INPUT_CHARS = {
 SECTION_MAX_OUTPUT_TOKENS = 3000
 
 
-def _build_section_prompt(section_def: dict, data: list[dict], since: "datetime | None" = None) -> str:
-    """セクション固有のユーザープロンプトを組み立てる。
-
-    since が指定された場合、LLM に対象期間の注意事項を付記する。
-    """
-    lines = []
-    if since is not None:
-        since_jst = since.astimezone(JST)
-        date_notice = (
-            f"【対象期間】{since_jst.strftime('%Y年%m月%d日 %H:%M')} (JST) 以降に公開された記事のみを対象としてください。\n"
-            "古い記事（対象期間より前に公開されたもの）は含めないでください。\n"
-            "もし取り上げる話題が以前の記事へのアップデートである場合は、"
-            "そのアップデートであることがわかるよう更新の経緯を明記し、元記事や関連リンクを記載してください。"
-        )
-        lines.append(date_notice)
-        lines.append("")
-    label = section_def.get("data_label") or "データ"
-    lines.extend([
-        section_def["instruction"],
-        "",
-        f"### {label}",
-        json.dumps(data, ensure_ascii=False, indent=2),
-        "",
-    ])
-    return "\n".join(lines)
+# _build_section_prompt は article_generator_shared の共通実装を使用する。
+_build_section_prompt = _ags._build_section_prompt
 
 
 def generate_section(
     client,
     model: str,
     section_def: dict,
-    data: list[dict],
+    data: "list[dict]",
     since: "datetime | None" = None,
 ) -> str:
     """1 セクション分の記事を LLM で生成する。"""
-    key = section_def["key"]
-    max_input = SECTION_MAX_INPUT_CHARS.get(key, 20_000)
-
-    # データが空リストの場合は LLM を呼ばずに「ありません」を返す
-    if len(data) == 0:
-        header = section_def.get("header", "")
-        return f"{header}\n\n現在の対象期間に該当する情報はありません。"
-
-    user_prompt = _build_section_prompt(section_def, data, since=since)
-    while len(user_prompt) > max_input:
-        if len(data) > 3:
-            data.pop()
-            user_prompt = _build_section_prompt(section_def, data, since=since)
-        else:
-            break
-
-    # リスト削減後もまだ上限を超える場合はプロンプトを文字数で切り詰める
-    if len(user_prompt) > max_input:
-        user_prompt = user_prompt[:max_input]
-
-    print(f"    入力: 約 {len(user_prompt):,} 文字")
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": section_def["system"]},
-            {"role": "user", "content": user_prompt},
-        ],
+    return _ags.generate_section(
+        client,
+        model,
+        section_def,
+        data,
+        since=since,
+        max_input_chars=SECTION_MAX_INPUT_CHARS,
+        default_max_input=20_000,
+        max_output_tokens=SECTION_MAX_OUTPUT_TOKENS,
         temperature=0.5,
-        max_tokens=SECTION_MAX_OUTPUT_TOKENS,
     )
-    return response.choices[0].message.content.strip()
 
 
 def generate_article(

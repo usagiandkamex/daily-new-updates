@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import generate_smallchat as sc
+import article_generator_shared as ags
 
 
 def _make_client(content: str = "生成テキスト"):
@@ -279,8 +280,8 @@ class TestValidateLinksOrphanedSeparators(unittest.TestCase):
                 return False, "HTTP 404"
             return True, "OK"
 
-        with (patch.object(sc, "_validate_url", side_effect=fake_validate),
-              patch.object(sc, "_search_alternative_url", return_value=None)):
+        with (patch.object(ags, "_validate_url", side_effect=fake_validate),
+              patch.object(ags, "_search_alternative_url", return_value=None)):
             return sc.validate_links(markdown)
 
     def test_consecutive_separators_removed_when_all_topics_deleted(self):
@@ -686,7 +687,7 @@ class TestFetchFeedDateFilter(unittest.TestCase):
         mock_feed = self._make_feed(entries)
         with (patch.object(sc.requests, "get", return_value=mock_resp),
               patch.object(sc.feedparser, "parse", return_value=mock_feed),
-              patch.object(sc, "_resolve_google_news_url", side_effect=lambda u: u)):
+              patch.object(ags, "_resolve_google_news_url", side_effect=lambda u: u)):
             return sc._fetch_feed("https://feed.example.com/rss", since)
 
     def _time_tuple(self, dt: datetime):

@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, call, patch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import generate_daily_update as du
+import article_generator_shared as ags
 
 
 def _make_client(content: str = "生成テキスト"):
@@ -475,8 +476,8 @@ class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):
         """リンク無効でトピック除去後に残った孤立 --- が除去される。"""
         article = self._make_article_with_invalid_link()
         with (
-            patch.object(du, "_validate_url", return_value=(False, "HTTP 404")),
-            patch.object(du, "_search_alternative_url", return_value=None),
+            patch.object(ags, "_validate_url", return_value=(False, "HTTP 404")),
+            patch.object(ags, "_search_alternative_url", return_value=None),
         ):
             result = du.validate_links(article)
         self.assertNotIn("\n---\n\n---\n", result)
@@ -485,7 +486,7 @@ class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):
     def test_valid_separators_preserved(self):
         """有効なリンクのみを含む記事では --- セパレータが保持される。"""
         article = self._make_article_with_invalid_link()
-        with patch.object(du, "_validate_url", return_value=(True, "OK")):
+        with patch.object(ags, "_validate_url", return_value=(True, "OK")):
             result = du.validate_links(article)
         self.assertIn("---", result)
 

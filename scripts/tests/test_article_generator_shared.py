@@ -469,6 +469,14 @@ class TestValidateUrlSoftFail(unittest.TestCase):
         self.assertFalse(ok, "HTTP 404 は無効（False）を返すべき")
         self.assertIn("404", reason)
 
+    def test_ssl_error_returns_false(self):
+        """SSL エラー等の恒久的エラーは無効（False）を返す。"""
+        import article_generator_shared as ags
+        with patch.object(ags.requests, "head", side_effect=ags.requests.exceptions.SSLError("ssl error")):
+            ok, reason = ags._validate_url("https://example.com/article")
+        self.assertFalse(ok, "SSL エラーは無効（False）を返すべき")
+        self.assertIn("接続エラー", reason)
+
     def test_uses_shorter_timeout(self):
         """_validate_url は短縮されたタイムアウト（5 秒）を使用する。"""
         import article_generator_shared as ags
@@ -499,14 +507,23 @@ class TestSearchAlternativeUrlSoftFail(unittest.TestCase):
             result = ags._search_alternative_url("検索クエリ")
         self.assertIs(result, ags._SEARCH_UNAVAILABLE, "タイムアウト時は _SEARCH_UNAVAILABLE を返すべき")
 
-    def test_non_200_status_returns_none(self):
-        """HTTP 非 200 レスポンスは None（結果なし）を返す。"""
+    def test_5xx_status_returns_sentinel(self):
+        """HTTP 5xx レスポンスは _SEARCH_UNAVAILABLE を返す。"""
         import article_generator_shared as ags
         mock_resp = MagicMock()
         mock_resp.status_code = 503
         with patch.object(ags.requests, "get", return_value=mock_resp):
             result = ags._search_alternative_url("検索クエリ")
-        self.assertIsNone(result, "非 200 レスポンスは None を返すべき")
+        self.assertIs(result, ags._SEARCH_UNAVAILABLE, "HTTP 5xx は _SEARCH_UNAVAILABLE を返すべき")
+
+    def test_4xx_status_returns_none(self):
+        """HTTP 4xx レスポンスは None（結果なし）を返す。"""
+        import article_generator_shared as ags
+        mock_resp = MagicMock()
+        mock_resp.status_code = 404
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            result = ags._search_alternative_url("検索クエリ")
+        self.assertIsNone(result, "HTTP 4xx は None を返すべき")
 
     def test_uses_shorter_timeout(self):
         """_search_alternative_url は短縮されたタイムアウト（10 秒）を使用する。"""

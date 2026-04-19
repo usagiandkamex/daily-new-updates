@@ -118,10 +118,16 @@ def _validate_url(url: str) -> tuple[bool, str]:
             return False, "Google News RSS リダイレクト URL"
 
         return True, "OK"
-    except requests.RequestException as e:
-        # 接続エラー・タイムアウト: URL の有効性が不明なためソフトフェイル（有効とみなす）
+    except requests.exceptions.SSLError as e:
+        # SSL 証明書エラー等は恒久的エラーとして無効とみなす
+        return False, f"接続エラー ({e.__class__.__name__})"
+    except (requests.ConnectionError, requests.Timeout) as e:
+        # 一時的なネットワーク障害・タイムアウト: URL の有効性が不明なためソフトフェイル（有効とみなす）
         print(f"    URL 検証スキップ（接続エラー）: {url[:80]} — {e.__class__.__name__}")
         return True, f"検証スキップ ({e.__class__.__name__})"
+    except requests.RequestException as e:
+        # SSL エラー・リダイレクトループ・無効な URL 等の恒久的エラーは無効とみなす
+        return False, f"接続エラー ({e.__class__.__name__})"
 
 
 def _search_alternative_url(query: str) -> "str | None | _SearchUnavailableSentinel":
@@ -143,6 +149,9 @@ def _search_alternative_url(query: str) -> "str | None | _SearchUnavailableSenti
             timeout=10,
         )
         if resp.status_code != 200:
+            if 500 <= resp.status_code < 600:
+                print(f"    代替検索失敗（検索サービス障害）: HTTP {resp.status_code}")
+                return _SEARCH_UNAVAILABLE
             return None
 
         feed = feedparser.parse(resp.content)

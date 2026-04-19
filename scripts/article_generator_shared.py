@@ -9,7 +9,7 @@ generate_daily_update.py と generate_smallchat.py の両ワークフローで
 import json
 import re
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse, urlunparse
 
 import feedparser
 import requests
@@ -642,12 +642,25 @@ class SourceUrlTracker:
     """
 
     @staticmethod
+    def _normalize_url(url: str) -> str:
+        """URL を正規化してクエリパラメータとフラグメントを除去する。
+
+        ?utm_source=... などのトラッキングパラメータや #section のフラグメントを
+        除去し、スキーム・ホスト・パスのみを残す。これにより、同一記事を指す
+        URL のバリエーションを同一視できる。
+        """
+        parsed = urlparse(url)
+        return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+
+    @staticmethod
     def collect_source_urls(*data_lists) -> frozenset[str]:
         """複数のデータリストから URL を収集して frozenset を返す。
 
         フィードから取得した記事・イベント URL を集約し、LLM 生成後の
         参考リンク検証（log_unsourced_reference_links）に使用する。
         list[dict] 形式では "url"・"event_url" キーを参照する。
+        収集時に URL を正規化（クエリパラメータ・フラグメント除去）するため、
+        ?utm_source=... などのパラメータ付き URL とも一致する。
         """
         urls: set[str] = set()
         for data in data_lists:
@@ -657,7 +670,7 @@ class SourceUrlTracker:
                         continue
                     url = item.get("url") or item.get("event_url", "")
                     if url:
-                        urls.add(url)
+                        urls.add(SourceUrlTracker._normalize_url(url))
         return frozenset(urls)
 
     @staticmethod
@@ -666,13 +679,14 @@ class SourceUrlTracker:
 
         LLM が提供されたソースデータ外の URL を生成した可能性がある箇所を可視化し、
         デバッグや品質改善に役立てる。URL の修正は validate_links() に委ねる。
+        参考リンクの URL は正規化（クエリパラメータ除去）してから照合する。
         """
         ref_link_pattern = re.compile(
             r'\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\((https?://[^)]+)\)'
         )
         unsourced = [
             m.group(1) for m in ref_link_pattern.finditer(article)
-            if m.group(1) not in source_urls
+            if SourceUrlTracker._normalize_url(m.group(1)) not in source_urls
         ]
         if unsourced:
             print(f"  ソース外参考リンク: {len(unsourced)} 件（HTTP 検証はこの後 validate_links() で実施）")

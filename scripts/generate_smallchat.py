@@ -710,6 +710,49 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
     return new_items
 
 
+# --- ソース URL 管理 ---------------------------------------------------------------
+
+
+def _collect_source_urls(*data_lists) -> frozenset[str]:
+    """複数のデータリストから URL を収集して frozenset を返す。
+
+    フィードから取得した記事 URL を集約し、LLM 生成後の
+    参考リンク検証（_log_unsourced_reference_links）に使用する。
+    list[dict] 形式では "url"・"event_url" キーを参照する。
+    """
+    urls: set[str] = set()
+    for data in data_lists:
+        if isinstance(data, list):
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                url = item.get("url") or item.get("event_url", "")
+                if url:
+                    urls.add(url)
+    return frozenset(urls)
+
+
+def _log_unsourced_reference_links(article: str, source_urls: frozenset[str]) -> None:
+    """参考リンクの URL がソースデータに含まれないものを検出・ログ出力する。
+
+    LLM が提供されたソースデータ外の URL を生成した可能性がある箇所を可視化し、
+    デバッグや品質改善に役立てる。URL の修正は validate_links() に委ねる。
+    """
+    ref_link_pattern = re.compile(
+        r'\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\((https?://[^)]+)\)'
+    )
+    unsourced = [
+        m.group(1) for m in ref_link_pattern.finditer(article)
+        if m.group(1) not in source_urls
+    ]
+    if unsourced:
+        print(f"  ソース外参考リンク: {len(unsourced)} 件（HTTP 検証は validate_links() で実施済み）")
+        for url in unsourced[:5]:
+            print(f"    ℹ {url[:80]}")
+    else:
+        print("  参考リンク確認: 全てのリンクがソースデータと一致しています")
+
+
 # --- LLM クライアント -----------------------------------------------------------
 
 
@@ -1131,6 +1174,13 @@ def main():
         "techblog_en": techblog_en_news,
     }
 
+    # ソースデータ URL を収集（LLM 生成後の参考リンク検証に使用）
+    source_urls = _collect_source_urls(
+        microsoft_news, ai_news, azure_news, cloud_news,
+        security_news, itops_news, techblog_ja_news, techblog_en_news,
+    )
+    print(f"\nソース URL 収集完了: {len(source_urls)} 件")
+
     print("\n記事を生成中（セクションごとに個別生成）...")
     llm_clients = create_llm_clients()
     article = None
@@ -1151,6 +1201,10 @@ def main():
             last_error = e
     if article is None:
         raise RuntimeError(f"全ての LLM プロバイダーで生成に失敗しました。最後のエラー: {last_error}")
+
+    # ソース外参考リンクを検出・ログ出力（デバッグ・品質確認用）
+    print("\nソース外参考リンクを確認中...")
+    _log_unsourced_reference_links(article, source_urls)
 
     print("\nリンクを検証中...")
     article = _format_bare_reference_links(article)

@@ -544,7 +544,7 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         """fetch_connpass_events() は started_at が実行日より前のイベントを除外する。"""
         import time
 
-        # 実行日 2026-05-20、過去イベント（5/10）と将来イベント（5/25）を用意
+        # 実行日 2026-05-20、過去イベント（JST 5/9）と将来イベント（JST 5/24）を用意
         past_pub = time.strptime("2026-05-09 10:00:00", "%Y-%m-%d %H:%M:%S")   # UTC → JST = 5/9 19:00
         future_pub = time.strptime("2026-05-24 10:00:00", "%Y-%m-%d %H:%M:%S")  # UTC → JST = 5/24 19:00
 

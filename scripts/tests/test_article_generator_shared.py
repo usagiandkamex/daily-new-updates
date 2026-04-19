@@ -438,5 +438,166 @@ class TestSharedFunctionsModule(unittest.TestCase):
         self.assertIn("記事A", prompt)
 
 
+class TestValidateUrlSoftFail(unittest.TestCase):
+    """_validate_url() のソフトフェイル動作テスト"""
+
+    def test_connection_error_returns_true(self):
+        """接続エラー時はソフトフェイル（True, 検証スキップ）を返す。"""
+        import article_generator_shared as ags
+        with patch.object(ags.requests, "head", side_effect=ags.requests.ConnectionError("timeout")):
+            ok, reason = ags._validate_url("https://example.com/article")
+        self.assertTrue(ok, "接続エラー時は有効（True）を返すべき")
+        self.assertIn("スキップ", reason)
+
+    def test_timeout_returns_true(self):
+        """タイムアウト時はソフトフェイル（True, 検証スキップ）を返す。"""
+        import article_generator_shared as ags
+        with patch.object(ags.requests, "head", side_effect=ags.requests.Timeout("timed out")):
+            ok, reason = ags._validate_url("https://example.com/article")
+        self.assertTrue(ok, "タイムアウト時は有効（True）を返すべき")
+        self.assertIn("スキップ", reason)
+
+    def test_http_404_returns_false(self):
+        """HTTP 404 は依然として無効（False）を返す。"""
+        import article_generator_shared as ags
+        mock_resp = MagicMock()
+        mock_resp.status_code = 404
+        mock_resp.headers.get.return_value = "text/html"
+        mock_resp.url = "https://example.com/article"
+        with patch.object(ags.requests, "head", return_value=mock_resp):
+            ok, reason = ags._validate_url("https://example.com/article")
+        self.assertFalse(ok, "HTTP 404 は無効（False）を返すべき")
+        self.assertIn("404", reason)
+
+    def test_uses_shorter_timeout(self):
+        """_validate_url は短縮されたタイムアウト（5 秒）を使用する。"""
+        import article_generator_shared as ags
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.headers.get.return_value = "text/html"
+        mock_resp.url = "https://example.com/article"
+        with patch.object(ags.requests, "head", return_value=mock_resp) as mock_head:
+            ags._validate_url("https://example.com/article")
+        _, kwargs = mock_head.call_args
+        self.assertEqual(kwargs.get("timeout"), 5, "タイムアウトは 5 秒であるべき")
+
+
+class TestSearchAlternativeUrlSoftFail(unittest.TestCase):
+    """_search_alternative_url() のソフトフェイル動作テスト"""
+
+    def test_network_error_returns_sentinel(self):
+        """ネットワーク障害時は _SEARCH_UNAVAILABLE センチネルを返す。"""
+        import article_generator_shared as ags
+        with patch.object(ags.requests, "get", side_effect=ags.requests.ConnectionError("no connection")):
+            result = ags._search_alternative_url("検索クエリ")
+        self.assertIs(result, ags._SEARCH_UNAVAILABLE, "ネットワーク障害時は _SEARCH_UNAVAILABLE を返すべき")
+
+    def test_timeout_returns_sentinel(self):
+        """タイムアウト時は _SEARCH_UNAVAILABLE センチネルを返す。"""
+        import article_generator_shared as ags
+        with patch.object(ags.requests, "get", side_effect=ags.requests.Timeout("timed out")):
+            result = ags._search_alternative_url("検索クエリ")
+        self.assertIs(result, ags._SEARCH_UNAVAILABLE, "タイムアウト時は _SEARCH_UNAVAILABLE を返すべき")
+
+    def test_non_200_status_returns_none(self):
+        """HTTP 非 200 レスポンスは None（結果なし）を返す。"""
+        import article_generator_shared as ags
+        mock_resp = MagicMock()
+        mock_resp.status_code = 503
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            result = ags._search_alternative_url("検索クエリ")
+        self.assertIsNone(result, "非 200 レスポンスは None を返すべき")
+
+    def test_uses_shorter_timeout(self):
+        """_search_alternative_url は短縮されたタイムアウト（10 秒）を使用する。"""
+        import article_generator_shared as ags
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = b""
+        with patch.object(ags.requests, "get", return_value=mock_resp) as mock_get, \
+             patch.object(ags, "feedparser") as mock_feedparser:
+            mock_feedparser.parse.return_value.entries = []
+            ags._search_alternative_url("検索クエリ")
+        _, kwargs = mock_get.call_args
+        self.assertEqual(kwargs.get("timeout"), 10, "タイムアウトは 10 秒であるべき")
+
+
+class TestValidateLinksSoftFail(unittest.TestCase):
+    """validate_links() のソフトフェイル動作テスト"""
+
+    def _make_article(self, url: str) -> str:
+        return (
+            "## 1. テスト\n\n"
+            f"### トピック\n\n"
+            f"**要約**: 内容\n\n"
+            f"**参考リンク**: [タイトル]({url})\n"
+        )
+
+    def test_search_unavailable_keeps_original_content(self):
+        """検索サービス障害時はトピックを除去せず元のコンテンツを保持する。"""
+        import article_generator_shared as ags
+        url = "https://bad.example.com/article"
+        markdown = self._make_article(url)
+
+        with (patch.object(ags, "_validate_url", return_value=(False, "HTTP 404")),
+              patch.object(ags, "_search_alternative_url", return_value=ags._SEARCH_UNAVAILABLE)):
+            result = ags.validate_links(markdown)
+
+        # トピックが除去されていないこと
+        self.assertIn("トピック", result)
+        self.assertIn(url, result)
+
+    def test_search_unavailable_does_not_add_to_unfixable(self):
+        """検索サービス障害時はトピックを除去せず、複数 URL でも保持する。"""
+        import article_generator_shared as ags
+        markdown = (
+            "## 1. テスト\n\n"
+            "### トピック A\n\n"
+            "**要約**: 内容 A\n\n"
+            "**参考リンク**: [A](https://bad-a.example.com)\n\n"
+            "---\n\n"
+            "### トピック B\n\n"
+            "**要約**: 内容 B\n\n"
+            "**参考リンク**: [B](https://bad-b.example.com)\n"
+        )
+
+        with (patch.object(ags, "_validate_url", return_value=(False, "HTTP 404")),
+              patch.object(ags, "_search_alternative_url", return_value=ags._SEARCH_UNAVAILABLE)):
+            result = ags.validate_links(markdown)
+
+        # どちらのトピックも除去されていないこと
+        self.assertIn("トピック A", result)
+        self.assertIn("トピック B", result)
+
+    def test_search_none_removes_topic(self):
+        """検索結果なし（None）の場合は従来通りトピックを除去する。"""
+        import article_generator_shared as ags
+        url = "https://bad.example.com/article"
+        markdown = self._make_article(url)
+
+        with (patch.object(ags, "_validate_url", return_value=(False, "HTTP 404")),
+              patch.object(ags, "_search_alternative_url", return_value=None)):
+            result = ags.validate_links(markdown)
+
+        # トピックが除去されていること
+        self.assertNotIn("トピック", result)
+
+    def test_connection_error_skips_validation(self):
+        """接続エラーのある URL は無効とみなされず、代替検索を呼ばない。"""
+        import article_generator_shared as ags
+        url = "https://timeout.example.com/article"
+        markdown = self._make_article(url)
+
+        with (patch.object(ags, "_validate_url", return_value=(True, "検証スキップ (ConnectionError)")),
+              patch.object(ags, "_search_alternative_url") as mock_search):
+            result = ags.validate_links(markdown)
+
+        # 代替検索が呼ばれないこと（接続エラーは有効とみなすため）
+        mock_search.assert_not_called()
+        # コンテンツが保持されていること
+        self.assertIn("トピック", result)
+        self.assertIn(url, result)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -53,6 +53,14 @@ _RSS_CONTENT_TYPES = (
 # 例: [[In preview] Public Preview: Event Grid](https://...)
 _LINK_LABEL_RE = r'[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*'
 
+# 代替 URL 検索でネットワーク障害が発生した場合を示すセンチネル。
+# None（検索結果なし）と区別するために使用する。
+class _SearchUnavailableSentinel:
+    """検索サービス自体が利用不可の場合を示すセンチネル型。"""
+    pass
+
+_SEARCH_UNAVAILABLE = _SearchUnavailableSentinel()
+
 
 def _resolve_google_news_url(url: str) -> str:
     """Google News RSS のリダイレクト URL を実際の記事 URL に解決する。"""
@@ -71,12 +79,16 @@ def _resolve_google_news_url(url: str) -> str:
 
 
 def _validate_url(url: str) -> tuple[bool, str]:
-    """単一 URL を検証し、(OK, 理由) を返す。"""
+    """単一 URL を検証し、(OK, 理由) を返す。
+
+    接続エラー・タイムアウト等のネットワーク障害時はソフトフェイル（有効とみなす）。
+    URL の有効性が不明な場合にトピックを誤って除去しないようにするための措置。
+    """
     try:
         resp = requests.head(
             url,
             headers={"User-Agent": HTTP_HEADERS["User-Agent"]},
-            timeout=10,
+            timeout=5,
             allow_redirects=True,
         )
         # HEAD が 405 の場合は GET でリトライ
@@ -84,7 +96,7 @@ def _validate_url(url: str) -> tuple[bool, str]:
             resp = requests.get(
                 url,
                 headers={"User-Agent": HTTP_HEADERS["User-Agent"]},
-                timeout=10,
+                timeout=5,
                 allow_redirects=True,
                 stream=True,
             )
@@ -107,11 +119,19 @@ def _validate_url(url: str) -> tuple[bool, str]:
 
         return True, "OK"
     except requests.RequestException as e:
-        return False, f"接続エラー ({e.__class__.__name__})"
+        # 接続エラー・タイムアウト: URL の有効性が不明なためソフトフェイル（有効とみなす）
+        print(f"    URL 検証スキップ（接続エラー）: {url[:80]} — {e.__class__.__name__}")
+        return True, f"検証スキップ ({e.__class__.__name__})"
 
 
-def _search_alternative_url(query: str) -> "str | None":
-    """Google News RSS で代替記事を検索し、最初の有効な URL を返す。"""
+def _search_alternative_url(query: str) -> "str | None | _SearchUnavailableSentinel":
+    """Google News RSS で代替記事を検索し、最初の有効な URL を返す。
+
+    Returns:
+        代替記事の URL 文字列（見つかった場合）、
+        検索結果が見つからない場合は None、
+        ネットワーク障害など検索サービス自体が利用不可の場合は _SEARCH_UNAVAILABLE センチネル。
+    """
     search_url = (
         "https://news.google.com/rss/search?"
         f"q={quote_plus(query)}&hl=ja&gl=JP&ceid=JP:ja"
@@ -120,7 +140,7 @@ def _search_alternative_url(query: str) -> "str | None":
         resp = requests.get(
             search_url,
             headers=HTTP_HEADERS,
-            timeout=15,
+            timeout=10,
         )
         if resp.status_code != 200:
             return None
@@ -134,6 +154,10 @@ def _search_alternative_url(query: str) -> "str | None":
             ok, _ = _validate_url(resolved)
             if ok:
                 return resolved
+    except requests.RequestException as e:
+        # ネットワーク障害・タイムアウト: 検索サービス自体が利用不可
+        print(f"    代替検索失敗（ネットワーク障害）: {e.__class__.__name__}")
+        return _SEARCH_UNAVAILABLE
     except Exception as e:
         print(f"    代替検索失敗: {e}")
     return None
@@ -214,7 +238,10 @@ def validate_links(markdown: str) -> str:
 
         print(f"    🔍 代替検索: {text[:60]}...")
         alt = _search_alternative_url(text)
-        if alt:
+        if alt is _SEARCH_UNAVAILABLE:
+            # 検索サービス自体が利用不可のためスキップ（元リンクを保持）
+            print(f"       → 代替検索サービス障害、スキップ（元リンクを保持）")
+        elif alt:
             replacement_urls[url] = alt
             print(f"       → 代替: {alt[:80]}")
         else:

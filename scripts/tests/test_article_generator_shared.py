@@ -112,6 +112,30 @@ class TestSourceUrlTrackerCollect(unittest.TestCase):
         result = tracker.collect_source_urls([{"url": "https://example.com/y"}])
         self.assertIn("https://example.com/y", result)
 
+    def test_normalizes_url_with_query_params(self):
+        """クエリパラメータ付き URL は正規化（パラメータ除去）して格納される。"""
+        data = [{"url": "https://example.com/article?utm_source=twitter&utm_medium=social"}]
+        result = SourceUrlTracker.collect_source_urls(data)
+        self.assertIn("https://example.com/article", result)
+        self.assertNotIn("https://example.com/article?utm_source=twitter&utm_medium=social", result)
+
+    def test_normalizes_url_with_fragment(self):
+        """フラグメント付き URL は正規化（フラグメント除去）して格納される。"""
+        data = [{"url": "https://example.com/article#section1"}]
+        result = SourceUrlTracker.collect_source_urls(data)
+        self.assertIn("https://example.com/article", result)
+        self.assertNotIn("https://example.com/article#section1", result)
+
+    def test_deduplicates_urls_differing_only_in_query_params(self):
+        """クエリパラメータのみ異なる同一パスの URL は正規化後に重複除去される。"""
+        data = [
+            {"url": "https://example.com/article?utm_source=twitter"},
+            {"url": "https://example.com/article?utm_source=facebook"},
+            {"url": "https://example.com/article"},
+        ]
+        result = SourceUrlTracker.collect_source_urls(data)
+        self.assertEqual(len(result), 1)
+        self.assertIn("https://example.com/article", result)
 
 class TestSourceUrlTrackerLog(unittest.TestCase):
     """SourceUrlTracker.log_unsourced_reference_links() のテスト"""
@@ -190,6 +214,30 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         # 例外が出ないことを確認
         with patch('sys.stdout', new_callable=io.StringIO):
             tracker.log_unsourced_reference_links(article, frozenset())
+
+    def test_url_with_query_params_matches_normalized_source(self):
+        """参考リンクにクエリパラメータがあっても、正規化後にソースと一致すれば警告しない。"""
+        base_url = "https://azure.microsoft.com/blog/update"
+        source_urls = frozenset({base_url})
+        article = self._make_article(f"{base_url}?utm_source=twitter&utm_medium=social")
+
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
+
+        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertIn("ソースデータと一致", mock_out.getvalue())
+
+    def test_url_with_fragment_matches_normalized_source(self):
+        """参考リンクにフラグメントがあっても、正規化後にソースと一致すれば警告しない。"""
+        base_url = "https://azure.microsoft.com/blog/update"
+        source_urls = frozenset({base_url})
+        article = self._make_article(f"{base_url}#section2")
+
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
+
+        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertIn("ソースデータと一致", mock_out.getvalue())
 
 
 class TestSourceUrlTrackerDelegationDaily(unittest.TestCase):

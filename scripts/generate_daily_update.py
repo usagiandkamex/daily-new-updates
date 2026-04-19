@@ -488,6 +488,7 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
     connpass API v1 は 2024 年 7 月末に終了しており利用不可。
     代わりに connpass RSS 検索エンドポイント（https://connpass.com/search/?format=rss）を使用。
     pref_id パラメータで都道府県を指定することで東京都・神奈川県のイベントのみを確実に取得できる。
+    また online=1 パラメータでオンライン開催イベントも別途取得する。
     旧実装の keyword による都道府県名の文字列検索は、イベントのタイトルや説明文に都道府県名が
     含まれることがほとんどないため、常に 0 件になっていた。
     """
@@ -550,6 +551,46 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
                 print(f"    connpass RSS ({pref} {ym}): {count} 件取得")
             except Exception as e:
                 print(f"    connpass RSS ({pref} {ym}): 取得失敗 ({e})")
+
+    # オンライン開催イベントを追加検索（online=1 パラメータ、都道府県不問）
+    for ym in search_months:
+        params = {"format": "rss", "online": 1, "ym": ym}
+        try:
+            resp = requests.get(
+                CONNPASS_RSS_URL,
+                params=params,
+                headers=HTTP_HEADERS,
+                timeout=15,
+            )
+            resp.raise_for_status()
+            feed = feedparser.parse(resp.content)
+            count = 0
+            for entry in feed.entries:
+                url = entry.get("link", "")
+                if not url or url in seen_urls:
+                    continue
+                title = entry.get("title", "").strip()
+                desc = entry.get("summary", "").strip()
+                if not _is_it_event({"title": title, "catch": desc}):
+                    continue
+                seen_urls.add(url)
+                events.append(
+                    {
+                        "title": title,
+                        "catch": desc[:200],
+                        "event_url": url,
+                        "started_at": "",
+                        "place": "オンライン",
+                        "address": "",
+                        "accepted": 0,
+                        "limit": 0,
+                        "series": "",
+                    }
+                )
+                count += 1
+            print(f"    connpass RSS (オンライン {ym}): {count} 件取得")
+        except Exception as e:
+            print(f"    connpass RSS (オンライン {ym}): 取得失敗 ({e})")
 
     if len(events) > CONNPASS_MAX_EVENTS:
         print(f"  ※ connpass RSS {len(events)} 件 → {CONNPASS_MAX_EVENTS} 件に制限")
@@ -712,8 +753,8 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
 
     API キー不要の多段検索で upcoming IT イベントを発掘する:
 
-    1. connpass RSS 月別 × 都道府県 検索（東京・神奈川、pref_id 指定）
-       ※ connpass API v1 は 2024 年 7 月末終了。RSS 検索エンドポイントが pref_id に対応。
+    1. connpass RSS 月別 × 都道府県 検索（東京・神奈川、pref_id 指定）+ オンラインイベント検索（online=1）
+       ※ connpass API v1 は 2024 年 7 月末終了。RSS 検索エンドポイントが pref_id / online に対応。
     2. Google News / X(Twitter) 言及からコミュニティキーワードを収集
     3. 収集キーワードで connpass RSS を追加検索（直近 3 ヶ月、上位 20 キーワード）
     4. Doorkeeper / TECH PLAY など connpass 以外のプラットフォームから取得

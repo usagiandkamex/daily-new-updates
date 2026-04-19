@@ -395,12 +395,15 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             self.assertIn(seed, result)
 
     def test_fetch_connpass_no_api_key_runs_multistep(self):
-        """CONNPASS_API_KEY 未設定でも多段検索（RSS pref_id + 段階3 キーワード RSS）が実行される。"""
+        """CONNPASS_API_KEY 未設定でも多段検索（RSS pref_id + オンライン + 段階3 キーワード RSS）が実行される。"""
         captured_pref_ids: list[int] = []
+        captured_online_flags: list[int] = []
 
         def fake_get(url, params=None, headers=None, timeout=None):
             if params and "pref_id" in params:
                 captured_pref_ids.append(params["pref_id"])
+            if params and params.get("online") == 1:
+                captured_online_flags.append(params["online"])
             resp = MagicMock()
             resp.raise_for_status.return_value = None
             resp.content = b""
@@ -417,8 +420,45 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         # 東京都（pref_id=13）・神奈川県（pref_id=14）が検索されている
         self.assertIn(du._CONNPASS_PREFECTURE_IDS["東京都"], captured_pref_ids)
         self.assertIn(du._CONNPASS_PREFECTURE_IDS["神奈川県"], captured_pref_ids)
+        # オンラインイベント（online=1）も検索されている
+        self.assertTrue(len(captured_online_flags) > 0)
         # 結果はリスト（空でも可）
         self.assertIsInstance(result, list)
+
+    def test_rss_search_online_events_have_place_set(self):
+        """オンライン検索（online=1）で取得したイベントの place は "オンライン" に設定される。"""
+        online_calls: list[bool] = []
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            online_calls.append(bool(params and params.get("online") == 1))
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry_data = {
+            "link": "https://connpass.com/event/999/",
+            "title": "Python オンライン勉強会",
+            "summary": "オンラインで Python を学ぶ",
+        }
+
+        def fake_parse(content):
+            # オンライン検索（online_calls[-1] が True）のときだけエントリを返す
+            if online_calls and online_calls[-1]:
+                entry = MagicMock()
+                entry.get.side_effect = lambda k, d="": entry_data.get(k, d)
+                return MagicMock(entries=[entry])
+            return MagicMock(entries=[])
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.side_effect = fake_parse
+            result = du._fetch_connpass_events_rss("20260501")
+
+        online_events = [e for e in result if e.get("place") == "オンライン"]
+        self.assertTrue(len(online_events) > 0)
 
     def test_search_connpass_rss_by_keyword_deduplicates(self):
         """_search_connpass_rss_by_keyword() は seen_urls に登録済みの URL を除外する。"""

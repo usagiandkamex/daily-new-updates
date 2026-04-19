@@ -533,9 +533,8 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         self.assertEqual(result[0]["event_url"], "https://doorkeeper.jp/events/1")
         self.assertIn("https://doorkeeper.jp/events/1", seen)
 
-    def test_event_outside_range_is_excluded(self):
-        """対象期間外のエントリは除外される。"""
-        import time
+    def test_event_included_regardless_of_publication_date(self):
+        """published_parsed は期間フィルタに使わないため、公開日が古くても IT イベントは含まれる。"""
         target_dt = self._make_dt("20260501")
         end_dt = self._make_dt("20260731")
 
@@ -545,14 +544,13 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
             resp.content = b""
             return resp
 
-        # published_parsed: 2025-01-01 (well outside range)
-        pub = time.strptime("2025-01-01", "%Y-%m-%d")
+        # published_parsed irrelevant since date filter was removed
         entry = MagicMock()
         entry_data = {
             "link": "https://doorkeeper.jp/events/2",
             "title": "Python 勉強会",
             "summary": "Python エンジニア向け",
-            "published_parsed": pub,
+            "published_parsed": None,
             "updated_parsed": None,
         }
         entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
@@ -565,11 +563,12 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
             seen: set[str] = set()
             result = du._fetch_other_platform_events(target_dt, end_dt, seen)
 
-        self.assertEqual(result, [])
+        # publication date is not used for filtering; IT event should be included
+        self.assertTrue(len(result) > 0)
+        self.assertEqual(result[0]["started_at"], "")
 
     def test_non_it_event_is_excluded(self):
         """IT 非関連エントリは除外される。"""
-        import time
         target_dt = self._make_dt("20260501")
         end_dt = self._make_dt("20260731")
 
@@ -579,13 +578,12 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
             resp.content = b""
             return resp
 
-        pub = time.strptime("2026-06-01", "%Y-%m-%d")
         entry = MagicMock()
         entry_data = {
             "link": "https://doorkeeper.jp/events/3",
             "title": "料理教室 東京",
             "summary": "家庭料理を楽しく学びましょう",
-            "published_parsed": pub,
+            "published_parsed": None,
             "updated_parsed": None,
         }
         entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
@@ -602,7 +600,6 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
 
     def test_duplicate_url_is_excluded(self):
         """seen_urls に登録済みの URL は除外される。"""
-        import time
         target_dt = self._make_dt("20260501")
         end_dt = self._make_dt("20260731")
 
@@ -612,14 +609,13 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
             resp.content = b""
             return resp
 
-        pub = time.strptime("2026-06-01", "%Y-%m-%d")
         entry = MagicMock()
         existing_url = "https://doorkeeper.jp/events/4"
         entry_data = {
             "link": existing_url,
             "title": "Python 勉強会",
             "summary": "Python エンジニア向け",
-            "published_parsed": pub,
+            "published_parsed": None,
             "updated_parsed": None,
         }
         entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
@@ -633,6 +629,83 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
             result = du._fetch_other_platform_events(target_dt, end_dt, seen)
 
         self.assertEqual(result, [])
+
+    def test_location_filter_excludes_non_tokyo_events(self):
+        """location_filter=True のフィードでは東京/神奈川/オンライン無関係のエントリを除外する。"""
+        target_dt = self._make_dt("20260501")
+        end_dt = self._make_dt("20260731")
+
+        techplay_url = "https://techplay.jp/atom/events"
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry = MagicMock()
+        entry_data = {
+            "link": "https://techplay.jp/event/9999",
+            "title": "大阪 Python 勉強会",
+            "summary": "大阪のエンジニア向けイベント",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            # Temporarily override feeds with only TECH PLAY (location_filter=True)
+            original_feeds = du._IT_EVENT_PLATFORM_FEEDS
+            du._IT_EVENT_PLATFORM_FEEDS = [{"name": "TECH PLAY", "url": techplay_url, "location_filter": True}]
+            try:
+                seen: set[str] = set()
+                result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+            finally:
+                du._IT_EVENT_PLATFORM_FEEDS = original_feeds
+
+        self.assertEqual(result, [])
+
+    def test_location_filter_includes_online_events(self):
+        """location_filter=True のフィードでもオンライン関連エントリは通過する。"""
+        target_dt = self._make_dt("20260501")
+        end_dt = self._make_dt("20260731")
+
+        techplay_url = "https://techplay.jp/atom/events"
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry = MagicMock()
+        entry_data = {
+            "link": "https://techplay.jp/event/8888",
+            "title": "オンライン Python ハンズオン",
+            "summary": "オンラインで Python エンジニア向け勉強会",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            original_feeds = du._IT_EVENT_PLATFORM_FEEDS
+            du._IT_EVENT_PLATFORM_FEEDS = [{"name": "TECH PLAY", "url": techplay_url, "location_filter": True}]
+            try:
+                seen: set[str] = set()
+                result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+            finally:
+                du._IT_EVENT_PLATFORM_FEEDS = original_feeds
+
+        self.assertTrue(len(result) > 0)
 
     def test_feed_fetch_failure_is_skipped(self):
         """フィード取得失敗時は例外を発生させずに空リストを返す。"""
@@ -652,6 +725,19 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         for feed in du._IT_EVENT_PLATFORM_FEEDS:
             self.assertIn("name", feed)
             self.assertIn("url", feed)
+
+    def test_techplay_feed_has_location_filter(self):
+        """TECH PLAY フィードには location_filter=True が設定されている。"""
+        techplay_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "TECH PLAY" in f.get("name", "")]
+        self.assertTrue(len(techplay_feeds) > 0, "TECH PLAY フィードが定義されていない")
+        for f in techplay_feeds:
+            self.assertTrue(f.get("location_filter"), "TECH PLAY フィードに location_filter=True が必要")
+
+    def test_location_filter_keywords_constant_is_nonempty(self):
+        """_LOCATION_FILTER_KEYWORDS が定義されており空でない。"""
+        self.assertTrue(len(du._LOCATION_FILTER_KEYWORDS) > 0)
+        self.assertIn("東京", du._LOCATION_FILTER_KEYWORDS)
+        self.assertIn("オンライン", du._LOCATION_FILTER_KEYWORDS)
 
 
 class TestDailyUpdateSinceWindow(unittest.TestCase):

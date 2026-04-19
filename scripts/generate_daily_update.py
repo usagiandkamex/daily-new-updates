@@ -412,14 +412,23 @@ _MAX_KEYWORDS_TO_SEARCH = 20
 
 # connpass 以外の IT イベントプラットフォームの Atom/RSS フィード
 # 東京・神奈川エリアの IT イベントを広くカバーするために使用する
-_IT_EVENT_PLATFORM_FEEDS: list[dict[str, str]] = [
+# location_filter=True のフィードは、タイトル/概要に東京・神奈川・オンライン関連語が
+# 含まれるエントリのみを通過させる（全国対象フィードの混入防止）
+_IT_EVENT_PLATFORM_FEEDS: list[dict] = [
     # Doorkeeper — タグ別 Atom フィード（認証不要）
     {"name": "Doorkeeper エンジニア", "url": "https://www.doorkeeper.jp/tags/エンジニア.atom"},
     {"name": "Doorkeeper 勉強会",     "url": "https://www.doorkeeper.jp/tags/勉強会.atom"},
     {"name": "Doorkeeper 東京",       "url": "https://www.doorkeeper.jp/tags/東京.atom"},
-    # TECH PLAY — イベント Atom フィード（認証不要）
-    {"name": "TECH PLAY",             "url": "https://techplay.jp/atom/events"},
+    # TECH PLAY — 全国対象 Atom フィード。location_filter で東京・神奈川・オンラインに限定
+    {"name": "TECH PLAY", "url": "https://techplay.jp/atom/events", "location_filter": True},
 ]
+
+# location_filter=True のフィードに適用する地域キーワード（小文字比較）
+_LOCATION_FILTER_KEYWORDS: frozenset[str] = frozenset([
+    "東京", "tokyo",
+    "神奈川", "kanagawa", "横浜", "yokohama",
+    "オンライン", "online", "リモート", "remote",
+])
 
 # IT 関連イベントを判定するキーワードリスト（タイトルや説明文に含まれるかチェック）
 CONNPASS_IT_KEYWORDS = [
@@ -691,15 +700,23 @@ def _fetch_other_platform_events(
     """Doorkeeper・TECH PLAY など connpass 以外のプラットフォームから IT イベントを取得する。
 
     _IT_EVENT_PLATFORM_FEEDS に定義された Atom/RSS フィードを feedparser で取得し、
-    対象期間（target_dt 〜 end_dt）内の IT イベントを返す。
+    IT 関連のイベントを返す。
     seen_urls に登録済みの URL は重複として除外する。
+    location_filter=True が設定されたフィードは、タイトル/概要に東京・神奈川・オンライン
+    関連語を含むエントリのみ通過させる。
     ネットワーク障害や未対応フィード形式は個別に無視し、他フィードの取得を続行する。
+
+    注意: Atom/RSS フィードの published_parsed / updated_parsed はフィード上の公開日時であり
+    イベント開催日時ではないため、期間フィルタには使用しない。started_at は空にする。
     """
     events = []
     for feed_def in _IT_EVENT_PLATFORM_FEEDS:
-        name = feed_def["name"]
-        url = feed_def["url"]
+        name: str = feed_def.get("name") or ""
         try:
+            url: str = feed_def.get("url") or ""
+            if not url:
+                continue
+            use_location_filter: bool = bool(feed_def.get("location_filter"))
             resp = requests.get(url, headers=HTTP_HEADERS, timeout=20)
             resp.raise_for_status()
             feed = feedparser.parse(resp.content)
@@ -711,18 +728,11 @@ def _fetch_other_platform_events(
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "").strip()
 
-                # 開催日時を取得して対象期間のみに絞る
-                started_at_display = ""
-                published = entry.get("published_parsed") or entry.get("updated_parsed")
-                if published:
-                    try:
-                        ts = calendar.timegm(published)
-                        event_dt = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(JST)
-                        if event_dt < target_dt or event_dt > end_dt:
-                            continue
-                        started_at_display = event_dt.strftime("%Y/%m/%d %H:%M")
-                    except Exception:
-                        pass
+                # location_filter が設定されたフィードはタイトル/概要で地域を絞る
+                if use_location_filter:
+                    combined = (title + " " + summary).lower()
+                    if not any(kw in combined for kw in _LOCATION_FILTER_KEYWORDS):
+                        continue
 
                 if not _is_it_event({"title": title, "catch": summary}):
                     continue
@@ -732,7 +742,7 @@ def _fetch_other_platform_events(
                         "title": title,
                         "catch": summary[:200] if summary else "",
                         "event_url": event_url,
-                        "started_at": started_at_display,
+                        "started_at": "",
                         "place": "",
                         "address": "",
                         "accepted": 0,
@@ -744,7 +754,7 @@ def _fetch_other_platform_events(
             if count:
                 print(f"    {name}: {count} 件取得")
         except Exception as e:
-            print(f"    {name}: 取得失敗 ({e})")
+            print(f"    {name or '(不明)'}: 取得失敗 ({e})")
     return events
 
 

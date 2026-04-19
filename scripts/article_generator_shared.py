@@ -653,6 +653,9 @@ def generate_section(
                     f"{wait} 秒後にリトライ... ({e})"
                 )
                 time.sleep(wait)
+    # ここに到達するのは全リトライが一時的エラーで失敗した場合のみ。
+    # _LLM_MAX_RETRIES >= 1 なので last_error は必ず設定されている。
+    assert last_error is not None
     raise last_error
 
 

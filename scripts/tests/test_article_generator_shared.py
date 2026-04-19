@@ -636,6 +636,11 @@ class TestGenerateSectionRetry(unittest.TestCase):
         client.chat.completions.create.return_value.choices = [choice]
         return client
 
+    def _make_choice(self, content="成功"):
+        choice = MagicMock()
+        choice.message.content = content
+        return choice
+
     def test_success_on_first_attempt_no_sleep(self):
         """初回成功時はスリープなしで結果を返す。"""
         import article_generator_shared as ags
@@ -652,14 +657,12 @@ class TestGenerateSectionRetry(unittest.TestCase):
         import article_generator_shared as ags
         from openai import RateLimitError
         client = MagicMock()
-        choice = MagicMock()
-        choice.message.content = "成功"
         rate_limit_err = RateLimitError(
             message="rate limit", response=MagicMock(), body={}
         )
         client.chat.completions.create.side_effect = [
             rate_limit_err,
-            MagicMock(choices=[choice]),
+            MagicMock(choices=[self._make_choice()]),
         ]
         section = self._make_section()
         with patch("article_generator_shared.time") as mock_time:
@@ -673,12 +676,10 @@ class TestGenerateSectionRetry(unittest.TestCase):
         import article_generator_shared as ags
         from openai import APIConnectionError
         client = MagicMock()
-        choice = MagicMock()
-        choice.message.content = "成功"
         conn_err = APIConnectionError(request=MagicMock())
         client.chat.completions.create.side_effect = [
             conn_err,
-            MagicMock(choices=[choice]),
+            MagicMock(choices=[self._make_choice()]),
         ]
         section = self._make_section()
         with patch("article_generator_shared.time") as mock_time:
@@ -692,14 +693,12 @@ class TestGenerateSectionRetry(unittest.TestCase):
         import article_generator_shared as ags
         from openai import InternalServerError
         client = MagicMock()
-        choice = MagicMock()
-        choice.message.content = "成功"
         server_err = InternalServerError(
             message="internal server error", response=MagicMock(), body={}
         )
         client.chat.completions.create.side_effect = [
             server_err,
-            MagicMock(choices=[choice]),
+            MagicMock(choices=[self._make_choice()]),
         ]
         section = self._make_section()
         with patch("article_generator_shared.time") as mock_time:

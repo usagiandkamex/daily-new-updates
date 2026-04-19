@@ -113,6 +113,16 @@ FEEDS = {
         {"name": "Google News Observability", "url": "https://news.google.com/rss/search?q=observability+monitoring+AIOps+OpenTelemetry&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News SRE Agent EN", "url": "https://news.google.com/rss/search?q=SRE+agent+AI+site+reliability+engineering&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News SRE Agent JP", "url": "https://news.google.com/rss/search?q=SRE+%E3%82%A8%E3%83%BC%E3%82%B8%E3%82%A7%E3%83%B3%E3%83%88+AI+%E3%82%B5%E3%82%A4%E3%83%88%E4%BF%A1%E9%A0%BC%E6%80%A7&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Datadog Engineering Blog", "url": "https://www.datadoghq.com/blog/engineering/feed.xml"},
+        {"name": "The New Stack", "url": "https://thenewstack.io/feed/"},
+        {"name": "Google News Datadog Dynatrace AIOps", "url": "https://news.google.com/rss/search?q=Datadog+OR+Dynatrace+AIOps+observability+case+study&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News ServiceNow AIOps", "url": "https://news.google.com/rss/search?q=ServiceNow+AIOps+ITSM+automation+AI&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News SRE overseas case study", "url": "https://news.google.com/rss/search?q=SRE+site+reliability+engineering+Google+Netflix+Uber+case+study&hl=en&gl=US&ceid=US:en"},
+        {"name": "DevOps.com", "url": "https://devops.com/feed/"},
+        {"name": "DZone DevOps", "url": "https://dzone.com/devops-tutorials-tools-news/feed"},
+        {"name": "GitLab Blog", "url": "https://about.gitlab.com/blog/feed.xml"},
+        {"name": "Google News DevOps JP", "url": "https://news.google.com/rss/search?q=DevOps+CI%2FCD+%E8%87%AA%E5%8B%95%E5%8C%96+%E9%96%8B%E7%99%BA%E9%81%8B%E7%94%A8&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News DevOps CI/CD EN", "url": "https://news.google.com/rss/search?q=DevOps+CI+CD+pipeline+GitOps+best+practices&hl=en&gl=US&ceid=US:en"},
     ],
     # --- 日本企業テックブログ ---
     "techblog_ja": [
@@ -861,13 +871,18 @@ SECTION_DEFINITIONS = [
         "system": (
             "あなたは IT 運用・管理の専門テクニカルライターです。"
             "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+            "古い情報や重複する話題は避け、直近の最新情報を優先して選定してください。"
         ),
         "instruction": (
             "以下の IT 運用・管理ニュースから5〜6件程度（最大6件）のトピックを選定し、マークダウン形式で出力してください。\n"
-            "**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析）および"
-            "**SRE Agent**（AI駆動のサイト信頼性エンジニアリングエージェント）を重点的に取り上げてください。"
-            "Microsoft Azure Monitor・System Center 等の Microsoft 製品による AIOps も優先的に含めてください。"
-            "ITSM・DevOps・エンドポイント管理・MSP・オブザーバビリティなど IT 運用全般のトレンドも含めてください。\n"
+            "**AIOps**（AIを活用したIT運用自動化・異常検知・予測分析・インシデント自動対応）および"
+            "**SRE Agent**（AI駆動のサイト信頼性エンジニアリングエージェント）を重点的に取り上げてください。\n"
+            "**DevOps**（CI/CD パイプライン・GitOps・Infrastructure as Code・デプロイ自動化）の最新プラクティスや事例も積極的に取り上げてください。\n"
+            "**海外（米国・欧州）の IT 企業における AIOps・DevOps・SRE・オブザーバビリティの最新事例を積極的に含めてください。**\n"
+            "特に Google・Netflix・Uber・Meta・Amazon などの大手 IT 企業の運用事例、"
+            "Datadog・Dynatrace・PagerDuty・ServiceNow・GitLab・GitHub Actions などの主要ツールの最新機能や活用事例を取り上げてください。\n"
+            "Microsoft Azure Monitor・System Center・Copilot for IT Operations・Azure DevOps 等の Microsoft 製品による AIOps・DevOps も優先的に含めてください。\n"
+            "ITSM・エンドポイント管理・MSP・オブザーバビリティ・OpenTelemetry など IT 運用全般のトレンドも含めてください。\n"
             "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
             "先頭に「## 6. IT運用・管理」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
@@ -876,7 +891,7 @@ SECTION_DEFINITIONS = [
             "また、セクション末尾に締めの文章は入れないでください。"
             "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
         ),
-        "data_label": "IT運用・管理（AIOps / ITSM / DevOps / エンドポイント管理）",
+        "data_label": "IT運用・管理（AIOps / ITSM / DevOps / オブザーバビリティ / 海外事例）",
     },
     {
         "key": "techblog_ja",

@@ -8,7 +8,7 @@ GitHub Copilot (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン�
 import os
 import re
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from urllib.parse import quote_plus
 
 import feedparser
@@ -20,6 +20,7 @@ import article_generator_shared as _ags
 from article_generator_shared import (
     HTTP_HEADERS,
     GENERAL_NEWS_FEEDS,
+    JST,
     SourceUrlTracker,
     _RSS_CONTENT_TYPES,
     _LINK_LABEL_RE,
@@ -31,7 +32,6 @@ from article_generator_shared import (
     verify_content,
 )
 
-JST = timezone(timedelta(hours=9))
 
 # --- ニュースソース定義 ---------------------------------------------------------------
 

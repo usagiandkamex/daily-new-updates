@@ -681,7 +681,7 @@ class SourceUrlTracker:
 
         LLM が提供されたソースデータ外の URL を生成した可能性がある箇所を可視化し、
         デバッグや品質改善に役立てる。URL の修正は validate_links() に委ねる。
-        参考リンクの URL は正規化（クエリパラメータ除去）してから照合する。
+        参考リンクの URL は正規化（クエリパラメータ・フラグメント除去）してから照合する。
         """
         ref_link_pattern = re.compile(
             r'\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\((https?://[^)]+)\)'

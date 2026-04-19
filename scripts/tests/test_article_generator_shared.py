@@ -1,15 +1,15 @@
 """
-article_generator_shared.py の SourceUrlTracker クラスのテスト
+article_generator_shared.py のユーティリティテスト
 
 generate_daily_update.py と generate_smallchat.py の両ワークフローで
-共有される SourceUrlTracker の挙動を一元的にテストする。
+共有されるクラス・関数の挙動を一元的にテストする。
 """
 
 import io
 import sys
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # スクリプトのディレクトリをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -218,6 +218,224 @@ class TestSourceUrlTrackerDelegationSmallchat(unittest.TestCase):
         """generate_smallchat の _log_unsourced_reference_links は SourceUrlTracker に委譲する。"""
         import generate_smallchat as sc
         self.assertIs(sc._log_unsourced_reference_links, SourceUrlTracker.log_unsourced_reference_links)
+
+
+class TestSharedFunctionsDelegationDaily(unittest.TestCase):
+    """generate_daily_update.py が共有関数に委譲しているかを検証するテスト"""
+
+    def setUp(self):
+        import generate_daily_update as du
+        self.du = du
+
+    def test_validate_links_is_shared(self):
+        """generate_daily_update の validate_links は共有モジュールの実装を使用する。"""
+        from article_generator_shared import validate_links
+        self.assertIs(self.du.validate_links, validate_links)
+
+    def test_verify_content_is_shared(self):
+        """generate_daily_update の verify_content は共有モジュールの実装を使用する。"""
+        from article_generator_shared import verify_content
+        self.assertIs(self.du.verify_content, verify_content)
+
+    def test_format_bare_reference_links_is_shared(self):
+        """generate_daily_update の _format_bare_reference_links は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _format_bare_reference_links
+        self.assertIs(self.du._format_bare_reference_links, _format_bare_reference_links)
+
+    def test_validate_url_is_shared(self):
+        """generate_daily_update の _validate_url は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _validate_url
+        self.assertIs(self.du._validate_url, _validate_url)
+
+    def test_search_alternative_url_is_shared(self):
+        """generate_daily_update の _search_alternative_url は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _search_alternative_url
+        self.assertIs(self.du._search_alternative_url, _search_alternative_url)
+
+    def test_resolve_google_news_url_is_shared(self):
+        """generate_daily_update の _resolve_google_news_url は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _resolve_google_news_url
+        self.assertIs(self.du._resolve_google_news_url, _resolve_google_news_url)
+
+    def test_build_section_prompt_is_shared(self):
+        """generate_daily_update の _build_section_prompt は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _build_section_prompt
+        self.assertIs(self.du._build_section_prompt, _build_section_prompt)
+
+    def test_http_headers_is_shared(self):
+        """generate_daily_update の HTTP_HEADERS は共有モジュールの定数を使用する。"""
+        from article_generator_shared import HTTP_HEADERS
+        self.assertIs(self.du.HTTP_HEADERS, HTTP_HEADERS)
+
+    def test_general_news_feeds_is_shared(self):
+        """generate_daily_update の GENERAL_NEWS_FEEDS は共有モジュールの定数を使用する。"""
+        from article_generator_shared import GENERAL_NEWS_FEEDS
+        self.assertIs(self.du.GENERAL_NEWS_FEEDS, GENERAL_NEWS_FEEDS)
+
+
+class TestSharedFunctionsDelegationSmallchat(unittest.TestCase):
+    """generate_smallchat.py が共有関数に委譲しているかを検証するテスト"""
+
+    def setUp(self):
+        import generate_smallchat as sc
+        self.sc = sc
+
+    def test_validate_links_is_shared(self):
+        """generate_smallchat の validate_links は共有モジュールの実装を使用する。"""
+        from article_generator_shared import validate_links
+        self.assertIs(self.sc.validate_links, validate_links)
+
+    def test_verify_content_is_shared(self):
+        """generate_smallchat の verify_content は共有モジュールの実装を使用する。"""
+        from article_generator_shared import verify_content
+        self.assertIs(self.sc.verify_content, verify_content)
+
+    def test_format_bare_reference_links_is_shared(self):
+        """generate_smallchat の _format_bare_reference_links は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _format_bare_reference_links
+        self.assertIs(self.sc._format_bare_reference_links, _format_bare_reference_links)
+
+    def test_validate_url_is_shared(self):
+        """generate_smallchat の _validate_url は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _validate_url
+        self.assertIs(self.sc._validate_url, _validate_url)
+
+    def test_search_alternative_url_is_shared(self):
+        """generate_smallchat の _search_alternative_url は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _search_alternative_url
+        self.assertIs(self.sc._search_alternative_url, _search_alternative_url)
+
+    def test_resolve_google_news_url_is_shared(self):
+        """generate_smallchat の _resolve_google_news_url は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _resolve_google_news_url
+        self.assertIs(self.sc._resolve_google_news_url, _resolve_google_news_url)
+
+    def test_build_section_prompt_is_shared(self):
+        """generate_smallchat の _build_section_prompt は共有モジュールの実装を使用する。"""
+        from article_generator_shared import _build_section_prompt
+        self.assertIs(self.sc._build_section_prompt, _build_section_prompt)
+
+    def test_http_headers_is_shared(self):
+        """generate_smallchat の HTTP_HEADERS は共有モジュールの定数を使用する。"""
+        from article_generator_shared import HTTP_HEADERS
+        self.assertIs(self.sc.HTTP_HEADERS, HTTP_HEADERS)
+
+    def test_general_news_feeds_is_shared(self):
+        """generate_smallchat の GENERAL_NEWS_FEEDS は共有モジュールの定数を使用する。"""
+        from article_generator_shared import GENERAL_NEWS_FEEDS
+        self.assertIs(self.sc.GENERAL_NEWS_FEEDS, GENERAL_NEWS_FEEDS)
+
+
+class TestSharedFunctionsModule(unittest.TestCase):
+    """article_generator_shared の新規共有関数の基本動作テスト"""
+
+    def test_format_bare_reference_links_bare_url(self):
+        """裸の URL が直近の ### 見出しをラベルにしたリンクへ変換される。"""
+        from article_generator_shared import _format_bare_reference_links
+        md = "### Azure Monitor\n\n**参考リンク**: https://docs.microsoft.com/azure/\n"
+        result = _format_bare_reference_links(md)
+        self.assertIn("[Azure Monitor](https://docs.microsoft.com/azure/)", result)
+        self.assertNotIn("**参考リンク**: https://", result)
+
+    def test_verify_content_community_section_is_skipped(self):
+        """コミュニティセクションの📅・📝見出しは要約・参考リンクチェックを省略する。"""
+        import io
+        from article_generator_shared import verify_content
+        md = (
+            "## 5. コミュニティイベント情報\n\n"
+            "### 📅 東京勉強会\n\n"
+            "- 日時: 2026-04-20\n\n"
+            "---\n\n"
+            "### 📝 参加レポート・イベント宣伝まとめ\n\n"
+            "内容のみ（要約・参考リンクなし）\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = verify_content(md)
+        # コミュニティ箇条書きは要約・参考リンクなし警告が出ないこと
+        output = mock_out.getvalue()
+        self.assertNotIn("要約なし", output)
+        self.assertNotIn("参考リンクなし", output)
+
+    def test_http_headers_user_agent(self):
+        """HTTP_HEADERS に User-Agent が含まれる。"""
+        from article_generator_shared import HTTP_HEADERS
+        self.assertIn("User-Agent", HTTP_HEADERS)
+        self.assertIn("daily-updates-bot", HTTP_HEADERS["User-Agent"])
+
+    def test_general_news_feeds_is_list(self):
+        """GENERAL_NEWS_FEEDS はリスト形式で定義されている。"""
+        from article_generator_shared import GENERAL_NEWS_FEEDS
+        self.assertIsInstance(GENERAL_NEWS_FEEDS, list)
+        self.assertGreater(len(GENERAL_NEWS_FEEDS), 0)
+        for feed in GENERAL_NEWS_FEEDS:
+            self.assertIn("name", feed)
+            self.assertIn("url", feed)
+
+    def test_fetch_category_deduplicates_urls(self):
+        """fetch_category は重複 URL を除外する。"""
+        from unittest.mock import patch as mpatch, MagicMock
+        from article_generator_shared import fetch_category
+
+        duplicate_item = {"url": "https://example.com/same", "title": "記事"}
+        feeds = {"test_cat": [
+            {"name": "Feed A", "url": "https://feed-a.example.com/rss"},
+            {"name": "Feed B", "url": "https://feed-b.example.com/rss"},
+        ]}
+
+        def fake_fetch_feed(url, since, max_items=10, max_age_days=None):
+            return [dict(duplicate_item)]
+
+        with mpatch.object(
+            sys.modules["article_generator_shared"], "_fetch_feed",
+            side_effect=fake_fetch_feed
+        ):
+            result = fetch_category(feeds, "test_cat", object())
+
+        urls = [r["url"] for r in result]
+        self.assertEqual(len(set(urls)), len(urls), "重複 URL が含まれている")
+        self.assertEqual(len(result), 1)
+
+    def test_generate_section_empty_list_returns_no_info(self):
+        """generate_section は空データの場合 LLM を呼ばずに「ありません」を返す。"""
+        from article_generator_shared import generate_section
+        client = MagicMock()
+        section = {"key": "test", "header": "## テスト", "system": "sys", "instruction": "inst"}
+        result = generate_section(client, "gpt-4o", section, [])
+        self.assertEqual(client.chat.completions.create.call_count, 0)
+        self.assertIn("## テスト", result)
+        self.assertIn("ありません", result)
+
+    def test_generate_section_respects_temperature_param(self):
+        """generate_section は temperature パラメータを API 呼び出しに渡す。"""
+        from article_generator_shared import generate_section
+        client = MagicMock()
+        choice = MagicMock()
+        choice.message.content = "出力"
+        client.chat.completions.create.return_value.choices = [choice]
+        section = {"key": "test", "header": "## T", "system": "sys", "instruction": "inst", "data_label": "データ"}
+        generate_section(client, "gpt-4o", section, [{"title": "記事"}], temperature=0.7)
+        call_kwargs = client.chat.completions.create.call_args[1]
+        self.assertEqual(call_kwargs["temperature"], 0.7)
+
+    def test_build_section_prompt_handles_dict_data(self):
+        """_build_section_prompt は dict 型データを各キーをラベルに展開する。"""
+        from article_generator_shared import _build_section_prompt
+        section = {"instruction": "指示", "data_label": "デフォルト"}
+        data = {"ラベルA": [{"title": "記事A"}], "ラベルB": [{"title": "記事B"}]}
+        prompt = _build_section_prompt(section, data)
+        self.assertIn("ラベルA", prompt)
+        self.assertIn("ラベルB", prompt)
+        self.assertIn("記事A", prompt)
+        self.assertIn("記事B", prompt)
+
+    def test_build_section_prompt_handles_list_data(self):
+        """_build_section_prompt は list 型データを data_label でラベル付けする。"""
+        from article_generator_shared import _build_section_prompt
+        section = {"instruction": "指示", "data_label": "記事データ"}
+        data = [{"title": "記事A"}]
+        prompt = _build_section_prompt(section, data)
+        self.assertIn("記事データ", prompt)
+        self.assertIn("記事A", prompt)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ import generate_daily_update as du
 
 
 def _search_months_for_date(target_date: date) -> tuple[str, ...]:
-    """target_date から CONNPASS_LOOKAHEAD_DAYS 日先の月までを月別リストで返す。"""
+    """target_date から CONNPASS_LOOKAHEAD_DAYS 日先の月までを月別のタプルで返す。"""
     target_dt = datetime(target_date.year, target_date.month, target_date.day,
                          tzinfo=du.JST)
     end_dt = target_dt + timedelta(days=du.CONNPASS_LOOKAHEAD_DAYS)
@@ -172,11 +172,12 @@ def _write_github_summary(
 
     prev_key: tuple[str, ...] | None = None
     for day, count, key in per_day:
+        key_tuple = tuple(key)
         month_range = f"{key[0]} 〜 {key[-1]}"
         count_str = f"**{count}**" if count > 0 else str(count)
-        note = " ※前日と同じ" if (prev_key is not None and tuple(key) == prev_key) else ""
+        note = " ※前日と同じ" if (prev_key is not None and key_tuple == prev_key) else ""
         lines.append(f"| {day.strftime('%Y/%m/%d')} | {count_str} | {month_range}{note} |")
-        prev_key = tuple(key)
+        prev_key = key_tuple
 
     lines += [
         "",

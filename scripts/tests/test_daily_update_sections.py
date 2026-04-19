@@ -929,84 +929,40 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
         self.assertNotIn("参考リンクなし:", output)
 
 
-class TestCollectSourceUrlsDailyUpdate(unittest.TestCase):
-    """_collect_source_urls() のテスト"""
+class TestSourceUrlTrackerDelegationInDailyUpdate(unittest.TestCase):
+    """generate_daily_update.py が SourceUrlTracker に委譲することの確認テスト
 
-    def test_collects_urls_from_single_list(self):
-        """単一の list[dict] から URL を収集する。"""
-        data = [
-            {"title": "記事A", "url": "https://example.com/a"},
-            {"title": "記事B", "url": "https://example.com/b"},
-        ]
+    ロジックの詳細テストは test_article_generator_shared.py で一元管理する。
+    """
+
+    def test_collect_source_urls_is_tracker_method(self):
+        """_collect_source_urls は SourceUrlTracker.collect_source_urls に委譲する。"""
+        from article_generator_shared import SourceUrlTracker
+        self.assertIs(du._collect_source_urls, SourceUrlTracker.collect_source_urls)
+
+    def test_log_unsourced_is_tracker_method(self):
+        """_log_unsourced_reference_links は SourceUrlTracker.log_unsourced_reference_links に委譲する。"""
+        from article_generator_shared import SourceUrlTracker
+        self.assertIs(du._log_unsourced_reference_links, SourceUrlTracker.log_unsourced_reference_links)
+
+    def test_collect_source_urls_works_via_alias(self):
+        """エイリアス経由でも正しく URL を収集できる（統合確認）。"""
+        data = [{"url": "https://example.com/a"}, {"event_url": "https://connpass.com/event/1/"}]
         result = du._collect_source_urls(data)
         self.assertIn("https://example.com/a", result)
-        self.assertIn("https://example.com/b", result)
+        self.assertIn("https://connpass.com/event/1/", result)
 
-    def test_collects_event_urls_from_list(self):
-        """event_url キーを持つ dict からも URL を収集する。"""
-        events = [
-            {"title": "イベントA", "event_url": "https://connpass.com/event/123/"},
-        ]
-        result = du._collect_source_urls(events)
-        self.assertIn("https://connpass.com/event/123/", result)
-
-    def test_collects_urls_from_multiple_lists(self):
-        """複数の list を受け取り、すべての URL を収集する。"""
-        list1 = [{"url": "https://example.com/1"}]
-        list2 = [{"url": "https://example.com/2"}]
-        list3 = [{"url": "https://example.com/3"}]
-        result = du._collect_source_urls(list1, list2, list3)
-        self.assertIn("https://example.com/1", result)
-        self.assertIn("https://example.com/2", result)
-        self.assertIn("https://example.com/3", result)
-
-    def test_empty_inputs_return_empty_frozenset(self):
-        """空リストのみ渡した場合、空の frozenset を返す。"""
-        result = du._collect_source_urls([], [])
-        self.assertIsInstance(result, frozenset)
-        self.assertEqual(len(result), 0)
-
-    def test_no_arguments_returns_empty_frozenset(self):
-        """引数なしの場合、空の frozenset を返す。"""
-        result = du._collect_source_urls()
-        self.assertIsInstance(result, frozenset)
-        self.assertEqual(len(result), 0)
-
-    def test_skips_items_without_url(self):
-        """url・event_url キーがない dict は無視される。"""
-        data = [
-            {"title": "URLなし"},
-            {"title": "URLあり", "url": "https://example.com/valid"},
-        ]
-        result = du._collect_source_urls(data)
-        self.assertEqual(len(result), 1)
-        self.assertIn("https://example.com/valid", result)
-
-    def test_skips_empty_url_strings(self):
-        """空文字列の url は無視される。"""
-        data = [{"url": ""}, {"url": "https://example.com/valid"}]
-        result = du._collect_source_urls(data)
-        self.assertEqual(len(result), 1)
-
-    def test_returns_frozenset(self):
-        """戻り値は frozenset である。"""
-        result = du._collect_source_urls([{"url": "https://example.com"}])
-        self.assertIsInstance(result, frozenset)
-
-    def test_deduplicates_same_url_across_lists(self):
-        """複数リストに同じ URL が存在しても重複なし。"""
-        list1 = [{"url": "https://example.com/same"}]
-        list2 = [{"url": "https://example.com/same"}]
-        result = du._collect_source_urls(list1, list2)
-        self.assertEqual(len(result), 1)
-
-    def test_skips_non_dict_items(self):
-        """dict でない要素はスキップされる。"""
-        data = ["string", 42, {"url": "https://example.com/valid"}]
-        result = du._collect_source_urls(data)
-        self.assertIn("https://example.com/valid", result)
+    def test_log_unsourced_works_via_alias(self):
+        """エイリアス経由でも正しくログ出力できる（統合確認）。"""
+        article = "### A\n\n**参考リンク**: [A](https://sourced.example.com)\n"
+        source_urls = frozenset({"https://sourced.example.com"})
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            du._log_unsourced_reference_links(article, source_urls)
+        self.assertIn("一致", mock_out.getvalue())
 
 
+if __name__ == "__main__":
+    unittest.main()
 class TestBuildConnpassSectionScripted(unittest.TestCase):
     """_build_connpass_section_scripted() のテスト"""
 
@@ -1240,67 +1196,6 @@ class TestGenerateCommunitySectionHybrid(unittest.TestCase):
         self.assertIn("https://connpass.com/event/999/", result)
         # LLM が別の URL を作ることはない（スクリプト生成のため）
         self.assertNotIn("https://connpass.com/event/000/", result)
-
-
-class TestLogUnsourcedReferenceLinksDailyUpdate(unittest.TestCase):
-    """_log_unsourced_reference_links() のテスト"""
-
-    def _make_article(self, url: str) -> str:
-        return (
-            "## 1. Azure アップデート情報\n\n"
-            f"### トピックA\n\n**要約**: テスト\n\n**参考リンク**: [タイトルA]({url})\n"
-        )
-
-    def test_sourced_url_logs_no_warning(self):
-        """参考リンク URL がソースに含まれる場合、ソース外の警告ログが出ない。"""
-        url = "https://azure.microsoft.com/blog/update"
-        source_urls = frozenset({url})
-        article = self._make_article(url)
-
-        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            du._log_unsourced_reference_links(article, source_urls)
-
-        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
-        self.assertIn("ソースデータと一致", mock_out.getvalue())
-
-    def test_unsourced_url_logs_warning(self):
-        """参考リンク URL がソースに含まれない場合、警告ログが出力される。"""
-        url = "https://hallucinated.example.com/article"
-        source_urls = frozenset()
-        article = self._make_article(url)
-
-        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            du._log_unsourced_reference_links(article, source_urls)
-
-        self.assertIn("ソース外参考リンク:", mock_out.getvalue())
-
-    def test_returns_none(self):
-        """戻り値は None（記事を変更しない）。"""
-        article = self._make_article("https://example.com/a")
-        result = du._log_unsourced_reference_links(article, frozenset())
-        self.assertIsNone(result)
-
-    def test_multiple_unsourced_urls_counted(self):
-        """複数のソース外 URL が検出されてカウントが正しい。"""
-        article = (
-            "### A\n\n**参考リンク**: [A](https://bad1.example.com)\n\n"
-            "### B\n\n**参考リンク**: [B](https://bad2.example.com)\n"
-        )
-        source_urls = frozenset()
-
-        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            du._log_unsourced_reference_links(article, source_urls)
-
-        output = mock_out.getvalue()
-        self.assertIn("2 件", output)
-
-    def test_no_reference_links_logs_all_match(self):
-        """参考リンクがない場合、「一致」メッセージが出力される。"""
-        article = "## テスト\n\n内容のみ\n"
-        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            du._log_unsourced_reference_links(article, frozenset())
-
-        self.assertIn("ソースデータと一致", mock_out.getvalue())
 
 
 if __name__ == "__main__":

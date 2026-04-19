@@ -18,6 +18,8 @@ from googlenewsdecoder import new_decoderv1
 from openai import AzureOpenAI, OpenAI
 from openai import OpenAIError
 
+from article_generator_shared import SourceUrlTracker
+
 JST = timezone(timedelta(hours=9))
 
 # --- ニュースソース定義 ---------------------------------------------------------------
@@ -718,45 +720,10 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 
 # --- ソース URL 管理 ---------------------------------------------------------------
 
-
-def _collect_source_urls(*data_lists) -> frozenset[str]:
-    """複数のデータリストから URL を収集して frozenset を返す。
-
-    フィードから取得した記事・イベント URL を集約し、LLM 生成後の
-    参考リンク検証（_log_unsourced_reference_links）に使用する。
-    list[dict] 形式では "url"・"event_url" キーを参照する。
-    """
-    urls: set[str] = set()
-    for data in data_lists:
-        if isinstance(data, list):
-            for item in data:
-                if not isinstance(item, dict):
-                    continue
-                url = item.get("url") or item.get("event_url", "")
-                if url:
-                    urls.add(url)
-    return frozenset(urls)
-
-
-def _log_unsourced_reference_links(article: str, source_urls: frozenset[str]) -> None:
-    """参考リンクの URL がソースデータに含まれないものを検出・ログ出力する。
-
-    LLM が提供されたソースデータ外の URL を生成した可能性がある箇所を可視化し、
-    デバッグや品質改善に役立てる。URL の修正は validate_links() に委ねる。
-    """
-    ref_link_pattern = re.compile(
-        r'\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\((https?://[^)]+)\)'
-    )
-    unsourced = [
-        m.group(1) for m in ref_link_pattern.finditer(article)
-        if m.group(1) not in source_urls
-    ]
-    if unsourced:
-        print(f"  ソース外参考リンク: {len(unsourced)} 件（HTTP 検証は validate_links() で実施済み）")
-        for url in unsourced[:5]:
-            print(f"    ℹ {url[:80]}")
-    else:
-        print("  参考リンク確認: 全てのリンクがソースデータと一致しています")
+# SourceUrlTracker を両ワークフローで共有して使用するためのモジュールレベルエイリアス。
+# 実装は article_generator_shared.py の SourceUrlTracker クラスで一元管理する。
+_collect_source_urls = SourceUrlTracker.collect_source_urls
+_log_unsourced_reference_links = SourceUrlTracker.log_unsourced_reference_links
 
 
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"

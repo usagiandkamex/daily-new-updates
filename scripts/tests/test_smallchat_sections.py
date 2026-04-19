@@ -904,116 +904,35 @@ class TestVerifyContentSmallchat(unittest.TestCase):
         self.assertIsInstance(result, str)
 
 
-class TestCollectSourceUrlsSmallchat(unittest.TestCase):
-    """_collect_source_urls() のテスト"""
+class TestSourceUrlTrackerDelegationInSmallchat(unittest.TestCase):
+    """generate_smallchat.py が SourceUrlTracker に委譲することの確認テスト
 
-    def test_collects_urls_from_single_list(self):
-        """単一の list[dict] から URL を収集する。"""
-        data = [
-            {"title": "記事A", "url": "https://example.com/a"},
-            {"title": "記事B", "url": "https://example.com/b"},
-        ]
+    ロジックの詳細テストは test_article_generator_shared.py で一元管理する。
+    """
+
+    def test_collect_source_urls_is_tracker_method(self):
+        """_collect_source_urls は SourceUrlTracker.collect_source_urls に委譲する。"""
+        from article_generator_shared import SourceUrlTracker
+        self.assertIs(sc._collect_source_urls, SourceUrlTracker.collect_source_urls)
+
+    def test_log_unsourced_is_tracker_method(self):
+        """_log_unsourced_reference_links は SourceUrlTracker.log_unsourced_reference_links に委譲する。"""
+        from article_generator_shared import SourceUrlTracker
+        self.assertIs(sc._log_unsourced_reference_links, SourceUrlTracker.log_unsourced_reference_links)
+
+    def test_collect_source_urls_works_via_alias(self):
+        """エイリアス経由でも正しく URL を収集できる（統合確認）。"""
+        data = [{"url": "https://blogs.microsoft.com/post"}]
         result = sc._collect_source_urls(data)
-        self.assertIn("https://example.com/a", result)
-        self.assertIn("https://example.com/b", result)
+        self.assertIn("https://blogs.microsoft.com/post", result)
 
-    def test_collects_urls_from_multiple_lists(self):
-        """複数リストからすべての URL を収集する。"""
-        list1 = [{"url": "https://example.com/1"}]
-        list2 = [{"url": "https://example.com/2"}]
-        result = sc._collect_source_urls(list1, list2)
-        self.assertIn("https://example.com/1", result)
-        self.assertIn("https://example.com/2", result)
-        self.assertEqual(len(result), 2)
-
-    def test_empty_inputs_return_empty_frozenset(self):
-        """空リストのみ渡した場合、空の frozenset を返す。"""
-        result = sc._collect_source_urls([], [])
-        self.assertIsInstance(result, frozenset)
-        self.assertEqual(len(result), 0)
-
-    def test_returns_frozenset(self):
-        """戻り値は frozenset である。"""
-        result = sc._collect_source_urls([{"url": "https://example.com"}])
-        self.assertIsInstance(result, frozenset)
-
-    def test_deduplicates_same_url(self):
-        """同じ URL が複数リストに存在しても重複なし。"""
-        list1 = [{"url": "https://example.com/same"}]
-        list2 = [{"url": "https://example.com/same"}]
-        result = sc._collect_source_urls(list1, list2)
-        self.assertEqual(len(result), 1)
-
-    def test_skips_items_without_url(self):
-        """url キーがない dict は無視される。"""
-        data = [
-            {"title": "URLなし"},
-            {"title": "URLあり", "url": "https://example.com/valid"},
-        ]
-        result = sc._collect_source_urls(data)
-        self.assertEqual(len(result), 1)
-        self.assertIn("https://example.com/valid", result)
-
-    def test_skips_non_dict_items(self):
-        """dict でない要素はスキップされる。"""
-        data = ["string", 42, {"url": "https://example.com/valid"}]
-        result = sc._collect_source_urls(data)
-        self.assertIn("https://example.com/valid", result)
-
-    def test_no_arguments_returns_empty_frozenset(self):
-        """引数なしの場合、空の frozenset を返す。"""
-        result = sc._collect_source_urls()
-        self.assertIsInstance(result, frozenset)
-        self.assertEqual(len(result), 0)
-
-
-class TestLogUnsourcedReferenceLinksSmallchat(unittest.TestCase):
-    """_log_unsourced_reference_links() のテスト"""
-
-    def _make_article(self, url: str) -> str:
-        return (
-            "## 1. Microsoft\n\n"
-            f"### トピックA\n\n**要約**: テスト\n\n**参考リンク**: [タイトルA]({url})\n"
-        )
-
-    def test_sourced_url_logs_no_warning(self):
-        """参考リンク URL がソースに含まれる場合、ソース外の警告ログが出ない。"""
-        url = "https://blogs.microsoft.com/update"
-        source_urls = frozenset({url})
-        article = self._make_article(url)
-
+    def test_log_unsourced_works_via_alias(self):
+        """エイリアス経由でも正しくログ出力できる（統合確認）。"""
+        article = "### A\n\n**参考リンク**: [A](https://sourced.example.com)\n"
+        source_urls = frozenset({"https://sourced.example.com"})
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             sc._log_unsourced_reference_links(article, source_urls)
-
-        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
-
-    def test_unsourced_url_logs_warning(self):
-        """参考リンク URL がソースに含まれない場合、警告ログが出力される。"""
-        url = "https://hallucinated.example.com/article"
-        source_urls = frozenset()
-        article = self._make_article(url)
-
-        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            sc._log_unsourced_reference_links(article, source_urls)
-
-        self.assertIn("ソース外参考リンク:", mock_out.getvalue())
-
-    def test_returns_none(self):
-        """戻り値は None（記事を変更しない）。"""
-        article = self._make_article("https://example.com/a")
-        result = sc._log_unsourced_reference_links(article, frozenset())
-        self.assertIsNone(result)
-
-    def test_all_sourced_shows_match_message(self):
-        """全 URL がソースに含まれる場合、「一致」メッセージが出力される。"""
-        url = "https://example.com/source"
-        article = self._make_article(url)
-        source_urls = frozenset({url})
-
-        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            sc._log_unsourced_reference_links(article, source_urls)
-
-        self.assertIn("ソースデータと一致", mock_out.getvalue())
+        self.assertIn("一致", mock_out.getvalue())
 
 
 if __name__ == "__main__":

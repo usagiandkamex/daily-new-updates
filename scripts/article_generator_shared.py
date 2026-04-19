@@ -8,15 +8,22 @@ generate_daily_update.py と generate_smallchat.py の両ワークフローで
 
 import json
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote_plus, urlparse, urlunparse
 
 import feedparser
 import requests
 from googlenewsdecoder import new_decoderv1
+from openai import APIConnectionError, APITimeoutError, InternalServerError, RateLimitError
 
 # 日本標準時
 JST = timezone(timedelta(hours=9))
+
+# LLM 呼び出しのリトライ設定
+# 一時的なエラー（レート制限・接続エラー・サーバーエラー）に対して指数バックオフでリトライする
+_LLM_MAX_RETRIES = 3
+_LLM_RETRY_BASE_WAIT = 5  # 秒（2^n 倍で増加: 5, 10 秒）
 
 # HTTP リクエスト共通ヘッダー
 HTTP_HEADERS = {
@@ -621,16 +628,36 @@ def generate_section(
         user_prompt = user_prompt[:max_input]
 
     print(f"    入力: 約 {len(user_prompt):,} 文字")
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": section_def["system"]},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=temperature,
-        max_tokens=max_output_tokens,
-    )
-    return response.choices[0].message.content.strip()
+
+    # 一時的なエラーに対して指数バックオフでリトライする
+    _TRANSIENT_ERRORS = (RateLimitError, APIConnectionError, APITimeoutError, InternalServerError)
+    last_error: Exception | None = None
+    for attempt in range(_LLM_MAX_RETRIES):
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": section_def["system"]},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=temperature,
+                max_tokens=max_output_tokens,
+            )
+            return response.choices[0].message.content.strip()
+        except _TRANSIENT_ERRORS as e:
+            last_error = e
+            if attempt < _LLM_MAX_RETRIES - 1:
+                wait = _LLM_RETRY_BASE_WAIT * (2 ** attempt)
+                print(
+                    f"    ⚠ LLM 呼び出し失敗 (試行 {attempt + 1}/{_LLM_MAX_RETRIES})、"
+                    f"{wait} 秒後にリトライ... ({e})"
+                )
+                time.sleep(wait)
+    # ここに到達するのは全リトライが一時的エラーで失敗した場合のみ。
+    # _LLM_MAX_RETRIES < 1 の設定不正で last_error が未設定になり得るため、明示的に検出する。
+    if last_error is None:
+        raise RuntimeError("_LLM_MAX_RETRIES must be at least 1.")
+    raise last_error
 
 
 class SourceUrlTracker:

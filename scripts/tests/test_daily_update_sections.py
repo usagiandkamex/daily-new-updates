@@ -447,6 +447,170 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         self.assertEqual(result, [])
 
 
+class TestFetchOtherPlatformEvents(unittest.TestCase):
+    """_fetch_other_platform_events() のテスト"""
+
+    def _make_dt(self, date_str: str) -> "datetime":
+        import generate_daily_update as d
+        return d.datetime.strptime(date_str, "%Y%m%d").replace(tzinfo=d.JST)
+
+    def test_it_event_from_feed_is_included(self):
+        """IT 関連エントリはリストに含まれる。"""
+        import time
+        target_dt = self._make_dt("20260501")
+        end_dt = self._make_dt("20260731")
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        # published_parsed: 2026-06-01 00:00:00 UTC
+        pub = time.strptime("2026-06-01", "%Y-%m-%d")
+        entry = MagicMock()
+        entry_data = {
+            "link": "https://doorkeeper.jp/events/1",
+            "title": "Python 勉強会 東京",
+            "summary": "Python エンジニア向けハンズオン",
+            "published_parsed": pub,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            seen: set[str] = set()
+            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+
+        self.assertTrue(len(result) > 0)
+        self.assertEqual(result[0]["event_url"], "https://doorkeeper.jp/events/1")
+        self.assertIn("https://doorkeeper.jp/events/1", seen)
+
+    def test_event_outside_range_is_excluded(self):
+        """対象期間外のエントリは除外される。"""
+        import time
+        target_dt = self._make_dt("20260501")
+        end_dt = self._make_dt("20260731")
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        # published_parsed: 2025-01-01 (well outside range)
+        pub = time.strptime("2025-01-01", "%Y-%m-%d")
+        entry = MagicMock()
+        entry_data = {
+            "link": "https://doorkeeper.jp/events/2",
+            "title": "Python 勉強会",
+            "summary": "Python エンジニア向け",
+            "published_parsed": pub,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            seen: set[str] = set()
+            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+
+        self.assertEqual(result, [])
+
+    def test_non_it_event_is_excluded(self):
+        """IT 非関連エントリは除外される。"""
+        import time
+        target_dt = self._make_dt("20260501")
+        end_dt = self._make_dt("20260731")
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        pub = time.strptime("2026-06-01", "%Y-%m-%d")
+        entry = MagicMock()
+        entry_data = {
+            "link": "https://doorkeeper.jp/events/3",
+            "title": "料理教室 東京",
+            "summary": "家庭料理を楽しく学びましょう",
+            "published_parsed": pub,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            seen: set[str] = set()
+            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+
+        self.assertEqual(result, [])
+
+    def test_duplicate_url_is_excluded(self):
+        """seen_urls に登録済みの URL は除外される。"""
+        import time
+        target_dt = self._make_dt("20260501")
+        end_dt = self._make_dt("20260731")
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        pub = time.strptime("2026-06-01", "%Y-%m-%d")
+        entry = MagicMock()
+        existing_url = "https://doorkeeper.jp/events/4"
+        entry_data = {
+            "link": existing_url,
+            "title": "Python 勉強会",
+            "summary": "Python エンジニア向け",
+            "published_parsed": pub,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            seen: set[str] = {existing_url}
+            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+
+        self.assertEqual(result, [])
+
+    def test_feed_fetch_failure_is_skipped(self):
+        """フィード取得失敗時は例外を発生させずに空リストを返す。"""
+        import requests as req_mod
+        target_dt = self._make_dt("20260501")
+        end_dt = self._make_dt("20260731")
+
+        with patch("requests.get", side_effect=req_mod.RequestException("timeout")):
+            seen: set[str] = set()
+            result = du._fetch_other_platform_events(target_dt, end_dt, seen)
+
+        self.assertEqual(result, [])
+
+    def test_platform_feeds_constant_is_nonempty(self):
+        """_IT_EVENT_PLATFORM_FEEDS には少なくとも 1 件のフィードが定義されている。"""
+        self.assertGreater(len(du._IT_EVENT_PLATFORM_FEEDS), 0)
+        for feed in du._IT_EVENT_PLATFORM_FEEDS:
+            self.assertIn("name", feed)
+            self.assertIn("url", feed)
+
+
 class TestDailyUpdateSinceWindow(unittest.TestCase):
     """デイリー更新の収集開始時刻計算のテスト"""
 

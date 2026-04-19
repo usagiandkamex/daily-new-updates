@@ -956,6 +956,29 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         for f in techplay_feeds:
             self.assertTrue(f.get("location_filter"), "TECH PLAY フィードに location_filter=True が必要")
 
+    def test_findy_feed_is_defined(self):
+        """Findy フィードが _IT_EVENT_PLATFORM_FEEDS に定義されている。"""
+        findy_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Findy" in f.get("name", "")]
+        self.assertTrue(len(findy_feeds) > 0, "Findy フィードが定義されていない")
+        for f in findy_feeds:
+            self.assertIn("url", f)
+            self.assertIn("findy", f["url"])
+
+    def test_codezine_feed_is_defined(self):
+        """Codezine フィードが _IT_EVENT_PLATFORM_FEEDS に定義されている。"""
+        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
+        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
+        for f in codezine_feeds:
+            self.assertIn("url", f)
+            self.assertIn("codezine", f["url"])
+
+    def test_codezine_feed_has_location_filter(self):
+        """Codezine フィードには location_filter=True が設定されている。"""
+        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
+        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
+        for f in codezine_feeds:
+            self.assertTrue(f.get("location_filter"), "Codezine フィードに location_filter=True が必要")
+
     def test_location_filter_keywords_constant_is_nonempty(self):
         """_LOCATION_FILTER_KEYWORDS が定義されており空でない。"""
         self.assertTrue(len(du._LOCATION_FILTER_KEYWORDS) > 0)

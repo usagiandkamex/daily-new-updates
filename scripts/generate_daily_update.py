@@ -362,6 +362,12 @@ _CONNPASS_SOCIAL_DISCOVERY_QUERIES = [
     # TECH PLAY
     "エンジニア セミナー 東京 techplay",
     "IT 技術 イベント techplay 開催予定",
+    # Findy
+    "エンジニア イベント 東京 findy 開催",
+    "IT 技術 勉強会 findy 申込",
+    # Codezine
+    "エンジニア セミナー 東京 codezine",
+    "IT 技術 イベント codezine 開催",
     # プラットフォーム横断
     "エンジニア ミートアップ 東京 開催",
     "生成AI LLM ハンズオン 東京 勉強会",
@@ -422,6 +428,10 @@ _IT_EVENT_PLATFORM_FEEDS: list[dict] = [
     {"name": "Doorkeeper オンライン", "url": "https://www.doorkeeper.jp/tags/オンライン.atom"},
     # TECH PLAY — 全国対象 Atom フィード。location_filter で東京・神奈川・オンラインに限定
     {"name": "TECH PLAY", "url": "https://techplay.jp/atom/events", "location_filter": True},
+    # Findy — connpass グループ RSS（Findy 主催エンジニア向けイベント）
+    {"name": "Findy", "url": "https://findy.connpass.com/rss"},
+    # Codezine — 全国対象 RSS。location_filter で東京・神奈川・オンラインに限定
+    {"name": "Codezine", "url": "https://codezine.jp/rss/new/20/index.xml", "location_filter": True},
 ]
 
 # location_filter=True のフィードに適用する地域キーワード（小文字比較）
@@ -712,7 +722,7 @@ def _search_connpass_rss_by_keyword(
 def _fetch_other_platform_events(
     seen_urls: set[str],
 ) -> list[dict]:
-    """Doorkeeper・TECH PLAY など connpass 以外のプラットフォームから IT イベントを取得する。
+    """Doorkeeper・TECH PLAY・Findy・Codezine など connpass 以外のプラットフォームから IT イベントを取得する。
 
     _IT_EVENT_PLATFORM_FEEDS に定義された Atom/RSS フィードを feedparser で取得し、
     IT 関連のイベントを返す。
@@ -782,7 +792,7 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
        ※ connpass API v1 は 2024 年 7 月末終了。RSS 検索エンドポイントが pref_id / online に対応。
     2. Google News / X(Twitter) 言及からコミュニティキーワードを収集
     3. 収集キーワードで connpass RSS を追加検索（直近 1 ヶ月、上位 20 キーワード）
-    4. Doorkeeper / TECH PLAY など connpass 以外のプラットフォームから取得
+    4. Doorkeeper / TECH PLAY / Findy / Codezine など connpass 以外のプラットフォームから取得
     5. CONNPASS_API_KEY が設定されている場合は v2 API でも補完する
 
     ステップ 1〜4 は API キー不要のため、CONNPASS_API_KEY が未設定でも動作する。
@@ -822,7 +832,7 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     if kw_added:
         print(f"    connpass: 段階3 — キーワード追加検索 {kw_added} 件追加")
 
-    # --- 段階 4: 他プラットフォーム（Doorkeeper / TECH PLAY など）から取得 ---
+    # --- 段階 4: 他プラットフォーム（Doorkeeper / TECH PLAY / Findy / Codezine など）から取得 ---
     print("    connpass: 段階4 — 他プラットフォームから取得")
     other_events = _fetch_other_platform_events(seen_urls)
     all_events.extend(other_events)

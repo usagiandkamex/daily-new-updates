@@ -489,6 +489,229 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         # 既登録 URL は返却リストに含まれない
         self.assertEqual(result, [])
 
+    def test_parse_rss_event_started_at_returns_formatted_datetime(self):
+        """_parse_rss_event_started_at() は published_parsed から開催日時文字列を返す。"""
+        import time
+        entry = MagicMock()
+        # 2026-06-15 10:00:00 UTC → JST は 2026-06-15 19:00:00
+        pub = time.strptime("2026-06-15 10:00:00", "%Y-%m-%d %H:%M:%S")
+        entry.get.side_effect = lambda k, d=None: {"published_parsed": pub}.get(k, d)
+        result = du._parse_rss_event_started_at(entry)
+        self.assertEqual(result, "2026/06/15 19:00")
+
+    def test_parse_rss_event_started_at_returns_empty_when_no_date(self):
+        """_parse_rss_event_started_at() は published_parsed がない場合に空文字列を返す。"""
+        entry = MagicMock()
+        entry.get.side_effect = lambda k, d=None: None
+        result = du._parse_rss_event_started_at(entry)
+        self.assertEqual(result, "")
+
+    def test_rss_events_populate_started_at_from_published_parsed(self):
+        """connpass RSS 取得イベントの started_at は published_parsed から設定される。"""
+        import time
+
+        # 2026-05-10 10:00:00 UTC
+        pub = time.strptime("2026-05-10 10:00:00", "%Y-%m-%d %H:%M:%S")
+        entry_data = {
+            "link": "https://connpass.com/event/456/",
+            "title": "Python 勉強会",
+            "summary": "Python エンジニア向けハンズオン",
+            "published_parsed": pub,
+        }
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry = MagicMock()
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            result = du._fetch_connpass_events_rss("20260501")
+
+        # started_at は published_parsed（UTC → JST変換）から設定される
+        matching = [e for e in result if e["event_url"] == "https://connpass.com/event/456/"]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(matching[0]["started_at"], "2026/05/10 19:00")
+
+    def test_fetch_connpass_filters_past_events(self):
+        """fetch_connpass_events() は started_at が実行日より前のイベントを除外する。"""
+        import time
+
+        # 実行日 2026-05-20、過去イベント（5/10）と将来イベント（5/25）を用意
+        past_pub = time.strptime("2026-05-09 10:00:00", "%Y-%m-%d %H:%M:%S")   # UTC → JST = 5/9 19:00
+        future_pub = time.strptime("2026-05-24 10:00:00", "%Y-%m-%d %H:%M:%S")  # UTC → JST = 5/24 19:00
+
+        past_entry_data = {
+            "link": "https://connpass.com/event/100/",
+            "title": "Python 勉強会（過去）",
+            "summary": "Python エンジニア向け",
+            "published_parsed": past_pub,
+        }
+        future_entry_data = {
+            "link": "https://connpass.com/event/200/",
+            "title": "Python 勉強会（未来）",
+            "summary": "Python エンジニア向け",
+            "published_parsed": future_pub,
+        }
+
+        def make_entry(data):
+            e = MagicMock()
+            e.get.side_effect = lambda k, d=None: data.get(k, d)
+            return e
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(
+                entries=[make_entry(past_entry_data), make_entry(future_entry_data)]
+            )
+            result = du.fetch_connpass_events("20260520")
+
+        urls = [e["event_url"] for e in result]
+        self.assertNotIn("https://connpass.com/event/100/", urls, "過去イベントは除外される")
+        self.assertIn("https://connpass.com/event/200/", urls, "将来イベントは含まれる")
+
+    def test_fetch_connpass_sorts_events_by_started_at(self):
+        """fetch_connpass_events() は started_at の昇順（近い順）でイベントを並べる。"""
+        import time
+
+        later_pub = time.strptime("2026-05-28 10:00:00", "%Y-%m-%d %H:%M:%S")   # UTC → JST = 5/28 19:00
+        sooner_pub = time.strptime("2026-05-22 10:00:00", "%Y-%m-%d %H:%M:%S")  # UTC → JST = 5/22 19:00
+
+        later_data = {
+            "link": "https://connpass.com/event/300/",
+            "title": "Python 勉強会（後）",
+            "summary": "Python エンジニア向け",
+            "published_parsed": later_pub,
+        }
+        sooner_data = {
+            "link": "https://connpass.com/event/400/",
+            "title": "Python 勉強会（先）",
+            "summary": "Python エンジニア向け",
+            "published_parsed": sooner_pub,
+        }
+
+        def make_entry(data):
+            e = MagicMock()
+            e.get.side_effect = lambda k, d=None: data.get(k, d)
+            return e
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            # later_data（5/28）を先に返し、sooner_data（5/22）を後に返す
+            mock_fp.parse.return_value = MagicMock(
+                entries=[make_entry(later_data), make_entry(sooner_data)]
+            )
+            result = du.fetch_connpass_events("20260520")
+
+        dated = [e for e in result if e.get("started_at")]
+        if len(dated) >= 2:
+            # started_at の昇順に並んでいることを確認（全隣接ペアを検証）
+            for i in range(len(dated) - 1):
+                self.assertLessEqual(
+                    dated[i]["started_at"], dated[i + 1]["started_at"],
+                    f"インデックス {i} と {i+1} の順序が不正: "
+                    f"{dated[i]['started_at']} > {dated[i + 1]['started_at']}"
+                )
+
+    def test_fetch_connpass_events_no_date_events_after_dated_events(self):
+        """fetch_connpass_events() は日時不明イベントを日時有りイベントの後に配置する。"""
+        import time
+
+        future_pub = time.strptime("2026-05-25 10:00:00", "%Y-%m-%d %H:%M:%S")  # UTC → JST = 5/25 19:00
+
+        dated_data = {
+            "link": "https://connpass.com/event/500/",
+            "title": "Python 勉強会（日時あり）",
+            "summary": "Python エンジニア向け",
+            "published_parsed": future_pub,
+        }
+        no_date_data = {
+            "link": "https://connpass.com/event/600/",
+            "title": "Python 勉強会（日時なし）",
+            "summary": "Python エンジニア向け",
+            "published_parsed": None,
+        }
+
+        def make_entry(data):
+            e = MagicMock()
+            e.get.side_effect = lambda k, d=None: data.get(k, d)
+            return e
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            # no_date_data を先に返し、dated_data を後に返す
+            mock_fp.parse.return_value = MagicMock(
+                entries=[make_entry(no_date_data), make_entry(dated_data)]
+            )
+            result = du.fetch_connpass_events("20260520")
+
+        # started_at があるイベントが先に来る
+        if len(result) >= 2:
+            dated_first = [e for e in result if e.get("started_at")]
+            no_date_events = [e for e in result if not e.get("started_at")]
+            if dated_first and no_date_events:
+                first_dated_idx = result.index(dated_first[0])
+                first_no_date_idx = result.index(no_date_events[0])
+                self.assertLess(first_dated_idx, first_no_date_idx)
+
+    def test_fetch_connpass_uses_accepted_end_at_gte(self):
+        """CONNPASS_API_KEY が設定された場合、API に accepted_end_at_gte パラメータを送信する。"""
+        captured_params: dict = {}
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            if params and "accepted_end_at_gte" in params:
+                captured_params.update(params)
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.json.return_value = {"events": [], "results_returned": 0}
+            resp.content = b""
+            return resp
+
+        with (
+            patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
+            du.fetch_connpass_events("20260501")
+
+        self.assertIn("accepted_end_at_gte", captured_params)
+        self.assertEqual(captured_params["accepted_end_at_gte"], "2026-05-01")
+
 
 class TestFetchOtherPlatformEvents(unittest.TestCase):
     """_fetch_other_platform_events() のテスト"""

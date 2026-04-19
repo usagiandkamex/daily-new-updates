@@ -23,7 +23,7 @@ JST = timezone(timedelta(hours=9))
 # LLM 呼び出しのリトライ設定
 # 一時的なエラー（レート制限・接続エラー・サーバーエラー）に対して指数バックオフでリトライする
 _LLM_MAX_RETRIES = 3
-_LLM_RETRY_BASE_WAIT = 5  # 秒（2^n 倍で増加: 5, 10, 20 秒）
+_LLM_RETRY_BASE_WAIT = 5  # 秒（2^n 倍で増加: 5, 10 秒）
 
 # HTTP リクエスト共通ヘッダー
 HTTP_HEADERS = {
@@ -654,8 +654,9 @@ def generate_section(
                 )
                 time.sleep(wait)
     # ここに到達するのは全リトライが一時的エラーで失敗した場合のみ。
-    # _LLM_MAX_RETRIES >= 1 なので last_error は必ず設定されている。
-    assert last_error is not None
+    # _LLM_MAX_RETRIES < 1 の設定不正で last_error が未設定になり得るため、明示的に検出する。
+    if last_error is None:
+        raise RuntimeError("_LLM_MAX_RETRIES must be at least 1.")
     raise last_error
 
 

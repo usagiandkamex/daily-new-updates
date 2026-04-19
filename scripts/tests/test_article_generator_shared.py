@@ -757,6 +757,15 @@ class TestGenerateSectionRetry(unittest.TestCase):
         mock_time.sleep.assert_not_called()
         self.assertEqual(client.chat.completions.create.call_count, 1)
 
+    def test_max_retries_zero_raises_runtime_error(self):
+        """_LLM_MAX_RETRIES が 0 の場合、RuntimeError を発生させる。"""
+        import article_generator_shared as ags
+        client = MagicMock()
+        section = self._make_section()
+        with patch.object(ags, "_LLM_MAX_RETRIES", 0):
+            with self.assertRaises(RuntimeError, msg="_LLM_MAX_RETRIES must be at least 1."):
+                ags.generate_section(client, "gpt-4o", section, [{"title": "記事"}])
+
 
 if __name__ == "__main__":
     unittest.main()

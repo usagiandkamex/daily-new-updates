@@ -420,6 +420,10 @@ _MAX_KEYWORDS_TO_SEARCH = 20
 # 東京・神奈川エリアの IT イベントを広くカバーするために使用する
 # location_filter=True のフィードは、タイトル/概要に東京・神奈川・オンライン関連語が
 # 含まれるエントリのみを通過させる（全国対象フィードの混入防止）
+# event_filter=True のフィードは、タイトル/概要にイベント告知語が含まれるエントリのみ通過させる
+#   （汎用記事 RSS で記事がイベント一覧に混入するのを防ぐ）
+# started_at_from_published=True のフィードは、published_parsed をイベント開始日時のプロキシとして使う
+#   （connpass グループ RSS はイベントエントリの published がイベント開催日時に対応するため）
 _IT_EVENT_PLATFORM_FEEDS: list[dict] = [
     # Doorkeeper — タグ別 Atom フィード（認証不要）
     {"name": "Doorkeeper エンジニア", "url": "https://www.doorkeeper.jp/tags/エンジニア.atom"},
@@ -429,9 +433,10 @@ _IT_EVENT_PLATFORM_FEEDS: list[dict] = [
     # TECH PLAY — 全国対象 Atom フィード。location_filter で東京・神奈川・オンラインに限定
     {"name": "TECH PLAY", "url": "https://techplay.jp/atom/events", "location_filter": True},
     # Findy — connpass グループ RSS（Findy 主催エンジニア向けイベント）
-    {"name": "Findy", "url": "https://findy.connpass.com/rss"},
-    # Codezine — 全国対象 RSS。location_filter で東京・神奈川・オンラインに限定
-    {"name": "Codezine", "url": "https://codezine.jp/rss/new/20/index.xml", "location_filter": True},
+    # published_parsed が開催日時のプロキシとして使えるため started_at_from_published=True
+    {"name": "Findy", "url": "https://findy.connpass.com/rss", "started_at_from_published": True},
+    # Codezine — 汎用 RSS。location_filter + event_filter で記事混入を防ぐ
+    {"name": "Codezine", "url": "https://codezine.jp/rss/new/20/index.xml", "location_filter": True, "event_filter": True},
 ]
 
 # location_filter=True のフィードに適用する地域キーワード（小文字比較）
@@ -439,6 +444,14 @@ _LOCATION_FILTER_KEYWORDS: frozenset[str] = frozenset([
     "東京", "tokyo",
     "神奈川", "kanagawa", "横浜", "yokohama",
     "オンライン", "online", "リモート", "remote",
+])
+
+# event_filter=True のフィードに適用するイベント告知語（小文字比較）
+# タイトル/概要のいずれかに含まれる場合のみイベントとして通過させる
+_EVENT_FILTER_KEYWORDS: frozenset[str] = frozenset([
+    "イベント", "セミナー", "勉強会", "ウェビナー", "webinar",
+    "ハンズオン", "ミートアップ", "meetup", "カンファレンス", "conference",
+    "ワークショップ", "workshop", "講演", "登壇", "開催",
 ])
 
 # IT 関連イベントを判定するキーワードリスト（タイトルや説明文に含まれるかチェック）
@@ -729,10 +742,11 @@ def _fetch_other_platform_events(
     seen_urls に登録済みの URL は重複として除外する。
     location_filter=True が設定されたフィードは、タイトル/概要に東京・神奈川・オンライン
     関連語を含むエントリのみ通過させる。
+    event_filter=True が設定されたフィードは、タイトル/概要にイベント告知語が含まれる
+    エントリのみ通過させる（汎用記事フィードからの記事混入を防ぐ）。
+    started_at_from_published=True が設定されたフィードは、published_parsed を
+    イベント開始日時のプロキシとして started_at に設定する（connpass グループ RSS 向け）。
     ネットワーク障害や未対応フィード形式は個別に無視し、他フィードの取得を続行する。
-
-    注意: Atom/RSS フィードの published_parsed / updated_parsed はフィード上の公開日時であり
-    イベント開催日時ではないため、期間フィルタには使用しない。started_at は空にする。
     """
     events = []
     for feed_def in _IT_EVENT_PLATFORM_FEEDS:
@@ -742,6 +756,8 @@ def _fetch_other_platform_events(
             if not url:
                 continue
             use_location_filter: bool = bool(feed_def.get("location_filter"))
+            use_event_filter: bool = bool(feed_def.get("event_filter"))
+            use_started_at_from_published: bool = bool(feed_def.get("started_at_from_published"))
             resp = requests.get(url, headers=HTTP_HEADERS, timeout=20)
             resp.raise_for_status()
             feed = feedparser.parse(resp.content)
@@ -752,22 +768,29 @@ def _fetch_other_platform_events(
                     continue
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "").strip()
+                combined = (title + " " + summary).lower()
 
                 # location_filter が設定されたフィードはタイトル/概要で地域を絞る
                 if use_location_filter:
-                    combined = (title + " " + summary).lower()
                     if not any(kw in combined for kw in _LOCATION_FILTER_KEYWORDS):
+                        continue
+
+                # event_filter が設定されたフィードはイベント告知語を要求する
+                if use_event_filter:
+                    if not any(kw in combined for kw in _EVENT_FILTER_KEYWORDS):
                         continue
 
                 if not _is_it_event({"title": title, "catch": summary}):
                     continue
+
+                started_at = _parse_rss_event_started_at(entry) if use_started_at_from_published else ""
                 seen_urls.add(event_url)
                 events.append(
                     {
                         "title": title,
                         "catch": summary[:200] if summary else "",
                         "event_url": event_url,
-                        "started_at": "",
+                        "started_at": started_at,
                         "place": "",
                         "address": "",
                         "accepted": 0,

@@ -964,6 +964,55 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
             self.assertIn("url", f)
             self.assertIn("findy", f["url"])
 
+    def test_findy_feed_has_started_at_from_published(self):
+        """Findy フィードには started_at_from_published=True が設定されている。"""
+        findy_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Findy" in f.get("name", "")]
+        self.assertTrue(len(findy_feeds) > 0, "Findy フィードが定義されていない")
+        for f in findy_feeds:
+            self.assertTrue(f.get("started_at_from_published"), "Findy フィードに started_at_from_published=True が必要")
+
+    def test_started_at_from_published_sets_started_at(self):
+        """started_at_from_published=True のフィードでは published_parsed が started_at に設定される。"""
+        import time
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        pub = time.strptime("2026-06-15 10:00:00", "%Y-%m-%d %H:%M:%S")
+        entry = MagicMock()
+        entry_data = {
+            "link": "https://findy.connpass.com/event/100",
+            "title": "Python エンジニア勉強会",
+            "summary": "Python エンジニア向けハンズオン",
+            "published_parsed": pub,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            original_feeds = du._IT_EVENT_PLATFORM_FEEDS
+            du._IT_EVENT_PLATFORM_FEEDS = [
+                {"name": "Findy", "url": "https://findy.connpass.com/rss", "started_at_from_published": True}
+            ]
+            try:
+                seen: set[str] = set()
+                result = du._fetch_other_platform_events(seen)
+            finally:
+                du._IT_EVENT_PLATFORM_FEEDS = original_feeds
+
+        self.assertTrue(len(result) > 0)
+        started_at = result[0]["started_at"]
+        self.assertNotEqual(started_at, "")
+        # published_parsed は UTC 2026-06-15 10:00 → JST 2026-06-15 19:00
+        self.assertEqual(started_at, "2026/06/15 19:00")
+
     def test_codezine_feed_is_defined(self):
         """Codezine フィードが _IT_EVENT_PLATFORM_FEEDS に定義されている。"""
         codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
@@ -978,6 +1027,94 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
         for f in codezine_feeds:
             self.assertTrue(f.get("location_filter"), "Codezine フィードに location_filter=True が必要")
+
+    def test_codezine_feed_has_event_filter(self):
+        """Codezine フィードには event_filter=True が設定されている。"""
+        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
+        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
+        for f in codezine_feeds:
+            self.assertTrue(f.get("event_filter"), "Codezine フィードに event_filter=True が必要")
+
+    def test_event_filter_excludes_non_event_entries(self):
+        """event_filter=True のフィードでは、イベント告知語のないエントリを除外する。"""
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry = MagicMock()
+        entry_data = {
+            "link": "https://codezine.jp/article/1234",
+            "title": "Python 最新機能解説 東京",
+            "summary": "Python 3.13 の新機能について解説",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            original_feeds = du._IT_EVENT_PLATFORM_FEEDS
+            du._IT_EVENT_PLATFORM_FEEDS = [
+                {"name": "Codezine", "url": "https://codezine.jp/rss/new/20/index.xml",
+                 "location_filter": True, "event_filter": True}
+            ]
+            try:
+                seen: set[str] = set()
+                result = du._fetch_other_platform_events(seen)
+            finally:
+                du._IT_EVENT_PLATFORM_FEEDS = original_feeds
+
+        self.assertEqual(result, [])
+
+    def test_event_filter_includes_event_entries(self):
+        """event_filter=True のフィードでも、イベント告知語を含むエントリは通過する。"""
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry = MagicMock()
+        entry_data = {
+            "link": "https://codezine.jp/article/5678",
+            "title": "Python セミナー 東京 開催",
+            "summary": "Python エンジニア向けセミナーを東京で開催します",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            original_feeds = du._IT_EVENT_PLATFORM_FEEDS
+            du._IT_EVENT_PLATFORM_FEEDS = [
+                {"name": "Codezine", "url": "https://codezine.jp/rss/new/20/index.xml",
+                 "location_filter": True, "event_filter": True}
+            ]
+            try:
+                seen: set[str] = set()
+                result = du._fetch_other_platform_events(seen)
+            finally:
+                du._IT_EVENT_PLATFORM_FEEDS = original_feeds
+
+        self.assertTrue(len(result) > 0)
+
+    def test_event_filter_keywords_constant_is_nonempty(self):
+        """_EVENT_FILTER_KEYWORDS が定義されており空でない。"""
+        self.assertTrue(len(du._EVENT_FILTER_KEYWORDS) > 0)
+        self.assertIn("イベント", du._EVENT_FILTER_KEYWORDS)
+        self.assertIn("セミナー", du._EVENT_FILTER_KEYWORDS)
+        self.assertIn("勉強会", du._EVENT_FILTER_KEYWORDS)
 
     def test_location_filter_keywords_constant_is_nonempty(self):
         """_LOCATION_FILTER_KEYWORDS が定義されており空でない。"""

@@ -435,8 +435,10 @@ _IT_EVENT_PLATFORM_FEEDS: list[dict] = [
     # Findy — connpass グループ RSS（Findy 主催エンジニア向けイベント）
     # published_parsed が開催日時のプロキシとして使えるため started_at_from_published=True
     {"name": "Findy", "url": "https://findy.connpass.com/rss", "started_at_from_published": True},
-    # Codezine — 汎用 RSS。location_filter + event_filter で記事混入を防ぐ
-    {"name": "Codezine", "url": "https://codezine.jp/rss/new/20/index.xml", "location_filter": True, "event_filter": True},
+    # Codezine — connpass グループ RSS（Developers Summit / CodeZine Night 等の参加募集イベント）
+    # 汎用ニュース RSS（codezine.jp/rss/）は記事と混在するため使用しない。connpass グループ RSS を使用する。
+    # published_parsed が開催日時のプロキシとして使えるため started_at_from_published=True
+    {"name": "Codezine", "url": "https://codezine.connpass.com/rss", "started_at_from_published": True},
 ]
 
 # location_filter=True のフィードに適用する地域キーワード（小文字比較）
@@ -735,7 +737,7 @@ def _search_connpass_rss_by_keyword(
 def _fetch_other_platform_events(
     seen_urls: set[str],
 ) -> list[dict]:
-    """Doorkeeper・TECH PLAY・Findy・Codezine など connpass 以外のプラットフォームから IT イベントを取得する。
+    """Doorkeeper・TECH PLAY・connpass グループ RSS など、connpass の月別検索/RSS 検索以外のフィードから IT イベントを取得する。
 
     _IT_EVENT_PLATFORM_FEEDS に定義された Atom/RSS フィードを feedparser で取得し、
     IT 関連のイベントを返す。

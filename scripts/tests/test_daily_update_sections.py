@@ -1013,27 +1013,19 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         # published_parsed は UTC 2026-06-15 10:00 → JST 2026-06-15 19:00
         self.assertEqual(started_at, "2026/06/15 19:00")
 
-    def test_codezine_feed_is_defined(self):
-        """Codezine フィードが _IT_EVENT_PLATFORM_FEEDS に定義されている。"""
+    def test_codezine_connpass_feed_is_in_event_platform_feeds(self):
+        """Codezine の connpass グループ RSS が _IT_EVENT_PLATFORM_FEEDS に定義されている。
+
+        Codezine は Developers Summit / CodeZine Night 等のイベントを connpass で参加募集するため、
+        connpass グループ RSS（codezine.connpass.com/rss）を使用する。
+        汎用ニュース RSS（codezine.jp/rss/）は技術記事と混在するため使用しない。
+        """
         codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
-        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
+        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが _IT_EVENT_PLATFORM_FEEDS に定義されていない")
         for f in codezine_feeds:
             self.assertIn("url", f)
-            self.assertIn("codezine", f["url"])
-
-    def test_codezine_feed_has_location_filter(self):
-        """Codezine フィードには location_filter=True が設定されている。"""
-        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
-        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
-        for f in codezine_feeds:
-            self.assertTrue(f.get("location_filter"), "Codezine フィードに location_filter=True が必要")
-
-    def test_codezine_feed_has_event_filter(self):
-        """Codezine フィードには event_filter=True が設定されている。"""
-        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
-        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
-        for f in codezine_feeds:
-            self.assertTrue(f.get("event_filter"), "Codezine フィードに event_filter=True が必要")
+            self.assertIn("codezine.connpass.com", f["url"], "Codezine は connpass グループ RSS を使用すること（汎用ニュース RSS は不可）")
+            self.assertTrue(f.get("started_at_from_published"), "Codezine connpass フィードには started_at_from_published=True が必要")
 
     def test_event_filter_excludes_non_event_entries(self):
         """event_filter=True のフィードでは、イベント告知語のないエントリを除外する。"""

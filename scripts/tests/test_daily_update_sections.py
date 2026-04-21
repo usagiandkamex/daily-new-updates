@@ -1013,27 +1013,15 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         # published_parsed は UTC 2026-06-15 10:00 → JST 2026-06-15 19:00
         self.assertEqual(started_at, "2026/06/15 19:00")
 
-    def test_codezine_feed_is_defined(self):
-        """Codezine フィードが _IT_EVENT_PLATFORM_FEEDS に定義されている。"""
-        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
-        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
-        for f in codezine_feeds:
-            self.assertIn("url", f)
-            self.assertIn("codezine", f["url"])
+    def test_codezine_not_in_event_platform_feeds(self):
+        """Codezine はニュースサイトであり _IT_EVENT_PLATFORM_FEEDS に含まれない。
 
-    def test_codezine_feed_has_location_filter(self):
-        """Codezine フィードには location_filter=True が設定されている。"""
-        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
-        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
-        for f in codezine_feeds:
-            self.assertTrue(f.get("location_filter"), "Codezine フィードに location_filter=True が必要")
-
-    def test_codezine_feed_has_event_filter(self):
-        """Codezine フィードには event_filter=True が設定されている。"""
-        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
-        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが定義されていない")
-        for f in codezine_feeds:
-            self.assertTrue(f.get("event_filter"), "Codezine フィードに event_filter=True が必要")
+        Codezine は IT 技術記事を配信するニュースサイトであり、イベント登録プラットフォームではない。
+        event_filter や location_filter を設定しても技術記事がイベント受付情報として混入するため、
+        受付情報セクションからは除外する。
+        """
+        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "") or "codezine" in f.get("url", "")]
+        self.assertEqual(len(codezine_feeds), 0, "Codezine はイベントプラットフォームではないため _IT_EVENT_PLATFORM_FEEDS に含まれてはならない")
 
     def test_event_filter_excludes_non_event_entries(self):
         """event_filter=True のフィードでは、イベント告知語のないエントリを除外する。"""

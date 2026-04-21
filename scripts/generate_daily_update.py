@@ -737,7 +737,7 @@ def _search_connpass_rss_by_keyword(
 def _fetch_other_platform_events(
     seen_urls: set[str],
 ) -> list[dict]:
-    """Doorkeeper・TECH PLAY・Findy・Codezine など connpass 以外のイベントプラットフォームから IT イベントを取得する。
+    """Doorkeeper・TECH PLAY・connpass グループ RSS など、connpass の月別検索/RSS 検索以外のフィードから IT イベントを取得する。
 
     _IT_EVENT_PLATFORM_FEEDS に定義された Atom/RSS フィードを feedparser で取得し、
     IT 関連のイベントを返す。

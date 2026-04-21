@@ -1285,8 +1285,8 @@ def _generate_community_section(
         reports_md = generate_section(client, model, reports_section_def, event_reports, since=since)
         # LLM が先頭に ## ヘッダーを出力した場合は除去（後で追加するため）
         reports_md = re.sub(r'^## [^\n]+\n\n?', '', reports_md, count=1).strip()
-        # LLM が末尾に「---」区切りを出力した場合は除去
-        reports_md = re.sub(r'\n+---\s*$', '', reports_md).rstrip()
+        # LLM が末尾に「---」区切りを出力した場合は除去（複数連続・改行なしも対応）
+        reports_md = re.sub(r'(?:\n?---[ \t]*)+\s*$', '', reports_md).rstrip()
     else:
         reports_md = "### 📝 参加レポート・イベント宣伝まとめ\n\n現在取得できる参加レポート情報はありません。"
 

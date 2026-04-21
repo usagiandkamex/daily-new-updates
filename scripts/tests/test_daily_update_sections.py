@@ -1919,10 +1919,17 @@ class TestGenerateCommunitySectionHybrid(unittest.TestCase):
 
         result = du._generate_community_section(client, "gpt-4o", section_def, events, [])
 
-        # 2 イベント間に「---」区切りがある
-        self.assertIn("---", result)
-        # 末尾の「---」は存在しない（イベントセクション内）
         connpass_part = result.split("### 📝")[0]
+
+        # connpass セクション内に 2 イベントが含まれる
+        self.assertIn("イベントA", connpass_part)
+        self.assertIn("イベントB", connpass_part)
+        # 区切りは 2 件なら 1 回だけ
+        self.assertEqual(connpass_part.count("---"), 1)
+        # 区切りがイベントAとイベントBの間にある
+        self.assertLess(connpass_part.index("イベントA"), connpass_part.index("---"))
+        self.assertLess(connpass_part.index("---"), connpass_part.index("イベントB"))
+        # 末尾の「---」は存在しない（イベントセクション内）
         self.assertFalse(connpass_part.rstrip().endswith("---"))
 
 

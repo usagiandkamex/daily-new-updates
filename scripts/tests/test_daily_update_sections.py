@@ -1869,6 +1869,62 @@ class TestGenerateCommunitySectionHybrid(unittest.TestCase):
         # LLM が別の URL を作ることはない（スクリプト生成のため）
         self.assertNotIn("https://connpass.com/event/000/", result)
 
+    def test_trailing_separator_stripped_from_llm_output(self):
+        """LLM が末尾に「---」を出力した場合は除去される。"""
+        section_def = self._get_community_def()
+        event_reports = [{"title": "レポート", "url": "https://zenn.dev/1"}]
+        llm_output = "### 📝 参加レポート・イベント宣伝まとめ\n\n### レポートA\n**要約**: ...\n**参考リンク**: [A](https://example.com/a)\n\n---"
+        client = self._make_client(llm_output)
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, [], event_reports)
+
+        # 末尾の「---」は除去されている
+        self.assertFalse(result.rstrip().endswith("---"))
+
+    def test_connpass_events_use_no_dash_subitem_format(self):
+        """connpass イベントのサブアイテムに「- 」プレフィックスを使わない。"""
+        section_def = self._get_community_def()
+        events = [{
+            "title": "テストイベント",
+            "event_url": "https://connpass.com/event/1/",
+            "started_at": "2026/05/15 19:00",
+            "place": "東京都渋谷区",
+            "series": "JAWS-UG",
+            "catch": "概要テキスト",
+            "accepted": 10,
+            "limit": 30,
+        }]
+        client = self._make_client()
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, events, [])
+
+        # サブアイテムに「  - 」プレフィックスがないこと
+        self.assertNotIn("  - コミュニティ:", result)
+        self.assertNotIn("  - 開催日時:", result)
+        self.assertNotIn("  - 場所:", result)
+        self.assertNotIn("  - 概要:", result)
+        self.assertNotIn("  - 参加状況:", result)
+        # フィールド内容は含まれる
+        self.assertIn("コミュニティ: JAWS-UG", result)
+        self.assertIn("開催日時: 2026/05/15 19:00", result)
+
+    def test_multiple_connpass_events_separated_by_horizontal_rule(self):
+        """複数の connpass イベントが「---」で区切られる。"""
+        section_def = self._get_community_def()
+        events = [
+            {"title": "イベントA", "event_url": "https://connpass.com/event/1/"},
+            {"title": "イベントB", "event_url": "https://connpass.com/event/2/"},
+        ]
+        client = self._make_client()
+
+        result = du._generate_community_section(client, "gpt-4o", section_def, events, [])
+
+        # 2 イベント間に「---」区切りがある
+        self.assertIn("---", result)
+        # 末尾の「---」は存在しない（イベントセクション内）
+        connpass_part = result.split("### 📝")[0]
+        self.assertFalse(connpass_part.rstrip().endswith("---"))
+
 
 if __name__ == "__main__":
     unittest.main()

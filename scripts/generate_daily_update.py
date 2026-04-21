@@ -967,7 +967,7 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
     if not events:
         return "### 📅 申し込み受付中のイベント\n\n現在取得できるイベント情報はありません。"
 
-    lines = ["### 📅 申し込み受付中のイベント", ""]
+    blocks = []
     for event in events:
         title = event.get("title") or "（タイトルなし）"
         url = event.get("event_url", "")
@@ -978,30 +978,31 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
         limit = event.get("limit") or 0
         series = event.get("series", "")
 
+        block_lines = []
         if url:
-            lines.append(f"- **[{title}]({url})**")
+            block_lines.append(f"**[{title}]({url})**")
         else:
-            lines.append(f"- **{title}**")
+            block_lines.append(f"**{title}**")
 
         if series:
-            lines.append(f"  - コミュニティ: {series}")
+            block_lines.append(f"コミュニティ: {series}")
         if started_at:
-            lines.append(f"  - 開催日時: {started_at}")
+            block_lines.append(f"開催日時: {started_at}")
         if place:
-            lines.append(f"  - 場所: {place}")
+            block_lines.append(f"場所: {place}")
         if catch:
             summary = catch[:150]
             if len(catch) > 150:
                 summary += "..."
-            lines.append(f"  - 概要: {summary}")
+            block_lines.append(f"概要: {summary}")
         if limit > 0:
-            lines.append(f"  - 参加状況: {accepted}/{limit}名")
+            block_lines.append(f"参加状況: {accepted}/{limit}名")
         elif accepted > 0:
-            lines.append(f"  - 参加状況: {accepted}名（定員なし）")
+            block_lines.append(f"参加状況: {accepted}名（定員なし）")
 
-        lines.append("")
+        blocks.append("\n".join(block_lines))
 
-    return "\n".join(lines).rstrip()
+    return "### 📅 申し込み受付中のイベント\n\n" + "\n\n---\n\n".join(blocks)
 
 
 # カテゴリ別の記事数上限（プロンプトサイズ制御用）
@@ -1244,8 +1245,8 @@ _EVENT_REPORTS_LLM_INSTRUCTION = (
     "IT 系勉強会・コミュニティイベントの参加レポート、開催レポート、イベント告知記事が含まれます。\n"
     "IT 関連のもののみを選定し、先頭に「### 📝 参加レポート・イベント宣伝まとめ」を出力してください。\n"
     "その後、各記事を次の形式で構成してください"
-    "（各項目の間には必ず空行と「---」区切りを入れること）。\n\n"
-    "### <見出し>\n\n**要約**: ...\n\n**参考リンク**: [タイトル](URL)\n\n---\n\n"
+    "（項目と項目の間には必ず空行と「---」区切りを入れること。最後の項目の後には「---」を入れないこと）。\n\n"
+    "### <見出し>\n\n**要約**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
     "見出し（###）自体はハイパーリンクにせず、参考リンクのみを [タイトル](URL) 形式で記載してください。"
     "また、サブセクション末尾に締めの文章は入れないでください。"
     "参考リンクは提供されたソースの URL をそのまま使用してください。"
@@ -1284,6 +1285,8 @@ def _generate_community_section(
         reports_md = generate_section(client, model, reports_section_def, event_reports, since=since)
         # LLM が先頭に ## ヘッダーを出力した場合は除去（後で追加するため）
         reports_md = re.sub(r'^## [^\n]+\n\n?', '', reports_md, count=1).strip()
+        # LLM が末尾に「---」区切りを出力した場合は除去
+        reports_md = re.sub(r'\n+---\s*$', '', reports_md).rstrip()
     else:
         reports_md = "### 📝 参加レポート・イベント宣伝まとめ\n\n現在取得できる参加レポート情報はありません。"
 

@@ -435,6 +435,10 @@ _IT_EVENT_PLATFORM_FEEDS: list[dict] = [
     # Findy — connpass グループ RSS（Findy 主催エンジニア向けイベント）
     # published_parsed が開催日時のプロキシとして使えるため started_at_from_published=True
     {"name": "Findy", "url": "https://findy.connpass.com/rss", "started_at_from_published": True},
+    # Codezine — connpass グループ RSS（Developers Summit / CodeZine Night 等の参加募集イベント）
+    # 汎用ニュース RSS（codezine.jp/rss/）は記事と混在するため使用しない。connpass グループ RSS を使用する。
+    # published_parsed が開催日時のプロキシとして使えるため started_at_from_published=True
+    {"name": "Codezine", "url": "https://codezine.connpass.com/rss", "started_at_from_published": True},
 ]
 
 # location_filter=True のフィードに適用する地域キーワード（小文字比較）
@@ -733,7 +737,7 @@ def _search_connpass_rss_by_keyword(
 def _fetch_other_platform_events(
     seen_urls: set[str],
 ) -> list[dict]:
-    """Doorkeeper・TECH PLAY・Findy など connpass 以外のイベントプラットフォームから IT イベントを取得する。
+    """Doorkeeper・TECH PLAY・Findy・Codezine など connpass 以外のイベントプラットフォームから IT イベントを取得する。
 
     _IT_EVENT_PLATFORM_FEEDS に定義された Atom/RSS フィードを feedparser で取得し、
     IT 関連のイベントを返す。
@@ -813,7 +817,7 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
        ※ connpass API v1 は 2024 年 7 月末終了。RSS 検索エンドポイントが pref_id / online に対応。
     2. Google News / X(Twitter) 言及からコミュニティキーワードを収集
     3. 収集キーワードで connpass RSS を追加検索（直近 1 ヶ月、上位 20 キーワード）
-    4. Doorkeeper / TECH PLAY / Findy など connpass 以外のプラットフォームから取得
+    4. Doorkeeper / TECH PLAY / Findy / Codezine など connpass 以外のプラットフォームから取得
     5. CONNPASS_API_KEY が設定されている場合は v2 API でも補完する
 
     ステップ 1〜4 は API キー不要のため、CONNPASS_API_KEY が未設定でも動作する。
@@ -853,7 +857,7 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     if kw_added:
         print(f"    connpass: 段階3 — キーワード追加検索 {kw_added} 件追加")
 
-    # --- 段階 4: 他プラットフォーム（Doorkeeper / TECH PLAY / Findy など）から取得 ---
+    # --- 段階 4: 他プラットフォーム（Doorkeeper / TECH PLAY / Findy / Codezine など）から取得 ---
     print("    connpass: 段階4 — 他プラットフォームから取得")
     other_events = _fetch_other_platform_events(seen_urls)
     all_events.extend(other_events)

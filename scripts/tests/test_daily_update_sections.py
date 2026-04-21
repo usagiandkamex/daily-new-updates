@@ -1013,15 +1013,19 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
         # published_parsed は UTC 2026-06-15 10:00 → JST 2026-06-15 19:00
         self.assertEqual(started_at, "2026/06/15 19:00")
 
-    def test_codezine_not_in_event_platform_feeds(self):
-        """Codezine はニュースサイトであり _IT_EVENT_PLATFORM_FEEDS に含まれない。
+    def test_codezine_connpass_feed_is_in_event_platform_feeds(self):
+        """Codezine の connpass グループ RSS が _IT_EVENT_PLATFORM_FEEDS に定義されている。
 
-        Codezine は IT 技術記事を配信するニュースサイトであり、イベント登録プラットフォームではない。
-        event_filter や location_filter を設定しても技術記事がイベント受付情報として混入するため、
-        受付情報セクションからは除外する。
+        Codezine は Developers Summit / CodeZine Night 等のイベントを connpass で参加募集するため、
+        connpass グループ RSS（codezine.connpass.com/rss）を使用する。
+        汎用ニュース RSS（codezine.jp/rss/）は技術記事と混在するため使用しない。
         """
-        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "") or "codezine" in f.get("url", "")]
-        self.assertEqual(len(codezine_feeds), 0, "Codezine はイベントプラットフォームではないため _IT_EVENT_PLATFORM_FEEDS に含まれてはならない")
+        codezine_feeds = [f for f in du._IT_EVENT_PLATFORM_FEEDS if "Codezine" in f.get("name", "")]
+        self.assertTrue(len(codezine_feeds) > 0, "Codezine フィードが _IT_EVENT_PLATFORM_FEEDS に定義されていない")
+        for f in codezine_feeds:
+            self.assertIn("url", f)
+            self.assertIn("codezine.connpass.com", f["url"], "Codezine は connpass グループ RSS を使用すること（汎用ニュース RSS は不可）")
+            self.assertTrue(f.get("started_at_from_published"), "Codezine connpass フィードには started_at_from_published=True が必要")
 
     def test_event_filter_excludes_non_event_entries(self):
         """event_filter=True のフィードでは、イベント告知語のないエントリを除外する。"""

@@ -187,7 +187,7 @@ def _regenerate_empty_sections(
     """リンク除去により空になったセクション（トピックなし）を再取得・再生成する。
 
     各セクションをチェックし、### 見出しが 0 件のセクションに対して以下を順に試みる:
-      1. 拡張時間窓（24h）でカテゴリ専用フィードを再取得して LLM 再生成
+      1. 拡張時間窓（直近 1 か月、EXTENDED_LOOKBACK_DAYS）でカテゴリ専用フィードを再取得して LLM 再生成
       2. 汎用 IT ニュースフィードで LLM 再生成
       3. それでも情報が得られない場合は「情報なし」メッセージを記載する
     """
@@ -286,8 +286,21 @@ def _regenerate_empty_sections(
 # --- フィード取得 -----------------------------------------------------------------
 
 
+# 空セクションのフォールバック時に時間窓を広げる日数。
+# デイリーアップデートは毎日 07:30 JST に実行される（.github/workflows/daily-update.yml）ため、
+# 通常の収集窓は since（前日 07:30 JST、約24時間 ＝ 直近 1〜2 日）。
+# 通常窓で記事が見つからずセクションが空になった場合のみ、
+# _regenerate_empty_sections が extended_since = target_dt - EXTENDED_LOOKBACK_DAYS まで
+# 範囲を広げて再取得を試みる。それでも見つからなければ「情報なし」を出力する。
+# 30 日（約 1 か月）は、ニッチなカテゴリでも 1 か月以内には何らかの更新がある想定で設定している。
+EXTENDED_LOOKBACK_DAYS = 30
+
+
 def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
-    """単一の RSS/Atom フィードを取得し、since 以降の記事を返す。"""
+    """単一の RSS/Atom フィードを取得し、since 以降の記事を返す。
+
+    日付のない記事は新鮮さを確認できないため、shared 実装側で常に除外される。
+    """
     return _ags._fetch_feed(url, since, max_items=max_items)
 
 
@@ -1449,7 +1462,9 @@ def main():
             "コミュニティイベント参加レポート": event_reports,
         },
     }
-    extended_since = target_dt - timedelta(hours=24)
+    # 通常窓（since、直近 1〜2 日）で空になったセクションは、
+    # 直近 1 か月（EXTENDED_LOOKBACK_DAYS）まで範囲を広げて再生成を試みる
+    extended_since = target_dt - timedelta(days=EXTENDED_LOOKBACK_DAYS)
     article = _regenerate_empty_sections(
         article, SECTION_DEFINITIONS, section_data_map, extended_since, llm_clients
     )

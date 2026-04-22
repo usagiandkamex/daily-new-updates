@@ -1124,6 +1124,106 @@ class TestDailyUpdateSinceWindow(unittest.TestCase):
         self.assertEqual(since.isoformat(), "2026-04-14T07:30:00+09:00")
 
 
+class TestFetchFeedDateFilterDailyUpdate(unittest.TestCase):
+    """_fetch_feed() の日付フィルタリングのテスト
+
+    通常窓（since、直近 1〜2 日）では `since` 以降のみを通し、日付なしを除外する。
+    `_regenerate_empty_sections` 経由で since が拡張窓（直近 1 か月）に
+    設定された場合は、その範囲内の古い記事も取得できる（絶対上限 cap を持たない）。
+    """
+
+    def _make_feed(self, entries: list[dict]):
+        """feedparser.FeedParserDict 相当のモックを返す。"""
+        mock_feed = MagicMock()
+        mock_entries = []
+        for e in entries:
+            entry = MagicMock()
+            entry.get.side_effect = lambda key, default="", _e=e: _e.get(key, default)
+            entry.published_parsed = e.get("published_parsed")
+            entry.updated_parsed = e.get("updated_parsed")
+            entry.link = e.get("link", "https://example.com/article")
+            mock_entries.append(entry)
+        mock_feed.entries = mock_entries
+        return mock_feed
+
+    def _run(self, entries: list[dict], since):
+        """requests と feedparser をモックして _fetch_feed を呼ぶ。"""
+        mock_resp = MagicMock()
+        mock_resp.content = b""
+        mock_feed = self._make_feed(entries)
+        with (patch.object(du.requests, "get", return_value=mock_resp),
+              patch.object(du.feedparser, "parse", return_value=mock_feed),
+              patch.object(ags, "_resolve_google_news_url", side_effect=lambda u: u)):
+            return du._fetch_feed("https://feed.example.com/rss", since)
+
+    def _time_tuple(self, dt):
+        return dt.timetuple()[:6]
+
+    def test_article_older_than_since_is_excluded(self):
+        """`since` より古い日付を持つ記事は除外される（前回実行以前の情報）。"""
+        from datetime import datetime, timedelta, timezone
+        # 相対時刻で組み立てて、テスト実行日に依存しないようにする
+        since = datetime.now(timezone.utc) - timedelta(hours=12)
+        old = since - timedelta(hours=1)
+        entries = [{
+            "title": "Old Article",
+            "link": "https://example.com/old",
+            "published_parsed": self._time_tuple(old),
+            "updated_parsed": None,
+        }]
+        self.assertEqual(len(self._run(entries, since)), 0)
+
+    def test_article_without_date_is_excluded(self):
+        """日付のない記事は新鮮さを確認できないため除外される（古い情報の混入防止）。"""
+        from datetime import datetime, timedelta, timezone
+        since = datetime.now(timezone.utc) - timedelta(hours=12)
+        entries = [{
+            "title": "No Date Article",
+            "link": "https://example.com/nodate",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }]
+        self.assertEqual(len(self._run(entries, since)), 0,
+                         "日付のない記事は除外されるべき")
+
+    def test_recent_article_within_since_window_is_included(self):
+        """since 以降の記事は含まれる。"""
+        from datetime import datetime, timedelta, timezone
+        since = datetime.now(timezone.utc) - timedelta(hours=1)
+        fresh = datetime.now(timezone.utc) - timedelta(minutes=30)
+        entries = [{
+            "title": "Fresh Article",
+            "link": "https://example.com/fresh",
+            "published_parsed": self._time_tuple(fresh),
+            "updated_parsed": None,
+        }]
+        result = self._run(entries, since)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["title"], "Fresh Article")
+
+    def test_old_article_included_when_since_is_distant_past(self):
+        """since が遠い過去（拡張窓フォールバック相当）の場合、
+        その範囲内の古い記事は除外されない（絶対上限の cap を持たない）。"""
+        from datetime import datetime, timedelta, timezone
+        # _regenerate_empty_sections の拡張窓（EXTENDED_LOOKBACK_DAYS=30 日）を想定
+        since = datetime.now(timezone.utc) - timedelta(days=du.EXTENDED_LOOKBACK_DAYS)
+        # 拡張窓内の 10 日前の記事は含まれるべき
+        old_but_in_window = datetime.now(timezone.utc) - timedelta(days=10)
+        entries = [{
+            "title": "Old But In Extended Window",
+            "link": "https://example.com/extended",
+            "published_parsed": self._time_tuple(old_but_in_window),
+            "updated_parsed": None,
+        }]
+        result = self._run(entries, since)
+        self.assertEqual(len(result), 1,
+                         "拡張窓内の古い記事はフォールバック時に取得できるべき")
+
+    def test_extended_lookback_days_constant_is_30(self):
+        """EXTENDED_LOOKBACK_DAYS は 30 日（直近 1 か月）に設定されている。"""
+        self.assertEqual(du.EXTENDED_LOOKBACK_DAYS, 30)
+
+
 class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):
     """validate_links() の孤立した --- セパレータ除去テスト"""
 

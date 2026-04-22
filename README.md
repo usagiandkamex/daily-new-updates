@@ -8,7 +8,7 @@
 
 1. **Issue 作成** — 「YYYY/MM/DD デイリーアップデート」という Issue を作成
 2. **ブランチ作成** — `YYYYMMDD_update` ブランチを作成
-3. **ニュース収集 & 記事生成** — 79 の RSS/Atom フィード（技術系・ビジネス系・SNS・コミュニティ）から最新ニュースを取得し、GitHub Models (claude-opus-4-6 / gpt-4o / gpt-4o-mini) で記事を生成
+3. **ニュース収集 & 記事生成** — 78 の RSS/Atom フィード（技術系・ビジネス系・SNS・コミュニティ）から最新ニュースを取得し、GitHub Models (claude-opus-4-6 / gpt-4o / gpt-4o-mini) で記事を生成
 4. **PR 作成 & マージ** — main ブランチへの PR を作成し、自動マージ
 
 ## 生成される記事の構成

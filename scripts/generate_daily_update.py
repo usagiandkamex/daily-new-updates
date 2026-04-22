@@ -187,7 +187,7 @@ def _regenerate_empty_sections(
     """リンク除去により空になったセクション（トピックなし）を再取得・再生成する。
 
     各セクションをチェックし、### 見出しが 0 件のセクションに対して以下を順に試みる:
-      1. 拡張時間窓（24h）でカテゴリ専用フィードを再取得して LLM 再生成
+      1. 拡張時間窓（直近 1 か月、EXTENDED_LOOKBACK_DAYS）でカテゴリ専用フィードを再取得して LLM 再生成
       2. 汎用 IT ニュースフィードで LLM 再生成
       3. それでも情報が得られない場合は「情報なし」メッセージを記載する
     """
@@ -286,30 +286,27 @@ def _regenerate_empty_sections(
 # --- フィード取得 -----------------------------------------------------------------
 
 
-# 記事の最大許容年齢（日数）。
-# デイリーアップデートは毎日 07:30 JST に実行される（.github/workflows/daily-update.yml）。
-# 「前回実行以降にアップデートされた情報」のみを拾うため、since（前日 07:30 JST）に
-# 加えて絶対上限を 2 日に設定する。これにより以下のケースで古い情報の混入を防ぐ:
-#   - フィードが古い記事に新しい published_parsed/updated_parsed を付与した場合
-#   - _regenerate_empty_sections の extended_since（target_dt - 24h）経由のフォールバック
-#   - 手動実行で過去日付を指定した際に since が遠い過去になるケース
-# 2 日に設定しているのは、since（約24時間）に加え extended_since（約32時間）の余裕を
-# 持たせつつ、それより古い情報は明確に除外するため。
-# 日付のない記事は新鮮さを確認できないため、_fetch_feed 側で常に除外される。
-MAX_ARTICLE_AGE_DAYS = 2
+# 空セクションのフォールバック時に時間窓を広げる日数。
+# デイリーアップデートは毎日 07:30 JST に実行される（.github/workflows/daily-update.yml）ため、
+# 通常の収集窓は since（前日 07:30 JST、約24時間 ＝ 直近 1〜2 日）。
+# 通常窓で記事が見つからずセクションが空になった場合のみ、
+# _regenerate_empty_sections が extended_since = target_dt - EXTENDED_LOOKBACK_DAYS まで
+# 範囲を広げて再取得を試みる。それでも見つからなければ「情報なし」を出力する。
+# 30 日（約 1 か月）は、ニッチなカテゴリでも 1 か月以内には何らかの更新がある想定で設定している。
+EXTENDED_LOOKBACK_DAYS = 30
 
 
 def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
     """単一の RSS/Atom フィードを取得し、since 以降の記事を返す。
 
-    MAX_ARTICLE_AGE_DAYS より古い記事は絶対上限として除外する（古い情報の混入防止）。
+    日付のない記事は新鮮さを確認できないため、shared 実装側で常に除外される。
     """
-    return _ags._fetch_feed(url, since, max_items=max_items, max_age_days=MAX_ARTICLE_AGE_DAYS)
+    return _ags._fetch_feed(url, since, max_items=max_items)
 
 
 def fetch_category(category: str, since: datetime) -> list[dict]:
     """カテゴリに属する全フィードから記事を収集する。"""
-    return _ags.fetch_category(FEEDS, category, since, max_age_days=MAX_ARTICLE_AGE_DAYS)
+    return _ags.fetch_category(FEEDS, category, since)
 
 
 
@@ -1465,7 +1462,9 @@ def main():
             "コミュニティイベント参加レポート": event_reports,
         },
     }
-    extended_since = target_dt - timedelta(hours=24)
+    # 通常窓（since、直近 1〜2 日）で空になったセクションは、
+    # 直近 1 か月（EXTENDED_LOOKBACK_DAYS）まで範囲を広げて再生成を試みる
+    extended_since = target_dt - timedelta(days=EXTENDED_LOOKBACK_DAYS)
     article = _regenerate_empty_sections(
         article, SECTION_DEFINITIONS, section_data_map, extended_since, llm_clients
     )

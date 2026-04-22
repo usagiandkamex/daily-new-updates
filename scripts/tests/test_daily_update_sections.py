@@ -1213,9 +1213,9 @@ class TestFetchFeedDateFilterDailyUpdate(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["title"], "Fresh Article")
 
-    def test_max_article_age_days_constant_is_30(self):
-        """MAX_ARTICLE_AGE_DAYS は 30 日に設定されている（smallchat と同値）。"""
-        self.assertEqual(du.MAX_ARTICLE_AGE_DAYS, 30)
+    def test_max_article_age_days_constant_is_2(self):
+        """MAX_ARTICLE_AGE_DAYS は 2 日に設定されている（毎日実行 + extended_since 24h を考慮）。"""
+        self.assertEqual(du.MAX_ARTICLE_AGE_DAYS, 2)
 
 
 class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):

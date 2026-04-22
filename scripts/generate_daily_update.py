@@ -287,11 +287,16 @@ def _regenerate_empty_sections(
 
 
 # 記事の最大許容年齢（日数）。
-# since によるフィルタリングに加え、絶対上限として古い記事を除外する。
-# これにより、フィードに残存する古い情報や日付が誤って付与された記事が
-# 「前回実行以降のアップデート情報」に混入することを防ぐ。
+# デイリーアップデートは毎日 07:30 JST に実行される（.github/workflows/daily-update.yml）。
+# 「前回実行以降にアップデートされた情報」のみを拾うため、since（前日 07:30 JST）に
+# 加えて絶対上限を 2 日に設定する。これにより以下のケースで古い情報の混入を防ぐ:
+#   - フィードが古い記事に新しい published_parsed/updated_parsed を付与した場合
+#   - _regenerate_empty_sections の extended_since（target_dt - 24h）経由のフォールバック
+#   - 手動実行で過去日付を指定した際に since が遠い過去になるケース
+# 2 日に設定しているのは、since（約24時間）に加え extended_since（約32時間）の余裕を
+# 持たせつつ、それより古い情報は明確に除外するため。
 # 日付のない記事は新鮮さを確認できないため、_fetch_feed 側で常に除外される。
-MAX_ARTICLE_AGE_DAYS = 30
+MAX_ARTICLE_AGE_DAYS = 2
 
 
 def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:

@@ -286,14 +286,25 @@ def _regenerate_empty_sections(
 # --- フィード取得 -----------------------------------------------------------------
 
 
+# 記事の最大許容年齢（日数）。
+# since によるフィルタリングに加え、絶対上限として古い記事を除外する。
+# これにより、フィードに残存する古い情報や日付が誤って付与された記事が
+# 「前回実行以降のアップデート情報」に混入することを防ぐ。
+# 日付のない記事は新鮮さを確認できないため、_fetch_feed 側で常に除外される。
+MAX_ARTICLE_AGE_DAYS = 30
+
+
 def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
-    """単一の RSS/Atom フィードを取得し、since 以降の記事を返す。"""
-    return _ags._fetch_feed(url, since, max_items=max_items)
+    """単一の RSS/Atom フィードを取得し、since 以降の記事を返す。
+
+    MAX_ARTICLE_AGE_DAYS より古い記事は絶対上限として除外する（古い情報の混入防止）。
+    """
+    return _ags._fetch_feed(url, since, max_items=max_items, max_age_days=MAX_ARTICLE_AGE_DAYS)
 
 
 def fetch_category(category: str, since: datetime) -> list[dict]:
     """カテゴリに属する全フィードから記事を収集する。"""
-    return _ags.fetch_category(FEEDS, category, since)
+    return _ags.fetch_category(FEEDS, category, since, max_age_days=MAX_ARTICLE_AGE_DAYS)
 
 
 

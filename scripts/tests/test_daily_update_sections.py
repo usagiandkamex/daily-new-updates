@@ -1124,6 +1124,100 @@ class TestDailyUpdateSinceWindow(unittest.TestCase):
         self.assertEqual(since.isoformat(), "2026-04-14T07:30:00+09:00")
 
 
+class TestFetchFeedDateFilterDailyUpdate(unittest.TestCase):
+    """_fetch_feed() の日付フィルタリングのテスト（古い情報の混入防止）"""
+
+    def _make_feed(self, entries: list[dict]):
+        """feedparser.FeedParserDict 相当のモックを返す。"""
+        mock_feed = MagicMock()
+        mock_entries = []
+        for e in entries:
+            entry = MagicMock()
+            entry.get.side_effect = lambda key, default="", _e=e: _e.get(key, default)
+            entry.published_parsed = e.get("published_parsed")
+            entry.updated_parsed = e.get("updated_parsed")
+            entry.link = e.get("link", "https://example.com/article")
+            mock_entries.append(entry)
+        mock_feed.entries = mock_entries
+        return mock_feed
+
+    def _run(self, entries: list[dict], since):
+        """requests と feedparser をモックして _fetch_feed を呼ぶ。"""
+        mock_resp = MagicMock()
+        mock_resp.content = b""
+        mock_feed = self._make_feed(entries)
+        with (patch.object(du.requests, "get", return_value=mock_resp),
+              patch.object(du.feedparser, "parse", return_value=mock_feed),
+              patch.object(ags, "_resolve_google_news_url", side_effect=lambda u: u)):
+            return du._fetch_feed("https://feed.example.com/rss", since)
+
+    def _time_tuple(self, dt):
+        return dt.timetuple()[:6]
+
+    def test_article_older_than_since_is_excluded(self):
+        """`since` より古い日付を持つ記事は除外される（前回実行以前の情報）。"""
+        from datetime import datetime, timezone
+        since = datetime(2026, 4, 12, 0, 0, tzinfo=timezone.utc)
+        old = datetime(2026, 4, 11, 12, 0, tzinfo=timezone.utc)
+        entries = [{
+            "title": "Old Article",
+            "link": "https://example.com/old",
+            "published_parsed": self._time_tuple(old),
+            "updated_parsed": None,
+        }]
+        self.assertEqual(len(self._run(entries, since)), 0)
+
+    def test_article_without_date_is_excluded(self):
+        """日付のない記事は新鮮さを確認できないため除外される（古い情報の混入防止）。"""
+        from datetime import datetime, timezone
+        since = datetime(2026, 4, 12, 0, 0, tzinfo=timezone.utc)
+        entries = [{
+            "title": "No Date Article",
+            "link": "https://example.com/nodate",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }]
+        self.assertEqual(len(self._run(entries, since)), 0,
+                         "日付のない記事は除外されるべき")
+
+    def test_article_older_than_max_age_days_is_excluded(self):
+        """MAX_ARTICLE_AGE_DAYS より古い記事は since 以降であっても除外される。"""
+        from datetime import datetime, timedelta, timezone
+        # since を過去にして、MAX_ARTICLE_AGE_DAYS を超える日付の記事をテスト
+        since = datetime.now(timezone.utc) - timedelta(days=du.MAX_ARTICLE_AGE_DAYS + 10)
+        very_old = datetime.now(timezone.utc) - timedelta(days=du.MAX_ARTICLE_AGE_DAYS + 1)
+        entries = [{
+            "title": "Very Old Article",
+            "link": "https://example.com/veryold",
+            "published_parsed": self._time_tuple(very_old),
+            "updated_parsed": None,
+        }]
+        result = self._run(entries, since)
+        self.assertEqual(
+            len(result), 0,
+            f"MAX_ARTICLE_AGE_DAYS ({du.MAX_ARTICLE_AGE_DAYS}) より古い記事は除外されるべき",
+        )
+
+    def test_recent_article_within_max_age_days_is_included(self):
+        """MAX_ARTICLE_AGE_DAYS 以内かつ since 以降の記事は含まれる。"""
+        from datetime import datetime, timedelta, timezone
+        since = datetime.now(timezone.utc) - timedelta(hours=1)
+        fresh = datetime.now(timezone.utc) - timedelta(minutes=30)
+        entries = [{
+            "title": "Fresh Article",
+            "link": "https://example.com/fresh",
+            "published_parsed": self._time_tuple(fresh),
+            "updated_parsed": None,
+        }]
+        result = self._run(entries, since)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["title"], "Fresh Article")
+
+    def test_max_article_age_days_constant_is_30(self):
+        """MAX_ARTICLE_AGE_DAYS は 30 日に設定されている（smallchat と同値）。"""
+        self.assertEqual(du.MAX_ARTICLE_AGE_DAYS, 30)
+
+
 class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):
     """validate_links() の孤立した --- セパレータ除去テスト"""
 

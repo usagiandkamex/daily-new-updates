@@ -8,7 +8,7 @@
 
 1. **Issue 作成** — 「YYYY/MM/DD デイリーアップデート」という Issue を作成
 2. **ブランチ作成** — `YYYYMMDD_update` ブランチを作成
-3. **ニュース収集 & 記事生成** — 79 の RSS/Atom フィード（技術系・ビジネス系・SNS・コミュニティ）から最新ニュースを取得し、GitHub Models (claude-opus-4-6 / gpt-4o / gpt-4o-mini) で記事を生成
+3. **ニュース収集 & 記事生成** — 78 の RSS/Atom フィード（技術系・ビジネス系・SNS・コミュニティ）から最新ニュースを取得し、GitHub Models (claude-opus-4-6 / gpt-4o / gpt-4o-mini) で記事を生成
 4. **PR 作成 & マージ** — main ブランチへの PR を作成し、自動マージ
 
 ## 生成される記事の構成
@@ -42,14 +42,15 @@
 
 ### ニュースソース
 
-以下の無料 RSS/Atom フィードからニュースを自動取得します（合計 79 ソース）。一部フィードが取得に失敗しても、他のソースで処理を続行します。
+以下の無料 RSS/Atom フィードからニュースを自動取得します（合計 78 ソース）。一部フィードが取得に失敗しても、他のソースで処理を続行します。
 
-#### Azure（3）
+#### Azure（2）
+Azure Updates は Microsoft 公式ソース（公式 Azure Updates / モデル更新情報 / 公式ブログの Update 関連情報）のみを使用します。他ベンダーや非公式ニュース（Google News 等）は除外しています。
+
 | ソース | URL |
 |---|---|
 | Azure Release Communications | `https://www.microsoft.com/releasecommunications/api/v2/azure/rss` |
 | Azure Blog | `https://azure.microsoft.com/en-us/blog/feed/` |
-| Google News Azure | Google News RSS（Azure アップデート） |
 
 #### 技術系（日本語 × 18）
 | ソース | URL |

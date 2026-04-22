@@ -38,10 +38,12 @@ from article_generator_shared import (
 
 FEEDS = {
     # --- Azure ---
+    # Azure Updates は Microsoft 公式ソースのみを使用する
+    # （公式 Azure Updates / モデル更新情報 / 公式ブログの Update 関連情報）。
+    # 他ベンダーや非公式ニュース（Google News 等）は意図的に除外している。
     "azure": [
         {"name": "Azure Release Communications", "url": "https://www.microsoft.com/releasecommunications/api/v2/azure/rss"},
         {"name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/"},
-        {"name": "Google News Azure", "url": "https://news.google.com/rss/search?q=Azure+%E3%82%A2%E3%83%83%E3%83%97%E3%83%87%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
     ],
     # --- 技術系 (日本語) ---
     "tech_ja": [

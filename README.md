@@ -42,14 +42,15 @@
 
 ### ニュースソース
 
-以下の無料 RSS/Atom フィードからニュースを自動取得します（合計 79 ソース）。一部フィードが取得に失敗しても、他のソースで処理を続行します。
+以下の無料 RSS/Atom フィードからニュースを自動取得します（合計 78 ソース）。一部フィードが取得に失敗しても、他のソースで処理を続行します。
 
-#### Azure（3）
+#### Azure（2）
+Azure Updates は Microsoft 公式ソース（公式 Azure Updates / モデル更新情報 / 公式ブログの Update 関連情報）のみを使用します。他ベンダーや非公式ニュース（Google News 等）は除外しています。
+
 | ソース | URL |
 |---|---|
 | Azure Release Communications | `https://www.microsoft.com/releasecommunications/api/v2/azure/rss` |
 | Azure Blog | `https://azure.microsoft.com/en-us/blog/feed/` |
-| Google News Azure | Google News RSS（Azure アップデート） |
 
 #### 技術系（日本語 × 18）
 | ソース | URL |

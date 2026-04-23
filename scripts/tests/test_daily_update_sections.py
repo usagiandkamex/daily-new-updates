@@ -1603,6 +1603,32 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
         self.assertIn("### Azure Update", result)
         self.assertNotIn("### [Azure Update](https://", result)
 
+    def test_heading_wrapped_in_brackets_is_unwrapped(self):
+        """### [タイトル] 形式（URL なしで全体が角括弧で囲まれた見出し）の角括弧が除去される。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "### [Generally Available: Premium SSD v2 for Azure Database for PostgreSQL]\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: [タイトル](https://example.com/azure)\n"
+        )
+        result = du.verify_content(md)
+        self.assertIn(
+            "### Generally Available: Premium SSD v2 for Azure Database for PostgreSQL",
+            result,
+        )
+        self.assertNotIn("### [Generally Available", result)
+
+    def test_heading_with_partial_brackets_is_preserved(self):
+        """見出しの一部にのみ角括弧がある場合（例: [In preview]）は変更されない。"""
+        md = (
+            "## 1. Azure アップデート情報\n\n"
+            "### [In preview] New Feature\n\n"
+            "**要約**: テスト\n\n"
+            "**参考リンク**: [タイトル](https://example.com)\n"
+        )
+        result = du.verify_content(md)
+        self.assertIn("### [In preview] New Feature", result)
+
     def test_missing_summary_detected(self):
         """**要約** が欠落しているトピックが検出ログに出力される。"""
         md = (

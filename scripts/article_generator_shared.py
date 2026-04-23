@@ -328,8 +328,15 @@ def verify_content(markdown: str) -> str:
     issues: list[str] = []
 
     # --- 1. 見出しのハイパーリンク解除 ---
+    # ### [タイトル](URL) 形式のリンク見出し、および
+    # ### [タイトル] のように見出し全体が角括弧で囲まれているケースの両方を解除する。
+    # ただし「### [In preview] New Feature」のように見出しの一部だけが角括弧で
+    # 囲まれている場合は意味があるため変更しない。
     _heading_link_re = re.compile(
         r'^(###\s+)\[(' + _LINK_LABEL_RE + r')\]\(https?://[^)]+\)\s*$'
+    )
+    _heading_bracket_re = re.compile(
+        r'^(###\s+)\[(' + _LINK_LABEL_RE + r')\]\s*$'
     )
     for line in lines:
         m = _heading_link_re.match(line)
@@ -338,8 +345,15 @@ def verify_content(markdown: str) -> str:
             fixed_line = f"{m.group(1)}{label}"
             fixed_lines.append(fixed_line)
             issues.append(f"見出しリンク修正: '{label}'")
-        else:
-            fixed_lines.append(line)
+            continue
+        m = _heading_bracket_re.match(line)
+        if m:
+            label = m.group(2).strip()
+            fixed_line = f"{m.group(1)}{label}"
+            fixed_lines.append(fixed_line)
+            issues.append(f"見出し角括弧除去: '{label}'")
+            continue
+        fixed_lines.append(line)
 
     result = '\n'.join(fixed_lines)
 

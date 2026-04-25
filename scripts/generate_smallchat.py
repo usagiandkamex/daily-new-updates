@@ -65,17 +65,11 @@ FEEDS = {
         {"name": "Google News AI Business", "url": "https://news.google.com/rss/search?q=artificial+intelligence+business&hl=en&gl=US&ceid=US:en"},
     ],
     # --- Azure ---
+    # Azure 関連情報は Microsoft 公式ソースのみを使用する。
+    # 他ベンダーや非公式ニュース（Google News・Reddit・Qiita 等）は意図的に除外している。
     "azure": [
         {"name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/"},
         {"name": "Azure Release Communications", "url": "https://www.microsoft.com/releasecommunications/api/v2/azure/rss"},
-        {"name": "Reddit Azure", "url": "https://www.reddit.com/r/azure/.rss"},
-        {"name": "X(旧Twitter) Azure話題 JP", "url": "https://news.google.com/rss/search?q=X+%E6%97%A7Twitter+Azure+%E8%A9%B1%E9%A1%8C+%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "Google News Azure", "url": "https://news.google.com/rss/search?q=Azure+cloud&hl=en&gl=US&ceid=US:en"},
-        {"name": "Azure SDK Blog", "url": "https://devblogs.microsoft.com/azure-sdk/feed/"},
-        {"name": "Qiita Azure", "url": "https://qiita.com/tags/azure/feed"},
-        {"name": "DevelopersIO", "url": "https://dev.classmethod.jp/feed/"},
-        {"name": "Reddit CloudComputing", "url": "https://www.reddit.com/r/cloudcomputing/.rss"},
-        {"name": "Google News Azure Japan", "url": "https://news.google.com/rss/search?q=Azure+%E3%82%A2%E3%83%83%E3%83%97%E3%83%87%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
     ],
     # --- セキュリティ ---
     "security": [
@@ -441,11 +435,11 @@ SECTION_DEFINITIONS = [
         "header": "## 3. Azure",
         "system": (
             "あなたは Microsoft Azure の専門テクニカルライターです。"
-            "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+            "提供された Azure ニュースはすべて Microsoft 公式ソース（Azure Release Communications および Azure Blog）から取得しています。"
+            "公式情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
         ),
         "instruction": (
             "以下の Azure 関連ニュースから5〜6件程度（最大6件）のトピックを選定し、マークダウン形式で出力してください。\n"
-            "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
             "先頭に「## 3. Azure」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
             "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"

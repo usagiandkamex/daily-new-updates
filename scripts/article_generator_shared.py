@@ -793,6 +793,7 @@ class SourceUrlTracker:
 
                 def _replacer(
                     m: re.Match,
+                    # デフォルト引数で heading_words を定義時の値に束縛する（早期束縛）
                     _hw: set = heading_words,
                 ) -> str:
                     nonlocal replaced
@@ -807,7 +808,7 @@ class SourceUrlTracker:
                         if not _hw or not title_words:
                             continue
                         common = _hw & title_words
-                        score = len(common) / max(len(_hw), len(title_words))
+                        score = len(common) / max(len(_hw), len(title_words), 1)
                         if score > best_score:
                             best_score = score
                             best_url = src_url

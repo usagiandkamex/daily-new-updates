@@ -190,7 +190,8 @@ def _regenerate_empty_sections(
 
     各セクションをチェックし、### 見出しが 0 件のセクションに対して以下を順に試みる:
       1. 拡張時間窓（直近 1 か月、EXTENDED_LOOKBACK_DAYS）でカテゴリ専用フィードを再取得して LLM 再生成
-      2. 汎用 IT ニュースフィードで LLM 再生成
+      2. official_only=True でないセクションのみ汎用 IT ニュースフィードで LLM 再生成
+         （Azure 等の公式ソース限定セクションはこのフォールバックをスキップする）
       3. それでも情報が得られない場合は「情報なし」メッセージを記載する
     """
     for section_def in section_definitions:
@@ -224,10 +225,15 @@ def _regenerate_empty_sections(
         extended_data = _fetch_section_category(key, extended_since)
         new_items = [item for item in extended_data if item.get("url", "") not in original_urls]
 
+        # official_only セクション（Azure 等）は公式ソース以外へのフォールバックを行わない
+        is_official_only = section_def.get("official_only", False)
+
         # カテゴリ専用フィードに新規データがなければ汎用ニュースにフォールバック
-        if not new_items:
+        if not new_items and not is_official_only:
             print(f"  [{key}] 専用フィードに新しいデータなし。汎用ニュースにフォールバックします...")
             new_items = fetch_general_news(extended_since, exclude_urls=original_urls)
+        elif not new_items and is_official_only:
+            print(f"  [{key}] 専用フィードに新しいデータなし（公式ソース限定のため汎用ニュースはスキップ）。")
 
         if not new_items:
             print(f"  [{key}] 汎用ニュースにも新しいデータがありませんでした。情報なしメッセージを記載します。")
@@ -342,6 +348,7 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 # 実装は article_generator_shared.py の SourceUrlTracker クラスで一元管理する。
 _collect_source_urls = SourceUrlTracker.collect_source_urls
 _log_unsourced_reference_links = SourceUrlTracker.log_unsourced_reference_links
+_replace_unsourced_reference_links = SourceUrlTracker.replace_unsourced_reference_links
 
 
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
@@ -1102,9 +1109,11 @@ SECTION_DEFINITIONS = [
     {
         "key": "azure",
         "header": "## 1. Azure アップデート情報",
+        "official_only": True,
         "system": (
             "あなたは Microsoft Azure の専門ライターです。"
-            "提供された Azure ニュースを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
+            "提供された Azure ニュースはすべて Microsoft 公式ソース（Azure Release Communications および Azure Blog）から取得しています。"
+            "提供されたデータのみを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
         ),
         "instruction": (
             "以下の Azure 関連ニュースから 5〜6 個のトピックを選定し、マークダウン形式で出力してください。\n"
@@ -1113,7 +1122,8 @@ SECTION_DEFINITIONS = [
             "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
             "見出し（###）自体はハイパーリンクにせず、参考リンクのみを [タイトル](URL) 形式で記載してください。"
             "また、セクション末尾に締めの文章は入れないでください。"
-            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+            "参考リンクは必ず提供されたデータの url フィールドの値をそのまま使用してください。"
+            "URL を自分で生成・変更・推測しないでください。コードブロックで囲まないこと。"
         ),
         "data_label": "Azure 関連ニュース",
     },
@@ -1449,6 +1459,10 @@ def main():
     # ソース外参考リンクを検出・ログ出力（デバッグ・品質確認用）
     print("\nソース外参考リンクを確認中...")
     _log_unsourced_reference_links(article, source_urls)
+
+    # ソース外参考リンクをソースデータの URL に置換する
+    all_source_data = azure_news + tech_news + business_news + sns_news + event_reports
+    article = _replace_unsourced_reference_links(article, all_source_data, source_urls)
 
     article = validate_links(article)
 

@@ -815,5 +815,137 @@ class TestGenerateSectionRetry(unittest.TestCase):
                 ags.generate_section(client, "gpt-4o", section, [{"title": "記事"}])
 
 
-if __name__ == "__main__":
+class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
+    """SourceUrlTracker.replace_unsourced_reference_links() のテスト"""
+
+    _SOURCE_DATA = [
+        {
+            "title": "[In preview] Public Preview: Azure Backup for Elastic SAN",
+            "url": "https://azure.microsoft.com/updates?id=560904",
+        },
+        {
+            "title": "[Launched] Generally Available: Foundry Toolkit for Visual Studio Code",
+            "url": "https://azure.microsoft.com/updates?id=560987",
+        },
+        {
+            "title": "Azure Kubernetes Service latest updates",
+            "url": "https://azure.microsoft.com/updates?id=560015",
+        },
+    ]
+
+    def _make_article(self, heading: str, url: str) -> str:
+        return (
+            "## 1. Azure アップデート情報\n\n"
+            f"### {heading}\n\n"
+            "**要約**: テスト内容\n\n"
+            "**影響**: テスト影響\n\n"
+            f"**参考リンク**: [{heading}]({url})\n"
+        )
+
+    def _source_urls(self) -> frozenset:
+        return SourceUrlTracker.collect_source_urls(self._SOURCE_DATA)
+
+    def test_replaces_hallucinated_url_with_source_url(self):
+        """LLM が生成した非ソース URL がソースデータの URL に置換される。"""
+        article = self._make_article(
+            "Public Preview: Azure Backup for Elastic SAN",
+            "https://www.softbank.jp/biz/blog/cloud-technology/articles/fake/",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, self._SOURCE_DATA, self._source_urls()
+            )
+        self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+        self.assertNotIn("softbank.jp", result)
+
+    def test_preserves_correct_source_url(self):
+        """すでにソースデータの URL を使用している参考リンクは変更しない。"""
+        correct_url = "https://azure.microsoft.com/updates?id=560904"
+        article = self._make_article(
+            "Public Preview: Azure Backup for Elastic SAN",
+            correct_url,
+        )
+        source_urls = self._source_urls()
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, self._SOURCE_DATA, source_urls
+            )
+        self.assertIn(correct_url, result)
+        self.assertEqual(article, result)
+
+    def test_no_replacement_when_score_too_low(self):
+        """ソースデータとの一致スコアが 0.5 未満の場合は置換しない。"""
+        article = self._make_article(
+            "全く関係ないトピック",
+            "https://hallucinated.example.com/unrelated",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, self._SOURCE_DATA, self._source_urls()
+            )
+        self.assertIn("hallucinated.example.com", result)
+
+    def test_empty_source_data_returns_article_unchanged(self):
+        """ソースデータが空の場合は記事を変更しない。"""
+        article = self._make_article(
+            "Azure Backup",
+            "https://hallucinated.example.com/fake",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, [], frozenset()
+            )
+        self.assertEqual(article, result)
+
+    def test_replaces_using_heading_from_topic_block(self):
+        """### 見出しのテキストを使って対応するソース URL を特定する。"""
+        article = (
+            "## 1. Azure\n\n"
+            "### Foundry Toolkit for Visual Studio Code\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**参考リンク**: [Foundry Toolkit](https://codezine.jp/fake/article)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, self._SOURCE_DATA, self._source_urls()
+            )
+        self.assertIn("https://azure.microsoft.com/updates?id=560987", result)
+        self.assertNotIn("codezine.jp", result)
+
+    def test_prefix_stripped_for_matching(self):
+        """ソースタイトルの [In preview] 等のプレフィックスを除去してマッチングする。"""
+        # Source title: "[In preview] Public Preview: Azure Backup for Elastic SAN"
+        # Heading: "Public Preview: Azure Backup for Elastic SAN"
+        article = (
+            "## 1. Azure\n\n"
+            "### Public Preview: Azure Backup for Elastic SAN\n\n"
+            "**要約**: ...\n\n"
+            "**参考リンク**: [title](https://wrong.example.com/)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, self._SOURCE_DATA, self._source_urls()
+            )
+        self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+
+    def test_daily_update_delegates_to_source_url_tracker(self):
+        """generate_daily_update の _replace_unsourced は SourceUrlTracker に委譲する。"""
+        import generate_daily_update as du
+        self.assertIs(
+            du._replace_unsourced_reference_links,
+            SourceUrlTracker.replace_unsourced_reference_links,
+        )
+
+    def test_smallchat_delegates_to_source_url_tracker(self):
+        """generate_smallchat の _replace_unsourced は SourceUrlTracker に委譲する。"""
+        import generate_smallchat as sc
+        self.assertIs(
+            sc._replace_unsourced_reference_links,
+            SourceUrlTracker.replace_unsourced_reference_links,
+        )
+
+
+
+if __name__ == '__main__':
     unittest.main()

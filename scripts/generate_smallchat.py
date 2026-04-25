@@ -65,17 +65,11 @@ FEEDS = {
         {"name": "Google News AI Business", "url": "https://news.google.com/rss/search?q=artificial+intelligence+business&hl=en&gl=US&ceid=US:en"},
     ],
     # --- Azure ---
+    # Azure 関連情報は Microsoft 公式ソースのみを使用する。
+    # 他ベンダーや非公式ニュース（Google News・Reddit・Qiita 等）は意図的に除外している。
     "azure": [
         {"name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/"},
         {"name": "Azure Release Communications", "url": "https://www.microsoft.com/releasecommunications/api/v2/azure/rss"},
-        {"name": "Reddit Azure", "url": "https://www.reddit.com/r/azure/.rss"},
-        {"name": "X(旧Twitter) Azure話題 JP", "url": "https://news.google.com/rss/search?q=X+%E6%97%A7Twitter+Azure+%E8%A9%B1%E9%A1%8C+%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "Google News Azure", "url": "https://news.google.com/rss/search?q=Azure+cloud&hl=en&gl=US&ceid=US:en"},
-        {"name": "Azure SDK Blog", "url": "https://devblogs.microsoft.com/azure-sdk/feed/"},
-        {"name": "Qiita Azure", "url": "https://qiita.com/tags/azure/feed"},
-        {"name": "DevelopersIO", "url": "https://dev.classmethod.jp/feed/"},
-        {"name": "Reddit CloudComputing", "url": "https://www.reddit.com/r/cloudcomputing/.rss"},
-        {"name": "Google News Azure Japan", "url": "https://news.google.com/rss/search?q=Azure+%E3%82%A2%E3%83%83%E3%83%97%E3%83%87%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
     ],
     # --- セキュリティ ---
     "security": [
@@ -198,7 +192,8 @@ def _regenerate_empty_sections(
 
     各セクションをチェックし、### 見出しが 0 件のセクションに対して以下を順に試みる:
       1. 拡張時間窓（24h）でカテゴリ専用フィードを再取得して LLM 再生成
-      2. 汎用 IT ニュースフィードで LLM 再生成
+      2. official_only=True でないセクションのみ汎用 IT ニュースフィードで LLM 再生成
+         （Azure 等の公式ソース限定セクションはこのフォールバックをスキップする）
       3. それでも情報が得られない場合は「情報なし」メッセージを記載する
     """
     for section_def in section_definitions:
@@ -227,10 +222,15 @@ def _regenerate_empty_sections(
         extended_data = fetch_category(key, extended_since)
         new_items = [item for item in extended_data if item.get("url", "") not in original_urls]
 
+        # official_only セクション（Azure 等）は公式ソース以外へのフォールバックを行わない
+        is_official_only = section_def.get("official_only", False)
+
         # カテゴリ専用フィードに新規データがなければ汎用ニュースにフォールバック
-        if not new_items:
+        if not new_items and not is_official_only:
             print(f"  [{key}] 専用フィードに新しいデータなし。汎用ニュースにフォールバックします...")
             new_items = fetch_general_news(extended_since, exclude_urls=original_urls)
+        elif not new_items and is_official_only:
+            print(f"  [{key}] 専用フィードに新しいデータなし（公式ソース限定のため汎用ニュースはスキップ）。")
 
         if not new_items:
             print(f"  [{key}] 汎用ニュースにも新しいデータがありませんでした。情報なしメッセージを記載します。")
@@ -337,6 +337,7 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 # 実装は article_generator_shared.py の SourceUrlTracker クラスで一元管理する。
 _collect_source_urls = SourceUrlTracker.collect_source_urls
 _log_unsourced_reference_links = SourceUrlTracker.log_unsourced_reference_links
+_replace_unsourced_reference_links = SourceUrlTracker.replace_unsourced_reference_links
 
 
 # --- LLM クライアント -----------------------------------------------------------
@@ -439,19 +440,21 @@ SECTION_DEFINITIONS = [
     {
         "key": "azure",
         "header": "## 3. Azure",
+        "official_only": True,
         "system": (
             "あなたは Microsoft Azure の専門テクニカルライターです。"
-            "SNS やニュースソースから収集した情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+            "提供された Azure ニュースはすべて Microsoft 公式ソース（Azure Release Communications および Azure Blog）から取得しています。"
+            "公式情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
         ),
         "instruction": (
             "以下の Azure 関連ニュースから5〜6件程度（最大6件）のトピックを選定し、マークダウン形式で出力してください。\n"
-            "情報が不足している場合は、最新のニュース系トピックを補足として追加してもかまいません。\n"
             "先頭に「## 3. Azure」を出力し、各トピックを次の形式で構成してください"
             "（各項目の間には必ず空行を入れること）。\n\n"
             "### <見出し>\n\n**要約**: ...\n\n**影響**: ...\n\n**参考リンク**: [タイトル](URL)\n\n"
             "見出し（###）自体はハイパーリンクにせず、参考リンクのみを [タイトル](URL) 形式のハイパーリンクで記述してください。"
             "また、セクション末尾に締めの文章は入れないでください。"
-            "参考リンクは提供されたソースの URL をそのまま使用してください。コードブロックで囲まないこと。"
+            "参考リンクは必ず提供されたデータの url フィールドの値をそのまま使用してください。"
+            "URL を自分で生成・変更・推測しないでください。コードブロックで囲まないこと。"
         ),
         "data_label": "Azure 関連",
     },
@@ -752,7 +755,15 @@ def main():
     print("\nソース外参考リンクを確認中...")
     _log_unsourced_reference_links(article, source_urls)
 
+    # ソース外参考リンクをソースデータの URL に置換する
+    all_source_data = (
+        microsoft_news + ai_news + azure_news + cloud_news
+        + security_news + itops_news + techblog_ja_news + techblog_en_news
+    )
+    article = _replace_unsourced_reference_links(article, all_source_data, source_urls)
+
     article = validate_links(article)
+
 
     # リンク除去で空になったセクションを時間窓を広げて再生成する
     print("\n空セクションの確認...")

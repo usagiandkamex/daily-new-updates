@@ -6,6 +6,7 @@ import sys
 import os
 import io
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, call, patch
 
 # スクリプトのディレクトリをパスに追加
@@ -2073,6 +2074,75 @@ class TestGenerateCommunitySectionHybrid(unittest.TestCase):
         self.assertLess(connpass_part.index("---"), connpass_part.index("イベントB"))
         # 末尾の「---」は存在しない（イベントセクション内）
         self.assertFalse(connpass_part.rstrip().endswith("---"))
+
+
+class TestFetchFeedMaxAgeDaysDailyUpdate(unittest.TestCase):
+    """_fetch_feed() の MAX_ARTICLE_AGE_DAYS フィルタリングのテスト"""
+
+    def _time_tuple(self, dt: datetime):
+        return dt.timetuple()[:6]
+
+    def _make_feed(self, entries):
+        mock_feed = MagicMock()
+        mock_entries = []
+        for e in entries:
+            entry = MagicMock()
+            entry.get.side_effect = lambda key, default="", _e=e: _e.get(key, default)
+            entry.published_parsed = e.get("published_parsed")
+            entry.updated_parsed = e.get("updated_parsed")
+            entry.link = e.get("link", "https://example.com/article")
+            mock_entries.append(entry)
+        mock_feed.entries = mock_entries
+        return mock_feed
+
+    def _run(self, entries, since):
+        mock_resp = MagicMock()
+        mock_resp.content = b""
+        mock_feed = self._make_feed(entries)
+        with (patch.object(ags.requests, "get", return_value=mock_resp),
+              patch.object(ags.feedparser, "parse", return_value=mock_feed),
+              patch.object(ags, "_resolve_google_news_url", side_effect=lambda u: u)):
+            return du._fetch_feed("https://feed.example.com/rss", since)
+
+    def test_article_older_than_max_age_days_is_excluded(self):
+        """MAX_ARTICLE_AGE_DAYS より古い記事は since 以降であっても除外される。"""
+        since = datetime.now(timezone.utc) - timedelta(days=du.MAX_ARTICLE_AGE_DAYS + 10)
+        very_old = datetime.now(timezone.utc) - timedelta(days=du.MAX_ARTICLE_AGE_DAYS + 1)
+        entries = [
+            {
+                "title": "Very Old Article",
+                "link": "https://example.com/veryold",
+                "published_parsed": self._time_tuple(very_old),
+                "updated_parsed": None,
+                "summary": "",
+            }
+        ]
+        result = self._run(entries, since)
+        self.assertEqual(
+            len(result), 0,
+            f"MAX_ARTICLE_AGE_DAYS ({du.MAX_ARTICLE_AGE_DAYS}) より古い記事は除外されるべき",
+        )
+
+    def test_article_within_max_age_days_is_included(self):
+        """MAX_ARTICLE_AGE_DAYS 以内かつ since 以降の記事は含まれる。"""
+        since = datetime.now(timezone.utc) - timedelta(hours=1)
+        fresh = datetime.now(timezone.utc) - timedelta(minutes=30)
+        entries = [
+            {
+                "title": "Fresh Article",
+                "link": "https://example.com/fresh",
+                "published_parsed": self._time_tuple(fresh),
+                "updated_parsed": None,
+                "summary": "",
+            }
+        ]
+        result = self._run(entries, since)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["title"], "Fresh Article")
+
+    def test_max_article_age_days_constant_is_30(self):
+        """MAX_ARTICLE_AGE_DAYS は 30 日に設定されている。"""
+        self.assertEqual(du.MAX_ARTICLE_AGE_DAYS, 30)
 
 
 if __name__ == "__main__":

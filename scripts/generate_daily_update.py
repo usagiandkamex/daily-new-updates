@@ -303,18 +303,23 @@ def _regenerate_empty_sections(
 # 30 日（約 1 か月）は、ニッチなカテゴリでも 1 か月以内には何らかの更新がある想定で設定している。
 EXTENDED_LOOKBACK_DAYS = 30
 
+# 記事の最大許容年齢（日数）。これより古い記事はフィードに含まれていても出力しない。
+# Microsoft 等の一部フィードが数年前の古い情報（SB 等）を返すことがあるため設定している。
+MAX_ARTICLE_AGE_DAYS = 30
+
 
 def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
     """単一の RSS/Atom フィードを取得し、since 以降の記事を返す。
 
     日付のない記事は新鮮さを確認できないため、shared 実装側で常に除外される。
+    MAX_ARTICLE_AGE_DAYS より古い記事は since 以降であっても除外する。
     """
-    return _ags._fetch_feed(url, since, max_items=max_items)
+    return _ags._fetch_feed(url, since, max_items=max_items, max_age_days=MAX_ARTICLE_AGE_DAYS)
 
 
 def fetch_category(category: str, since: datetime) -> list[dict]:
     """カテゴリに属する全フィードから記事を収集する。"""
-    return _ags.fetch_category(FEEDS, category, since)
+    return _ags.fetch_category(FEEDS, category, since, max_age_days=MAX_ARTICLE_AGE_DAYS)
 
 
 

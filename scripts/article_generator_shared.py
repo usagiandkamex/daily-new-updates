@@ -737,3 +737,94 @@ class SourceUrlTracker:
                 print(f"    ℹ {url[:80]}")
         else:
             print("  参考リンク確認: 全てのリンクがソースデータと一致しています")
+
+    @staticmethod
+    def replace_unsourced_reference_links(
+        article: str,
+        source_data: "list[dict]",
+        source_urls: frozenset[str],
+    ) -> str:
+        """ソース外の参考リンク URL をソースデータの URL に置換する。
+
+        LLM がソースデータ外の URL を生成した場合、直近の ### 見出しと
+        ソースデータのタイトルの単語一致でスコアリングし、最も近いソース URL に置換する。
+        一致スコアが 0.5 未満の場合は元の URL を保持する。
+        """
+        # Azure アップデート系の接頭辞を除去するための正規化関数
+        # 2 段階処理: (1) [In preview] 等の角括弧部分を除去、(2) "Public Preview:" 等を除去
+        _bracket_re = re.compile(r'\[[^\]]+\]')
+        _status_prefix_re = re.compile(
+            r'\b(?:Public Preview|Generally Available|Preview|GA|'
+            r'Retirement|Retired?|Launched|In preview)\b\s*:?\s*',
+            re.IGNORECASE,
+        )
+
+        def _norm(t: str) -> str:
+            t = _bracket_re.sub('', t)
+            t = _status_prefix_re.sub('', t)
+            return re.sub(r'[^\w\s]', ' ', t.strip().lower())
+
+        title_url_pairs: list[tuple[str, str]] = [
+            (_norm(item["title"]), item["url"])
+            for item in source_data
+            if item.get("title") and item.get("url")
+        ]
+
+        if not title_url_pairs:
+            return article
+
+        ref_pattern = re.compile(
+            r'(\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\])\((https?://[^)]+)\)'
+        )
+
+        lines = article.split('\n')
+        current_heading = ''
+        replaced = 0
+        result: list[str] = []
+
+        for line in lines:
+            m_h = re.match(r'^###\s+(.+)', line)
+            if m_h:
+                current_heading = m_h.group(1).strip()
+
+            if '**参考リンク**' in line and current_heading:
+                norm_heading = _norm(current_heading)
+                heading_words = set(norm_heading.split())
+
+                def _replacer(
+                    m: re.Match,
+                    _hw: set = heading_words,
+                ) -> str:
+                    nonlocal replaced
+                    url = m.group(2)
+                    if SourceUrlTracker._normalize_url(url) in source_urls:
+                        return m.group(0)
+
+                    best_url = ''
+                    best_score = 0.0
+                    for norm_t, src_url in title_url_pairs:
+                        title_words = set(norm_t.split())
+                        if not _hw or not title_words:
+                            continue
+                        common = _hw & title_words
+                        score = len(common) / max(len(_hw), len(title_words))
+                        if score > best_score:
+                            best_score = score
+                            best_url = src_url
+
+                    if best_url and best_score >= 0.5:
+                        replaced += 1
+                        print(
+                            f"    ✓ ソース外 URL 置換: {url[:50]} → {best_url[:50]}"
+                            f" (score={best_score:.2f})"
+                        )
+                        return f"{m.group(1)}({best_url})"
+                    return m.group(0)
+
+                line = ref_pattern.sub(_replacer, line)
+
+            result.append(line)
+
+        if replaced:
+            print(f"  ソース外参考リンク修正: {replaced} 件をソースデータの URL に置換しました")
+        return '\n'.join(result)

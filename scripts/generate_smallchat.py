@@ -331,6 +331,7 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 # 実装は article_generator_shared.py の SourceUrlTracker クラスで一元管理する。
 _collect_source_urls = SourceUrlTracker.collect_source_urls
 _log_unsourced_reference_links = SourceUrlTracker.log_unsourced_reference_links
+_replace_unsourced_reference_links = SourceUrlTracker.replace_unsourced_reference_links
 
 
 # --- LLM クライアント -----------------------------------------------------------
@@ -747,7 +748,15 @@ def main():
     print("\nソース外参考リンクを確認中...")
     _log_unsourced_reference_links(article, source_urls)
 
+    # ソース外参考リンクをソースデータの URL に置換する
+    all_source_data = (
+        microsoft_news + ai_news + azure_news + cloud_news
+        + security_news + itops_news + techblog_ja_news + techblog_en_news
+    )
+    article = _replace_unsourced_reference_links(article, all_source_data, source_urls)
+
     article = validate_links(article)
+
 
     # リンク除去で空になったセクションを時間窓を広げて再生成する
     print("\n空セクションの確認...")

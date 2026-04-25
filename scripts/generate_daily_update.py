@@ -342,6 +342,7 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 # 実装は article_generator_shared.py の SourceUrlTracker クラスで一元管理する。
 _collect_source_urls = SourceUrlTracker.collect_source_urls
 _log_unsourced_reference_links = SourceUrlTracker.log_unsourced_reference_links
+_replace_unsourced_reference_links = SourceUrlTracker.replace_unsourced_reference_links
 
 
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
@@ -1451,6 +1452,10 @@ def main():
     # ソース外参考リンクを検出・ログ出力（デバッグ・品質確認用）
     print("\nソース外参考リンクを確認中...")
     _log_unsourced_reference_links(article, source_urls)
+
+    # ソース外参考リンクをソースデータの URL に置換する
+    all_source_data = azure_news + tech_news + business_news + sns_news + event_reports
+    article = _replace_unsourced_reference_links(article, all_source_data, source_urls)
 
     article = validate_links(article)
 

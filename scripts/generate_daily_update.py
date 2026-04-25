@@ -190,7 +190,8 @@ def _regenerate_empty_sections(
 
     各セクションをチェックし、### 見出しが 0 件のセクションに対して以下を順に試みる:
       1. 拡張時間窓（直近 1 か月、EXTENDED_LOOKBACK_DAYS）でカテゴリ専用フィードを再取得して LLM 再生成
-      2. 汎用 IT ニュースフィードで LLM 再生成
+      2. official_only=True でないセクションのみ汎用 IT ニュースフィードで LLM 再生成
+         （Azure 等の公式ソース限定セクションはこのフォールバックをスキップする）
       3. それでも情報が得られない場合は「情報なし」メッセージを記載する
     """
     for section_def in section_definitions:
@@ -224,10 +225,15 @@ def _regenerate_empty_sections(
         extended_data = _fetch_section_category(key, extended_since)
         new_items = [item for item in extended_data if item.get("url", "") not in original_urls]
 
+        # official_only セクション（Azure 等）は公式ソース以外へのフォールバックを行わない
+        is_official_only = section_def.get("official_only", False)
+
         # カテゴリ専用フィードに新規データがなければ汎用ニュースにフォールバック
-        if not new_items:
+        if not new_items and not is_official_only:
             print(f"  [{key}] 専用フィードに新しいデータなし。汎用ニュースにフォールバックします...")
             new_items = fetch_general_news(extended_since, exclude_urls=original_urls)
+        elif not new_items and is_official_only:
+            print(f"  [{key}] 専用フィードに新しいデータなし（公式ソース限定のため汎用ニュースはスキップ）。")
 
         if not new_items:
             print(f"  [{key}] 汎用ニュースにも新しいデータがありませんでした。情報なしメッセージを記載します。")
@@ -1103,6 +1109,7 @@ SECTION_DEFINITIONS = [
     {
         "key": "azure",
         "header": "## 1. Azure アップデート情報",
+        "official_only": True,
         "system": (
             "あなたは Microsoft Azure の専門ライターです。"
             "提供された Azure ニュースはすべて Microsoft 公式ソース（Azure Release Communications および Azure Blog）から取得しています。"

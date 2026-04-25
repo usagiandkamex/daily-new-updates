@@ -1337,10 +1337,12 @@ class TestRegenerateEmptySectionsDailyUpdate(unittest.TestCase):
 
     def test_no_category_items_falls_back_to_general_news(self):
         """専用フィードに新規データがなければ汎用ニュースにフォールバックして LLM を呼ぶ。"""
-        article = f"{self._HEADER}\n\n"
+        tech_def = next(s for s in du.SECTION_DEFINITIONS if s["key"] == "tech")
+        header = tech_def["header"]
+        article = f"{header}\n\n"
         original_items = [{"url": "https://old.example.com", "title": "既存"}]
         general_items = [{"url": "https://general.example.com", "title": "汎用ニュース"}]
-        new_content = f"{self._HEADER}\n\n### 汎用トピック\n内容"
+        new_content = f"{header}\n\n### 汎用トピック\n内容"
         llm_clients = self._make_llm_clients(new_content)
         client = llm_clients[0][0]
 
@@ -1351,8 +1353,8 @@ class TestRegenerateEmptySectionsDailyUpdate(unittest.TestCase):
         ):
             result = du._regenerate_empty_sections(
                 article,
-                [self._SECTION_DEF],
-                {"azure": original_items},
+                [tech_def],
+                {"tech": original_items},
                 MagicMock(),
                 llm_clients,
             )
@@ -1362,7 +1364,9 @@ class TestRegenerateEmptySectionsDailyUpdate(unittest.TestCase):
 
     def test_general_news_fallback_excludes_original_urls(self):
         """汎用ニュースフォールバック時も元データの URL が除外される。"""
-        article = f"{self._HEADER}\n\n"
+        tech_def = next(s for s in du.SECTION_DEFINITIONS if s["key"] == "tech")
+        header = tech_def["header"]
+        article = f"{header}\n\n"
         original_items = [{"url": "https://old.example.com", "title": "既存"}]
         captured_exclude = {}
 
@@ -1376,13 +1380,33 @@ class TestRegenerateEmptySectionsDailyUpdate(unittest.TestCase):
         ):
             du._regenerate_empty_sections(
                 article,
+                [tech_def],
+                {"tech": original_items},
+                MagicMock(),
+                self._make_llm_clients(),
+            )
+
+        self.assertIn("https://old.example.com", captured_exclude.get("urls", set()))
+
+    def test_official_only_section_skips_general_news_fallback(self):
+        """official_only=True のセクション（Azure 等）は汎用ニュースへのフォールバックを行わない。"""
+        article = f"{self._HEADER}\n\n"
+        original_items = [{"url": "https://old.example.com", "title": "既存"}]
+
+        with (
+            patch.object(du, "_fetch_section_category", return_value=original_items),
+            patch.object(du, "fetch_general_news") as mock_general,
+        ):
+            result = du._regenerate_empty_sections(
+                article,
                 [self._SECTION_DEF],
                 {"azure": original_items},
                 MagicMock(),
                 self._make_llm_clients(),
             )
 
-        self.assertIn("https://old.example.com", captured_exclude.get("urls", set()))
+        mock_general.assert_not_called()
+        self.assertIn("現在の対象期間に該当する情報はありません。", result)
 
     def test_no_info_message_section_is_not_reprocessed(self):
         """「情報なし」メッセージが既に記載されているセクションは再処理されない。"""

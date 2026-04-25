@@ -582,6 +582,28 @@ class TestRegenerateEmptySections(unittest.TestCase):
         self.assertIn("ありません", result)
         self.assertNotIn("新トピック", result)
 
+    def test_official_only_section_skips_general_news_fallback(self):
+        """official_only=True のセクション（Azure 等）は汎用ニュースへのフォールバックを行わない。"""
+        azure_def = next(s for s in sc.SECTION_DEFINITIONS if s["key"] == "azure")
+        header = azure_def["header"]
+        article = f"{header}\n\n"
+        original_items = [{"url": "https://old.azure.example.com", "title": "既存"}]
+
+        with (
+            patch.object(sc, "fetch_category", return_value=original_items),
+            patch.object(sc, "fetch_general_news") as mock_general,
+        ):
+            result = sc._regenerate_empty_sections(
+                article,
+                [azure_def],
+                {"azure": original_items},
+                object(),
+                self._make_llm_clients(),
+            )
+
+        mock_general.assert_not_called()
+        self.assertIn("現在の対象期間に該当する情報はありません。", result)
+
 
 class TestFormatBareReferenceLinksSmallchat(unittest.TestCase):
     """_format_bare_reference_links() のテスト"""

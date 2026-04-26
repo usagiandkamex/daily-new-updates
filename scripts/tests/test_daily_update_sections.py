@@ -1231,9 +1231,9 @@ class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):
     def _make_article_with_invalid_link(self, url: str = "https://bad.example.com") -> str:
         return (
             "## 1. Azure アップデート情報\n\n"
-            "### トピックA\n\n内容A\n\n**参考リンク**: [タイトルA](https://good.example.com)\n\n"
+            "### トピックA\n\n内容A\n\n**リンク**: [タイトルA](https://good.example.com)\n\n"
             "---\n\n"
-            f"### トピックB\n\n内容B\n\n**参考リンク**: [タイトルB]({url})\n\n"
+            f"### トピックB\n\n内容B\n\n**リンク**: [タイトルB]({url})\n\n"
             "---\n\n"
             "## 2. ニュースで話題のテーマ\n\n"
         )
@@ -1432,17 +1432,17 @@ class TestFormatBareReferenceLinksDailyUpdate(unittest.TestCase):
         md = (
             "### Azure Monitor の新機能\n\n"
             "**要約**: 内容\n\n"
-            "**参考リンク**: https://docs.microsoft.com/azure/monitor/\n"
+            "**リンク**: https://docs.microsoft.com/azure/monitor/\n"
         )
         result = du._format_bare_reference_links(md)
         self.assertIn("[Azure Monitor の新機能](https://docs.microsoft.com/azure/monitor/)", result)
-        self.assertNotIn("**参考リンク**: https://", result)
+        self.assertNotIn("**リンク**: https://", result)
 
     def test_url_as_label_converted_using_heading(self):
         """[https://...](https://...) 形式が見出しをラベルにしたリンクへ変換される。"""
         md = (
             "### AWS CLI の変更\n\n"
-            "**参考リンク**: [https://aws.amazon.com/blogs/news/](https://aws.amazon.com/blogs/news/)\n"
+            "**リンク**: [https://aws.amazon.com/blogs/news/](https://aws.amazon.com/blogs/news/)\n"
         )
         result = du._format_bare_reference_links(md)
         self.assertIn("[AWS CLI の変更](https://aws.amazon.com/blogs/news/)", result)
@@ -1452,14 +1452,14 @@ class TestFormatBareReferenceLinksDailyUpdate(unittest.TestCase):
         """既に [タイトル](URL) 形式のリンクは変更されない。"""
         md = (
             "### トピック\n\n"
-            "**参考リンク**: [詳細記事](https://example.com/article)\n"
+            "**リンク**: [詳細記事](https://example.com/article)\n"
         )
         result = du._format_bare_reference_links(md)
         self.assertIn("[詳細記事](https://example.com/article)", result)
 
     def test_no_heading_falls_back_to_url_as_label(self):
         """直前に ### 見出しがない場合、URL 自身がラベルに使われる。"""
-        md = "**参考リンク**: https://example.com/fallback\n"
+        md = "**リンク**: https://example.com/fallback\n"
         result = du._format_bare_reference_links(md)
         self.assertIn("[https://example.com/fallback](https://example.com/fallback)", result)
 
@@ -1611,7 +1611,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
             "### Azure Functions の新機能\n\n"
             "**要約**: テスト要約\n\n"
             "**影響**: テスト影響\n\n"
-            "**参考リンク**: [Azure Functions](https://example.com/azure)\n"
+            "**リンク**: [Azure Functions](https://example.com/azure)\n"
         )
         result = du.verify_content(md)
         self.assertEqual(result.strip(), md.strip())
@@ -1622,7 +1622,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
             "## 1. Azure アップデート情報\n\n"
             "### [Azure Update](https://example.com/azure)\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: [Azure Update](https://example.com/azure)\n"
+            "**リンク**: [Azure Update](https://example.com/azure)\n"
         )
         result = du.verify_content(md)
         self.assertIn("### Azure Update", result)
@@ -1634,7 +1634,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
             "## 1. Azure アップデート情報\n\n"
             "### [Generally Available: Premium SSD v2 for Azure Database for PostgreSQL]\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: [タイトル](https://example.com/azure)\n"
+            "**リンク**: [タイトル](https://example.com/azure)\n"
         )
         result = du.verify_content(md)
         self.assertIn(
@@ -1649,7 +1649,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
             "## 1. Azure アップデート情報\n\n"
             "### [In preview] New Feature\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: [タイトル](https://example.com)\n"
+            "**リンク**: [タイトル](https://example.com)\n"
         )
         result = du.verify_content(md)
         self.assertIn("### [In preview] New Feature", result)
@@ -1660,7 +1660,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
             "## 1. Azure アップデート情報\n\n"
             "### トピックA\n\n"
             "内容のみ\n\n"
-            "**参考リンク**: [タイトル](https://example.com)\n"
+            "**リンク**: [タイトル](https://example.com)\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = du.verify_content(md)
@@ -1668,7 +1668,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
         self.assertIn("要約なし:", mock_out.getvalue())
 
     def test_missing_reference_link_detected(self):
-        """**参考リンク** が欠落しているトピックが検出ログに出力される。"""
+        """**リンク** が欠落しているトピックが検出ログに出力される。"""
         md = (
             "## 1. Azure アップデート情報\n\n"
             "### トピックA\n\n"
@@ -1677,20 +1677,20 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = du.verify_content(md)
         self.assertIsInstance(result, str)
-        self.assertIn("参考リンクなし:", mock_out.getvalue())
+        self.assertIn("リンクなし:", mock_out.getvalue())
 
     def test_malformed_reference_link_detected(self):
-        """**参考リンク** が [text](URL) 形式でないトピックが検出ログに出力される。"""
+        """**リンク** が [text](URL) 形式でないトピックが検出ログに出力される。"""
         md = (
             "## 1. Azure アップデート情報\n\n"
             "### トピックA\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: https://example.com/bare\n"
+            "**リンク**: https://example.com/bare\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = du.verify_content(md)
         self.assertIsInstance(result, str)
-        self.assertIn("参考リンク形式不正:", mock_out.getvalue())
+        self.assertIn("リンク形式不正:", mock_out.getvalue())
 
     def test_closing_sentence_removed(self):
         """セクション末尾の締め文が除去される。"""
@@ -1699,7 +1699,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
             "### トピックA\n\n"
             "**要約**: テスト\n\n"
             "**影響**: テスト\n\n"
-            "**参考リンク**: [タイトル](https://example.com)\n\n"
+            "**リンク**: [タイトル](https://example.com)\n\n"
             "以上が本日のアップデート情報です。\n\n"
             "## 2. ニュースで話題のテーマ\n"
         )
@@ -1722,7 +1722,7 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
             "---\n\n"
             "### トピックA\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: [タイトル](https://example.com)\n"
+            "**リンク**: [タイトル](https://example.com)\n"
         )
         result = du.verify_content(md)
         # ヘッダー直後の --- が除去されること
@@ -1737,13 +1737,13 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
             "### 📝 参加レポート・イベント宣伝まとめ\n\n"
             "- レポートA\n"
         )
-        # 📅/📝 サブセクションで要約・参考リンクの欠落が検出されないことを確認
+        # 📅/📝 サブセクションで要約・リンクの欠落が検出されないことを確認
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = du.verify_content(md)
         self.assertIsInstance(result, str)
         output = mock_out.getvalue()
         self.assertNotIn("要約なし:", output)
-        self.assertNotIn("参考リンクなし:", output)
+        self.assertNotIn("リンクなし:", output)
 
 
 class TestSourceUrlTrackerDelegationInDailyUpdate(unittest.TestCase):
@@ -1771,7 +1771,7 @@ class TestSourceUrlTrackerDelegationInDailyUpdate(unittest.TestCase):
 
     def test_log_unsourced_works_via_alias(self):
         """エイリアス経由でも正しくログ出力できる（統合確認）。"""
-        article = "### A\n\n**参考リンク**: [A](https://sourced.example.com)\n"
+        article = "### A\n\n**リンク**: [A](https://sourced.example.com)\n"
         source_urls = frozenset({"https://sourced.example.com"})
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             du._log_unsourced_reference_links(article, source_urls)
@@ -1915,7 +1915,7 @@ class TestGenerateCommunitySectionHybrid(unittest.TestCase):
     def _get_community_def(self) -> dict:
         return next(s for s in du.SECTION_DEFINITIONS if s["key"] == "community")
 
-    def _make_client(self, content: str = "### 📝 参加レポート・イベント宣伝まとめ\n\n### レポートA\n**要約**: ...\n**参考リンク**: [A](https://example.com/a)"):
+    def _make_client(self, content: str = "### 📝 参加レポート・イベント宣伝まとめ\n\n### レポートA\n**要約**: ...\n**リンク**: [A](https://example.com/a)"):
         client = MagicMock()
         choice = MagicMock()
         choice.message.content = content
@@ -2016,7 +2016,7 @@ class TestGenerateCommunitySectionHybrid(unittest.TestCase):
         """LLM が末尾に「---」を出力した場合は除去される。"""
         section_def = self._get_community_def()
         event_reports = [{"title": "レポート", "url": "https://zenn.dev/1"}]
-        llm_output = "### 📝 参加レポート・イベント宣伝まとめ\n\n### レポートA\n**要約**: ...\n**参考リンク**: [A](https://example.com/a)\n\n---"
+        llm_output = "### 📝 参加レポート・イベント宣伝まとめ\n\n### レポートA\n**要約**: ...\n**リンク**: [A](https://example.com/a)\n\n---"
         client = self._make_client(llm_output)
 
         result = du._generate_community_section(client, "gpt-4o", section_def, [], event_reports)

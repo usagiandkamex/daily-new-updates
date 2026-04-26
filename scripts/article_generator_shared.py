@@ -180,7 +180,7 @@ def _search_alternative_url(query: str) -> "str | None | _SearchUnavailableSenti
 
 
 def _format_bare_reference_links(markdown: str) -> str:
-    """**参考リンク**: の後に裸の URL または URL をラベルにしたリンクがある場合、
+    """**リンク**: の後に裸の URL または URL をラベルにしたリンクがある場合、
     直近の ### 見出しをラベルにしたハイパーリンクへ変換する。"""
     lines = markdown.splitlines()
     current_heading = ""
@@ -190,11 +190,11 @@ def _format_bare_reference_links(markdown: str) -> str:
         if heading_match:
             current_heading = heading_match.group(1).strip()
 
-        # 裸の URL: **参考リンク**: https://...
-        ref_bare = re.match(r'^(\*\*参考リンク\*\*:\s*)(https?://\S+)\s*$', line)
-        # URL をラベルにしたリンク: **参考リンク**: [https://...](https://...)
+        # 裸の URL: **リンク**: https://...
+        ref_bare = re.match(r'^(\*\*リンク\*\*:\s*)(https?://\S+)\s*$', line)
+        # URL をラベルにしたリンク: **リンク**: [https://...](https://...)
         ref_url_label = re.match(
-            r'^(\*\*参考リンク\*\*:\s*)\[(https?://[^\]]+)\]\((https?://[^)]+)\)\s*$', line
+            r'^(\*\*リンク\*\*:\s*)\[(https?://[^\]]+)\]\((https?://[^)]+)\)\s*$', line
         )
         if ref_bare:
             prefix = ref_bare.group(1)
@@ -315,13 +315,13 @@ def verify_content(markdown: str) -> str:
 
     生成やリンク検証とは独立した検証プロセスとして、以下の項目をチェックする:
       1. 見出し（###）がハイパーリンク化されていないこと
-      2. 各トピックに **要約** と **参考リンク** が含まれること
-      3. **参考リンク** が [タイトル](URL) 形式であること
+      2. 各トピックに **要約** と **リンク** が含まれること
+      3. **リンク** が [タイトル](URL) 形式であること
       4. セクション末尾に不要な締め文がないこと
       5. 連続 --- セパレータや孤立セパレータがないこと
     修正可能な問題は自動修正し、全ての検出事項をログ出力する。
     コミュニティイベントセクション（「コミュニティ」を含む見出し）の
-    箇条書きサブセクション（📅・📝 で始まる見出し）は要約・参考リンクのチェックを省略する。
+    箇条書きサブセクション（📅・📝 で始まる見出し）は要約・リンクのチェックを省略する。
     """
     lines = markdown.split('\n')
     fixed_lines: list[str] = []
@@ -394,23 +394,23 @@ def verify_content(markdown: str) -> str:
             if not is_community_list and '**要約**' not in topic_block:
                 issues.append(f"要約なし: [{section_name}] {topic_title}")
 
-            # **参考リンク** チェック — コミュニティ箇条書きサブセクションは除外
-            if not is_community_list and '**参考リンク**' not in topic_block:
-                issues.append(f"参考リンクなし: [{section_name}] {topic_title}")
+            # **リンク** チェック — コミュニティ箇条書きサブセクションは除外
+            if not is_community_list and '**リンク**' not in topic_block:
+                issues.append(f"リンクなし: [{section_name}] {topic_title}")
             elif not is_community_list:
-                # 参考リンクの形式チェック: [text](URL) が含まれるか
-                ref_line_re = re.compile(r'\*\*参考リンク\*\*:\s*(.*)', re.MULTILINE)
+                # リンクの形式チェック: [text](URL) が含まれるか
+                ref_line_re = re.compile(r'\*\*リンク\*\*:\s*(.*)', re.MULTILINE)
                 ref_match = ref_line_re.search(topic_block)
                 if ref_match:
                     ref_value = ref_match.group(1).strip()
                     link_re = re.compile(rf'\[{_LINK_LABEL_RE}\]\(https?://[^)]+\)')
                     if not link_re.search(ref_value):
-                        issues.append(f"参考リンク形式不正: [{section_name}] {topic_title}")
+                        issues.append(f"リンク形式不正: [{section_name}] {topic_title}")
 
     # --- 3. セクション末尾の締め文検出 ---
-    # 最後のトピックの **参考リンク** (または ---) 以降に余分なテキストがないかチェック
+    # 最後のトピックの **リンク** (または ---) 以降に余分なテキストがないかチェック
     _closing_re = re.compile(
-        r'(\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\(https?://[^)]+\))'
+        r'(\*\*リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\(https?://[^)]+\))'
         r'(\n\n(?!###\s|##\s|---|\Z).*?)(?=\n(?:###\s|##\s|---)\b|\Z)',
         re.MULTILINE | re.DOTALL,
     )
@@ -675,7 +675,7 @@ def generate_section(
 
 
 class SourceUrlTracker:
-    """フィード取得したソース URL を管理し、LLM 生成後の参考リンク検証に使用するクラス。
+    """フィード取得したソース URL を管理し、LLM 生成後のリンク検証に使用するクラス。
 
     デイリーアップデート・テクニカル雑談の両ワークフローで共通して使用する。
     LLM が提供されたソースデータ外の URL を生成した可能性がある箇所を可視化し、
@@ -700,7 +700,7 @@ class SourceUrlTracker:
         """複数のデータリストから URL を収集して frozenset を返す。
 
         フィードから取得した記事・イベント URL を集約し、LLM 生成後の
-        参考リンク検証（log_unsourced_reference_links）に使用する。
+        リンク検証（log_unsourced_reference_links）に使用する。
         list[dict] 形式では "url"・"event_url" キーを参照する。
         収集時に URL を正規化（クエリパラメータ・フラグメント除去）するため、
         ?utm_source=... などのパラメータ付き URL とも一致する。
@@ -718,25 +718,25 @@ class SourceUrlTracker:
 
     @staticmethod
     def log_unsourced_reference_links(article: str, source_urls: frozenset[str]) -> None:
-        """参考リンクの URL がソースデータに含まれないものを検出・ログ出力する。
+        """リンクの URL がソースデータに含まれないものを検出・ログ出力する。
 
         LLM が提供されたソースデータ外の URL を生成した可能性がある箇所を可視化し、
         デバッグや品質改善に役立てる。URL の修正は validate_links() に委ねる。
-        参考リンクの URL は正規化（クエリパラメータ・フラグメント除去）してから照合する。
+        リンクの URL は正規化（クエリパラメータ・フラグメント除去）してから照合する。
         """
         ref_link_pattern = re.compile(
-            r'\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\((https?://[^)]+)\)'
+            r'\*\*リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\((https?://[^)]+)\)'
         )
         unsourced = [
             m.group(1) for m in ref_link_pattern.finditer(article)
             if SourceUrlTracker._normalize_url(m.group(1)) not in source_urls
         ]
         if unsourced:
-            print(f"  ソース外参考リンク: {len(unsourced)} 件（HTTP 検証はこの後 validate_links() で実施）")
+            print(f"  ソース外リンク: {len(unsourced)} 件（HTTP 検証はこの後 validate_links() で実施）")
             for url in unsourced[:5]:
                 print(f"    ℹ {url[:80]}")
         else:
-            print("  参考リンク確認: 全てのリンクがソースデータと一致しています")
+            print("  リンク確認: 全てのリンクがソースデータと一致しています")
 
     @staticmethod
     def replace_unsourced_reference_links(
@@ -744,7 +744,7 @@ class SourceUrlTracker:
         source_data: "list[dict]",
         source_urls: frozenset[str],
     ) -> str:
-        """ソース外の参考リンク URL をソースデータの URL に置換する。
+        """ソース外のリンク URL をソースデータの URL に置換する。
 
         LLM がソースデータ外の URL を生成した場合、直近の ### 見出しと
         ソースデータのタイトルの単語一致でスコアリングし、最も近いソース URL に置換する。
@@ -774,7 +774,7 @@ class SourceUrlTracker:
             return article
 
         ref_pattern = re.compile(
-            r'(\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\])\((https?://[^)]+)\)'
+            r'(\*\*リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\])\((https?://[^)]+)\)'
         )
 
         lines = article.split('\n')
@@ -787,7 +787,7 @@ class SourceUrlTracker:
             if m_h:
                 current_heading = m_h.group(1).strip()
 
-            if '**参考リンク**' in line and current_heading:
+            if '**リンク**' in line and current_heading:
                 norm_heading = _norm(current_heading)
                 heading_words = set(norm_heading.split())
 
@@ -827,5 +827,5 @@ class SourceUrlTracker:
             result.append(line)
 
         if replaced:
-            print(f"  ソース外参考リンク修正: {replaced} 件をソースデータの URL に置換しました")
+            print(f"  ソース外リンク修正: {replaced} 件をソースデータの URL に置換しました")
         return '\n'.join(result)

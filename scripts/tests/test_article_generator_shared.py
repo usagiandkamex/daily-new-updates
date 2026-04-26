@@ -143,11 +143,11 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
     def _make_article(self, url: str) -> str:
         return (
             "## 1. テストセクション\n\n"
-            f"### トピックA\n\n**要約**: テスト\n\n**参考リンク**: [タイトルA]({url})\n"
+            f"### トピックA\n\n**要約**: テスト\n\n**リンク**: [タイトルA]({url})\n"
         )
 
     def test_sourced_url_logs_no_warning(self):
-        """参考リンク URL がソースに含まれる場合、ソース外の警告ログが出ない。"""
+        """リンク URL がソースに含まれる場合、ソース外の警告ログが出ない。"""
         url = "https://azure.microsoft.com/blog/update"
         source_urls = frozenset({url})
         article = self._make_article(url)
@@ -155,11 +155,11 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
 
-        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertNotIn("ソース外リンク:", mock_out.getvalue())
         self.assertIn("ソースデータと一致", mock_out.getvalue())
 
     def test_unsourced_url_logs_warning(self):
-        """参考リンク URL がソースに含まれない場合、警告ログが出力される。"""
+        """リンク URL がソースに含まれない場合、警告ログが出力される。"""
         url = "https://hallucinated.example.com/article"
         source_urls = frozenset()
         article = self._make_article(url)
@@ -167,13 +167,13 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
 
-        self.assertIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertIn("ソース外リンク:", mock_out.getvalue())
 
     def test_unsourced_url_log_shows_count(self):
         """ソース外 URL の件数がログに含まれる。"""
         article = (
-            "### A\n\n**参考リンク**: [A](https://bad1.example.com)\n\n"
-            "### B\n\n**参考リンク**: [B](https://bad2.example.com)\n"
+            "### A\n\n**リンク**: [A](https://bad1.example.com)\n\n"
+            "### B\n\n**リンク**: [B](https://bad2.example.com)\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, frozenset())
@@ -187,7 +187,7 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_no_reference_links_logs_all_match(self):
-        """参考リンクがない場合、「一致」メッセージが出力される。"""
+        """リンクがない場合、「一致」メッセージが出力される。"""
         article = "## テスト\n\n内容のみ\n"
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, frozenset())
@@ -198,7 +198,7 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         """ソース外 URL が 5 件を超えても最大 5 件のみログ出力する。"""
         article_lines = []
         for i in range(7):
-            article_lines.append(f"### Topic {i}\n\n**参考リンク**: [T{i}](https://bad{i}.example.com)")
+            article_lines.append(f"### Topic {i}\n\n**リンク**: [T{i}](https://bad{i}.example.com)")
         article = "\n\n".join(article_lines)
 
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
@@ -216,7 +216,7 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
             tracker.log_unsourced_reference_links(article, frozenset())
 
     def test_url_with_query_params_matches_normalized_source(self):
-        """参考リンクにクエリパラメータがあっても、正規化後にソースと一致すれば警告しない。"""
+        """リンクにクエリパラメータがあっても、正規化後にソースと一致すれば警告しない。"""
         base_url = "https://azure.microsoft.com/blog/update"
         source_urls = frozenset({base_url})
         article = self._make_article(f"{base_url}?utm_source=twitter&utm_medium=social")
@@ -224,11 +224,11 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
 
-        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertNotIn("ソース外リンク:", mock_out.getvalue())
         self.assertIn("ソースデータと一致", mock_out.getvalue())
 
     def test_url_with_fragment_matches_normalized_source(self):
-        """参考リンクにフラグメントがあっても、正規化後にソースと一致すれば警告しない。"""
+        """リンクにフラグメントがあっても、正規化後にソースと一致すれば警告しない。"""
         base_url = "https://azure.microsoft.com/blog/update"
         source_urls = frozenset({base_url})
         article = self._make_article(f"{base_url}#section2")
@@ -236,7 +236,7 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
 
-        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertNotIn("ソース外リンク:", mock_out.getvalue())
         self.assertIn("ソースデータと一致", mock_out.getvalue())
 
 
@@ -380,13 +380,13 @@ class TestSharedFunctionsModule(unittest.TestCase):
     def test_format_bare_reference_links_bare_url(self):
         """裸の URL が直近の ### 見出しをラベルにしたリンクへ変換される。"""
         from article_generator_shared import _format_bare_reference_links
-        md = "### Azure Monitor\n\n**参考リンク**: https://docs.microsoft.com/azure/\n"
+        md = "### Azure Monitor\n\n**リンク**: https://docs.microsoft.com/azure/\n"
         result = _format_bare_reference_links(md)
         self.assertIn("[Azure Monitor](https://docs.microsoft.com/azure/)", result)
-        self.assertNotIn("**参考リンク**: https://", result)
+        self.assertNotIn("**リンク**: https://", result)
 
     def test_verify_content_community_section_is_skipped(self):
-        """コミュニティセクションの📅・📝見出しは要約・参考リンクチェックを省略する。"""
+        """コミュニティセクションの📅・📝見出しは要約・リンクチェックを省略する。"""
         import io
         from article_generator_shared import verify_content
         md = (
@@ -395,14 +395,14 @@ class TestSharedFunctionsModule(unittest.TestCase):
             "- 日時: 2026-04-20\n\n"
             "---\n\n"
             "### 📝 参加レポート・イベント宣伝まとめ\n\n"
-            "内容のみ（要約・参考リンクなし）\n"
+            "内容のみ（要約・リンクなし）\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = verify_content(md)
-        # コミュニティ箇条書きは要約・参考リンクなし警告が出ないこと
+        # コミュニティ箇条書きは要約・リンクなし警告が出ないこと
         output = mock_out.getvalue()
         self.assertNotIn("要約なし", output)
-        self.assertNotIn("参考リンクなし", output)
+        self.assertNotIn("リンクなし", output)
 
     def test_http_headers_user_agent(self):
         """HTTP_HEADERS に User-Agent が含まれる。"""
@@ -595,7 +595,7 @@ class TestValidateLinksSoftFail(unittest.TestCase):
             "## 1. テスト\n\n"
             f"### トピック\n\n"
             f"**要約**: 内容\n\n"
-            f"**参考リンク**: [タイトル]({url})\n"
+            f"**リンク**: [タイトル]({url})\n"
         )
 
     def test_search_unavailable_keeps_original_content(self):
@@ -619,11 +619,11 @@ class TestValidateLinksSoftFail(unittest.TestCase):
             "## 1. テスト\n\n"
             "### トピック A\n\n"
             "**要約**: 内容 A\n\n"
-            "**参考リンク**: [A](https://bad-a.example.com)\n\n"
+            "**リンク**: [A](https://bad-a.example.com)\n\n"
             "---\n\n"
             "### トピック B\n\n"
             "**要約**: 内容 B\n\n"
-            "**参考リンク**: [B](https://bad-b.example.com)\n"
+            "**リンク**: [B](https://bad-b.example.com)\n"
         )
 
         with (patch.object(ags, "_validate_url", return_value=(False, "HTTP 404")),
@@ -839,7 +839,7 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
             f"### {heading}\n\n"
             "**要約**: テスト内容\n\n"
             "**影響**: テスト影響\n\n"
-            f"**参考リンク**: [{heading}]({url})\n"
+            f"**リンク**: [{heading}]({url})\n"
         )
 
     def _source_urls(self) -> frozenset:
@@ -859,7 +859,7 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
         self.assertNotIn("softbank.jp", result)
 
     def test_preserves_correct_source_url(self):
-        """すでにソースデータの URL を使用している参考リンクは変更しない。"""
+        """すでにソースデータの URL を使用しているリンクは変更しない。"""
         correct_url = "https://azure.microsoft.com/updates?id=560904"
         article = self._make_article(
             "Public Preview: Azure Backup for Elastic SAN",
@@ -904,7 +904,7 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
             "### Foundry Toolkit for Visual Studio Code\n\n"
             "**要約**: ...\n\n"
             "**影響**: ...\n\n"
-            "**参考リンク**: [Foundry Toolkit](https://codezine.jp/fake/article)\n"
+            "**リンク**: [Foundry Toolkit](https://codezine.jp/fake/article)\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO):
             result = SourceUrlTracker.replace_unsourced_reference_links(
@@ -921,7 +921,7 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
             "## 1. Azure\n\n"
             "### Public Preview: Azure Backup for Elastic SAN\n\n"
             "**要約**: ...\n\n"
-            "**参考リンク**: [title](https://wrong.example.com/)\n"
+            "**リンク**: [title](https://wrong.example.com/)\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO):
             result = SourceUrlTracker.replace_unsourced_reference_links(

@@ -291,11 +291,11 @@ class TestValidateLinksOrphanedSeparators(unittest.TestCase):
             "---\n\n"
             "### Topic 1\n\n"
             "**要約**: 内容1\n\n"
-            "**参考リンク**: [Link](https://bad1.example.com)\n\n"
+            "**リンク**: [Link](https://bad1.example.com)\n\n"
             "---\n\n"
             "### Topic 2\n\n"
             "**要約**: 内容2\n\n"
-            "**参考リンク**: [Link](https://bad2.example.com)\n\n"
+            "**リンク**: [Link](https://bad2.example.com)\n\n"
             "---\n\n"
             "## 5. セキュリティ\n"
         )
@@ -312,11 +312,11 @@ class TestValidateLinksOrphanedSeparators(unittest.TestCase):
             "---\n\n"
             "### Removed Topic\n\n"
             "**要約**: 内容\n\n"
-            "**参考リンク**: [Link](https://bad.example.com)\n\n"
+            "**リンク**: [Link](https://bad.example.com)\n\n"
             "---\n\n"
             "### Kept Topic\n\n"
             "**要約**: 残った内容\n\n"
-            "**参考リンク**: [Link](https://good.example.com)\n"
+            "**リンク**: [Link](https://good.example.com)\n"
         )
         result = self._run_validate_links_with_bad_urls(
             markdown, ["https://bad.example.com"]
@@ -332,15 +332,15 @@ class TestValidateLinksOrphanedSeparators(unittest.TestCase):
             "## 1. Microsoft\n\n"
             "### Removed Topic\n\n"
             "**要約**: 内容\n\n"
-            "**参考リンク**: [Link](https://bad.example.com)\n\n"
+            "**リンク**: [Link](https://bad.example.com)\n\n"
             "---\n\n"
             "### Kept Topic 1\n\n"
             "**要約**: 内容1\n\n"
-            "**参考リンク**: [Link](https://good1.example.com)\n\n"
+            "**リンク**: [Link](https://good1.example.com)\n\n"
             "---\n\n"
             "### Kept Topic 2\n\n"
             "**要約**: 内容2\n\n"
-            "**参考リンク**: [Link](https://good2.example.com)\n"
+            "**リンク**: [Link](https://good2.example.com)\n"
         )
         result = self._run_validate_links_with_bad_urls(
             markdown, ["https://bad.example.com"]
@@ -356,7 +356,7 @@ class TestValidateLinksOrphanedSeparators(unittest.TestCase):
             "## 1. Microsoft\n\n"
             "### Topic 1\n\n"
             "**要約**: 内容\n\n"
-            "**参考リンク**: [Link](https://good.example.com)\n"
+            "**リンク**: [Link](https://good.example.com)\n"
         )
         result = self._run_validate_links_with_bad_urls(markdown, [])
         self.assertEqual(result, markdown)
@@ -381,7 +381,7 @@ class TestRegenerateEmptySections(unittest.TestCase):
             f"{self._HEADER}\n\n"
             "## 5. セキュリティ\n\n### 既存トピック\n内容\n"
         )
-        new_content = f"{self._HEADER}\n\n### 新トピック\n\n**参考リンク**: https://new.example.com"
+        new_content = f"{self._HEADER}\n\n### 新トピック\n\n**リンク**: https://new.example.com"
         llm_clients = self._make_llm_clients(new_content)
         new_items = [{"url": "https://new.example.com", "title": "新記事"}]
         extended_since = object()  # dummy; fetch_category is patched
@@ -402,7 +402,7 @@ class TestRegenerateEmptySections(unittest.TestCase):
         """トピックがあるセクションは再生成されない（LLM は呼ばれない）。"""
         article = (
             f"{self._HEADER}\n\n"
-            "### 既存トピック\n\n**参考リンク**: https://good.example.com\n"
+            "### 既存トピック\n\n**リンク**: https://good.example.com\n"
         )
         llm_clients = self._make_llm_clients()
         client = llm_clients[0][0]
@@ -613,17 +613,17 @@ class TestFormatBareReferenceLinksSmallchat(unittest.TestCase):
         md = (
             "### cuBLAS のバグ\n\n"
             "**要約**: 内容\n\n"
-            "**参考リンク**: https://www.reddit.com/r/MachineLearning/comments/abc/\n"
+            "**リンク**: https://www.reddit.com/r/MachineLearning/comments/abc/\n"
         )
         result = sc._format_bare_reference_links(md)
         self.assertIn("[cuBLAS のバグ](https://www.reddit.com/r/MachineLearning/comments/abc/)", result)
-        self.assertNotIn("**参考リンク**: https://", result)
+        self.assertNotIn("**リンク**: https://", result)
 
     def test_url_as_label_converted_using_heading(self):
         """[https://...](https://...) 形式が見出しをラベルにしたリンクへ変換される。"""
         md = (
             "### Amazon EC2 vs Azure\n\n"
-            "**参考リンク**: [https://www.prnewswire.com/news.html](https://www.prnewswire.com/news.html)\n"
+            "**リンク**: [https://www.prnewswire.com/news.html](https://www.prnewswire.com/news.html)\n"
         )
         result = sc._format_bare_reference_links(md)
         self.assertIn("[Amazon EC2 vs Azure](https://www.prnewswire.com/news.html)", result)
@@ -633,14 +633,14 @@ class TestFormatBareReferenceLinksSmallchat(unittest.TestCase):
         """既に [タイトル](URL) 形式のリンクは変更されない。"""
         md = (
             "### トピック\n\n"
-            "**参考リンク**: [Read More](https://example.com/article)\n"
+            "**リンク**: [Read More](https://example.com/article)\n"
         )
         result = sc._format_bare_reference_links(md)
         self.assertIn("[Read More](https://example.com/article)", result)
 
     def test_no_heading_falls_back_to_url_as_label(self):
         """直前に ### 見出しがない場合、URL 自身がラベルに使われる。"""
-        md = "**参考リンク**: https://example.com/fallback\n"
+        md = "**リンク**: https://example.com/fallback\n"
         result = sc._format_bare_reference_links(md)
         self.assertIn("[https://example.com/fallback](https://example.com/fallback)", result)
 
@@ -808,7 +808,7 @@ class TestVerifyContentSmallchat(unittest.TestCase):
             "### Windows 11 の新機能\n\n"
             "**要約**: テスト要約\n\n"
             "**影響**: テスト影響\n\n"
-            "**参考リンク**: [Windows 11](https://example.com/windows)\n"
+            "**リンク**: [Windows 11](https://example.com/windows)\n"
         )
         result = sc.verify_content(md)
         self.assertEqual(result.strip(), md.strip())
@@ -819,7 +819,7 @@ class TestVerifyContentSmallchat(unittest.TestCase):
             "## 1. Microsoft\n\n"
             "### [Surface Pro Update](https://example.com/surface)\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: [Surface Pro Update](https://example.com/surface)\n"
+            "**リンク**: [Surface Pro Update](https://example.com/surface)\n"
         )
         result = sc.verify_content(md)
         self.assertIn("### Surface Pro Update", result)
@@ -831,7 +831,7 @@ class TestVerifyContentSmallchat(unittest.TestCase):
             "## 1. Microsoft\n\n"
             "### [In preview] New Feature\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: [タイトル](https://example.com)\n"
+            "**リンク**: [タイトル](https://example.com)\n"
         )
         result = sc.verify_content(md)
         self.assertIn("### [In preview] New Feature", result)
@@ -842,7 +842,7 @@ class TestVerifyContentSmallchat(unittest.TestCase):
             "## 1. Microsoft\n\n"
             "### トピックA\n\n"
             "内容のみ\n\n"
-            "**参考リンク**: [タイトル](https://example.com)\n"
+            "**リンク**: [タイトル](https://example.com)\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = sc.verify_content(md)
@@ -850,7 +850,7 @@ class TestVerifyContentSmallchat(unittest.TestCase):
         self.assertIn("要約なし:", mock_out.getvalue())
 
     def test_missing_reference_link_detected(self):
-        """**参考リンク** が欠落しているトピックが検出ログに出力される。"""
+        """**リンク** が欠落しているトピックが検出ログに出力される。"""
         md = (
             "## 1. Microsoft\n\n"
             "### トピックA\n\n"
@@ -859,20 +859,20 @@ class TestVerifyContentSmallchat(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = sc.verify_content(md)
         self.assertIsInstance(result, str)
-        self.assertIn("参考リンクなし:", mock_out.getvalue())
+        self.assertIn("リンクなし:", mock_out.getvalue())
 
     def test_malformed_reference_link_detected(self):
-        """**参考リンク** が [text](URL) 形式でないトピックが検出ログに出力される。"""
+        """**リンク** が [text](URL) 形式でないトピックが検出ログに出力される。"""
         md = (
             "## 2. AI\n\n"
             "### トピックA\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: https://example.com/bare\n"
+            "**リンク**: https://example.com/bare\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = sc.verify_content(md)
         self.assertIsInstance(result, str)
-        self.assertIn("参考リンク形式不正:", mock_out.getvalue())
+        self.assertIn("リンク形式不正:", mock_out.getvalue())
 
     def test_closing_sentence_removed(self):
         """セクション末尾の締め文が除去される。"""
@@ -881,7 +881,7 @@ class TestVerifyContentSmallchat(unittest.TestCase):
             "### トピックA\n\n"
             "**要約**: テスト\n\n"
             "**影響**: テスト\n\n"
-            "**参考リンク**: [タイトル](https://example.com)\n\n"
+            "**リンク**: [タイトル](https://example.com)\n\n"
             "以上がMicrosoftの最新ニュースです。\n\n"
             "## 2. AI\n"
         )
@@ -903,12 +903,12 @@ class TestVerifyContentSmallchat(unittest.TestCase):
             "## 1. Microsoft\n\n"
             "### トピックA\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: [タイトル](https://example.com)\n\n"
+            "**リンク**: [タイトル](https://example.com)\n\n"
             "---\n\n"
             "---\n\n"
             "### トピックB\n\n"
             "**要約**: テスト2\n\n"
-            "**参考リンク**: [タイトル2](https://example.com/2)\n"
+            "**リンク**: [タイトル2](https://example.com/2)\n"
         )
         result = sc.verify_content(md)
         self.assertNotIn("---\n\n---", result)
@@ -920,7 +920,7 @@ class TestVerifyContentSmallchat(unittest.TestCase):
             "## 2. AI\n\n"
             "### AI ニュース\n\n"
             "**要約**: テスト\n\n"
-            "**参考リンク**: [タイトル](https://example.com)\n"
+            "**リンク**: [タイトル](https://example.com)\n"
         )
         # 空セクション（Microsoft）が検出されるが例外は出ない
         result = sc.verify_content(md)
@@ -951,7 +951,7 @@ class TestSourceUrlTrackerDelegationInSmallchat(unittest.TestCase):
 
     def test_log_unsourced_works_via_alias(self):
         """エイリアス経由でも正しくログ出力できる（統合確認）。"""
-        article = "### A\n\n**参考リンク**: [A](https://sourced.example.com)\n"
+        article = "### A\n\n**リンク**: [A](https://sourced.example.com)\n"
         source_urls = frozenset({"https://sourced.example.com"})
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             sc._log_unsourced_reference_links(article, source_urls)

@@ -112,8 +112,8 @@ class TestSourceUrlTrackerCollect(unittest.TestCase):
         result = tracker.collect_source_urls([{"url": "https://example.com/y"}])
         self.assertIn("https://example.com/y", result)
 
-    def test_normalizes_url_with_query_params(self):
-        """クエリパラメータ付き URL は正規化（パラメータ除去）して格納される。"""
+    def test_normalizes_url_with_utm_query_params(self):
+        """utm_* トラッキングパラメータ付き URL は正規化時にパラメータが除去される。"""
         data = [{"url": "https://example.com/article?utm_source=twitter&utm_medium=social"}]
         result = SourceUrlTracker.collect_source_urls(data)
         self.assertIn("https://example.com/article", result)
@@ -126,8 +126,8 @@ class TestSourceUrlTrackerCollect(unittest.TestCase):
         self.assertIn("https://example.com/article", result)
         self.assertNotIn("https://example.com/article#section1", result)
 
-    def test_deduplicates_urls_differing_only_in_query_params(self):
-        """クエリパラメータのみ異なる同一パスの URL は正規化後に重複除去される。"""
+    def test_deduplicates_urls_differing_only_in_utm_params(self):
+        """utm_* トラッキングパラメータのみ異なる同一パスの URL は正規化後に重複除去される。"""
         data = [
             {"url": "https://example.com/article?utm_source=twitter"},
             {"url": "https://example.com/article?utm_source=facebook"},
@@ -137,17 +137,39 @@ class TestSourceUrlTrackerCollect(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertIn("https://example.com/article", result)
 
+    def test_preserves_content_identifier_query_params(self):
+        """id= などのコンテンツ識別パラメータは正規化後も保持される。
+
+        Azure アップデートの URL（?id=NNNN）のように、クエリパラメータが
+        記事の識別子として機能する場合は除去しない。
+        異なる id を持つ URL は別々のエントリとして収集される。
+        """
+        data = [
+            {"url": "https://azure.microsoft.com/updates?id=560904"},
+            {"url": "https://azure.microsoft.com/updates?id=560987"},
+        ]
+        result = SourceUrlTracker.collect_source_urls(data)
+        self.assertEqual(len(result), 2)
+        self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+        self.assertIn("https://azure.microsoft.com/updates?id=560987", result)
+
+    def test_strips_utm_but_preserves_id_param(self):
+        """utm_* は除去するが id= は保持する（複合クエリパラメータ）。"""
+        data = [{"url": "https://azure.microsoft.com/updates?id=560904&utm_source=rss"}]
+        result = SourceUrlTracker.collect_source_urls(data)
+        self.assertEqual(result, frozenset({"https://azure.microsoft.com/updates?id=560904"}))
+
 class TestSourceUrlTrackerLog(unittest.TestCase):
     """SourceUrlTracker.log_unsourced_reference_links() のテスト"""
 
     def _make_article(self, url: str) -> str:
         return (
             "## 1. テストセクション\n\n"
-            f"### トピックA\n\n**要約**: テスト\n\n**参考リンク**: [タイトルA]({url})\n"
+            f"### トピックA\n\n**要約**: テスト\n\n**リンク**: [タイトルA]({url})\n"
         )
 
     def test_sourced_url_logs_no_warning(self):
-        """参考リンク URL がソースに含まれる場合、ソース外の警告ログが出ない。"""
+        """リンク URL がソースに含まれる場合、ソース外の警告ログが出ない。"""
         url = "https://azure.microsoft.com/blog/update"
         source_urls = frozenset({url})
         article = self._make_article(url)
@@ -155,11 +177,11 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
 
-        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertNotIn("ソース外リンク:", mock_out.getvalue())
         self.assertIn("ソースデータと一致", mock_out.getvalue())
 
     def test_unsourced_url_logs_warning(self):
-        """参考リンク URL がソースに含まれない場合、警告ログが出力される。"""
+        """リンク URL がソースに含まれない場合、警告ログが出力される。"""
         url = "https://hallucinated.example.com/article"
         source_urls = frozenset()
         article = self._make_article(url)
@@ -167,13 +189,13 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
 
-        self.assertIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertIn("ソース外リンク:", mock_out.getvalue())
 
     def test_unsourced_url_log_shows_count(self):
         """ソース外 URL の件数がログに含まれる。"""
         article = (
-            "### A\n\n**参考リンク**: [A](https://bad1.example.com)\n\n"
-            "### B\n\n**参考リンク**: [B](https://bad2.example.com)\n"
+            "### A\n\n**リンク**: [A](https://bad1.example.com)\n\n"
+            "### B\n\n**リンク**: [B](https://bad2.example.com)\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, frozenset())
@@ -187,7 +209,7 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_no_reference_links_logs_all_match(self):
-        """参考リンクがない場合、「一致」メッセージが出力される。"""
+        """リンクがない場合、「一致」メッセージが出力される。"""
         article = "## テスト\n\n内容のみ\n"
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, frozenset())
@@ -198,7 +220,7 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         """ソース外 URL が 5 件を超えても最大 5 件のみログ出力する。"""
         article_lines = []
         for i in range(7):
-            article_lines.append(f"### Topic {i}\n\n**参考リンク**: [T{i}](https://bad{i}.example.com)")
+            article_lines.append(f"### Topic {i}\n\n**リンク**: [T{i}](https://bad{i}.example.com)")
         article = "\n\n".join(article_lines)
 
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
@@ -216,7 +238,7 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
             tracker.log_unsourced_reference_links(article, frozenset())
 
     def test_url_with_query_params_matches_normalized_source(self):
-        """参考リンクにクエリパラメータがあっても、正規化後にソースと一致すれば警告しない。"""
+        """リンクにクエリパラメータがあっても、正規化後にソースと一致すれば警告しない。"""
         base_url = "https://azure.microsoft.com/blog/update"
         source_urls = frozenset({base_url})
         article = self._make_article(f"{base_url}?utm_source=twitter&utm_medium=social")
@@ -224,11 +246,11 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
 
-        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertNotIn("ソース外リンク:", mock_out.getvalue())
         self.assertIn("ソースデータと一致", mock_out.getvalue())
 
     def test_url_with_fragment_matches_normalized_source(self):
-        """参考リンクにフラグメントがあっても、正規化後にソースと一致すれば警告しない。"""
+        """リンクにフラグメントがあっても、正規化後にソースと一致すれば警告しない。"""
         base_url = "https://azure.microsoft.com/blog/update"
         source_urls = frozenset({base_url})
         article = self._make_article(f"{base_url}#section2")
@@ -236,7 +258,7 @@ class TestSourceUrlTrackerLog(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             SourceUrlTracker.log_unsourced_reference_links(article, source_urls)
 
-        self.assertNotIn("ソース外参考リンク:", mock_out.getvalue())
+        self.assertNotIn("ソース外リンク:", mock_out.getvalue())
         self.assertIn("ソースデータと一致", mock_out.getvalue())
 
 
@@ -380,13 +402,13 @@ class TestSharedFunctionsModule(unittest.TestCase):
     def test_format_bare_reference_links_bare_url(self):
         """裸の URL が直近の ### 見出しをラベルにしたリンクへ変換される。"""
         from article_generator_shared import _format_bare_reference_links
-        md = "### Azure Monitor\n\n**参考リンク**: https://docs.microsoft.com/azure/\n"
+        md = "### Azure Monitor\n\n**リンク**: https://docs.microsoft.com/azure/\n"
         result = _format_bare_reference_links(md)
         self.assertIn("[Azure Monitor](https://docs.microsoft.com/azure/)", result)
-        self.assertNotIn("**参考リンク**: https://", result)
+        self.assertNotIn("**リンク**: https://", result)
 
     def test_verify_content_community_section_is_skipped(self):
-        """コミュニティセクションの📅・📝見出しは要約・参考リンクチェックを省略する。"""
+        """コミュニティセクションの📅・📝見出しは要約・リンクチェックを省略する。"""
         import io
         from article_generator_shared import verify_content
         md = (
@@ -395,14 +417,14 @@ class TestSharedFunctionsModule(unittest.TestCase):
             "- 日時: 2026-04-20\n\n"
             "---\n\n"
             "### 📝 参加レポート・イベント宣伝まとめ\n\n"
-            "内容のみ（要約・参考リンクなし）\n"
+            "内容のみ（要約・リンクなし）\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = verify_content(md)
-        # コミュニティ箇条書きは要約・参考リンクなし警告が出ないこと
+        # コミュニティ箇条書きは要約・リンクなし警告が出ないこと
         output = mock_out.getvalue()
         self.assertNotIn("要約なし", output)
-        self.assertNotIn("参考リンクなし", output)
+        self.assertNotIn("リンクなし", output)
 
     def test_http_headers_user_agent(self):
         """HTTP_HEADERS に User-Agent が含まれる。"""
@@ -595,7 +617,7 @@ class TestValidateLinksSoftFail(unittest.TestCase):
             "## 1. テスト\n\n"
             f"### トピック\n\n"
             f"**要約**: 内容\n\n"
-            f"**参考リンク**: [タイトル]({url})\n"
+            f"**リンク**: [タイトル]({url})\n"
         )
 
     def test_search_unavailable_keeps_original_content(self):
@@ -619,11 +641,11 @@ class TestValidateLinksSoftFail(unittest.TestCase):
             "## 1. テスト\n\n"
             "### トピック A\n\n"
             "**要約**: 内容 A\n\n"
-            "**参考リンク**: [A](https://bad-a.example.com)\n\n"
+            "**リンク**: [A](https://bad-a.example.com)\n\n"
             "---\n\n"
             "### トピック B\n\n"
             "**要約**: 内容 B\n\n"
-            "**参考リンク**: [B](https://bad-b.example.com)\n"
+            "**リンク**: [B](https://bad-b.example.com)\n"
         )
 
         with (patch.object(ags, "_validate_url", return_value=(False, "HTTP 404")),
@@ -839,7 +861,7 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
             f"### {heading}\n\n"
             "**要約**: テスト内容\n\n"
             "**影響**: テスト影響\n\n"
-            f"**参考リンク**: [{heading}]({url})\n"
+            f"**リンク**: [{heading}]({url})\n"
         )
 
     def _source_urls(self) -> frozenset:
@@ -859,7 +881,7 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
         self.assertNotIn("softbank.jp", result)
 
     def test_preserves_correct_source_url(self):
-        """すでにソースデータの URL を使用している参考リンクは変更しない。"""
+        """すでにソースデータの URL を使用しているリンクは変更しない。"""
         correct_url = "https://azure.microsoft.com/updates?id=560904"
         article = self._make_article(
             "Public Preview: Azure Backup for Elastic SAN",
@@ -904,7 +926,7 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
             "### Foundry Toolkit for Visual Studio Code\n\n"
             "**要約**: ...\n\n"
             "**影響**: ...\n\n"
-            "**参考リンク**: [Foundry Toolkit](https://codezine.jp/fake/article)\n"
+            "**リンク**: [Foundry Toolkit](https://codezine.jp/fake/article)\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO):
             result = SourceUrlTracker.replace_unsourced_reference_links(
@@ -921,13 +943,79 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
             "## 1. Azure\n\n"
             "### Public Preview: Azure Backup for Elastic SAN\n\n"
             "**要約**: ...\n\n"
-            "**参考リンク**: [title](https://wrong.example.com/)\n"
+            "**リンク**: [title](https://wrong.example.com/)\n"
         )
         with patch('sys.stdout', new_callable=io.StringIO):
             result = SourceUrlTracker.replace_unsourced_reference_links(
                 article, self._SOURCE_DATA, self._source_urls()
             )
         self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+
+    def test_replaces_using_source_name_label_when_primary_fails(self):
+        """リンクラベルがソース名と一致し、1次マッチングが閾値未満でも置換する。
+
+        LLM がソース名をラベルに使い、ソース名から推測した URL（e.g. サブレディット root）を
+        生成するケースを想定。2次マッチング（ソース名絞り込み + 閾値 0.3）で正しい URL に置換する。
+        """
+        source_data = [
+            {
+                # 見出し "AI Safety Release Concerns and Tech Impact Analysis" との1次スコア:
+                # 共通語 {"ai", "safety", "release"} = 3、max(8, 4) = 8 → 0.375 (< 0.5, ≥ 0.3)
+                "title": "AI Safety: Release Considerations",
+                "url": "https://www.reddit.com/r/artificial/comments/abc123/ai_safety_release/",
+                "source": "Reddit Artificial",
+            },
+            {
+                "title": "Azure Kubernetes Service Update",
+                "url": "https://azure.microsoft.com/updates?id=123",
+                "source": "Azure Blog",
+            },
+        ]
+        article = (
+            "## 2. AI\n\n"
+            "### AI Safety Release Concerns and Tech Impact Analysis\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Reddit Artificial](https://www.reddit.com/r/artificial/)\n"
+        )
+        source_urls = SourceUrlTracker.collect_source_urls(source_data)
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, source_data, source_urls
+            )
+        self.assertIn(
+            "https://www.reddit.com/r/artificial/comments/abc123/ai_safety_release/", result
+        )
+        self.assertNotIn("https://www.reddit.com/r/artificial/)\n", result)
+
+    def test_replaces_azure_url_with_wrong_id(self):
+        """LLM が生成した Azure URL の ?id= が異なる場合に正しい URL に置換する。
+
+        Azure アップデートの URL は ?id=NNNN で記事を識別する。以前の実装では
+        クエリパラメータを全除去するため異なる ID でも「一致」とみなされていたが、
+        修正後は id= を保持するため、誤 ID は「ソース外」と検出され置換される。
+        """
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN General Availability",
+                "url": "https://azure.microsoft.com/updates?id=560904",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 1. Azure アップデート情報\n\n"
+            "### Azure Backup for Elastic SAN General Availability\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Azure Backup for Elastic SAN](https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        source_urls = SourceUrlTracker.collect_source_urls(source_data)
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, source_data, source_urls
+            )
+        self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+        self.assertNotIn("?id=999999", result)
 
     def test_daily_update_delegates_to_source_url_tracker(self):
         """generate_daily_update の _replace_unsourced は SourceUrlTracker に委譲する。"""
@@ -946,6 +1034,200 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
         )
 
 
+class TestVerifyLinkSourceMatch(unittest.TestCase):
+    """SourceUrlTracker.verify_link_source_match() のテスト"""
 
-if __name__ == '__main__':
-    unittest.main()
+    def _make_article(self, heading: str, url: str) -> str:
+        return (
+            "## 1. Azure アップデート情報\n\n"
+            f"### {heading}\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            f"**リンク**: [{heading}]({url})\n"
+        )
+
+    def test_matching_content_logs_no_warning(self):
+        """リンクのソースデータ title がトピック見出しと一致する場合は警告なし。"""
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN General Availability",
+                "url": "https://azure.microsoft.com/updates?id=560904",
+                "description": "Azure Backup now supports Elastic SAN...",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = self._make_article(
+            "Azure Backup for Elastic SAN General Availability",
+            "https://azure.microsoft.com/updates?id=560904",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        self.assertNotIn("低スコア", mock_out.getvalue())
+        self.assertIn("問題なし", mock_out.getvalue())
+        # 修正不要なので記事は変わらない
+        self.assertEqual(result, article)
+
+    def test_wrong_azure_id_repaired_when_better_match_found(self):
+        """Azure の ?id= が間違っているが、正しい URL がソースにある場合は修正される。"""
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN General Availability",
+                "url": "https://azure.microsoft.com/updates?id=560904",
+                "description": "Azure Backup...",
+                "source": "Azure Release Communications",
+            },
+            {
+                # 全く異なるトピック — 誤 ID でこちらの URL が使われた場合
+                "title": "Azure Kubernetes Service monthly updates",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "AKS updates...",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # 記事の見出しは Elastic SAN だが、リンクは AKS の URL（id=999999）を指している
+        article = self._make_article(
+            "Azure Backup for Elastic SAN General Availability",
+            "https://azure.microsoft.com/updates?id=999999",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        # 修正済みログが出て、正しい URL に置換されている
+        self.assertIn("修正済み", mock_out.getvalue())
+        self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+        self.assertNotIn("?id=999999", result)
+
+    def test_wrong_azure_id_warns_when_no_repair_candidate(self):
+        """Azure の ?id= が間違っているが修正候補がない場合は警告のみ（記事は変えない）。"""
+        source_data = [
+            {
+                # 全く関係ないトピック
+                "title": "Azure Kubernetes Service monthly updates",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "AKS updates...",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = self._make_article(
+            "Azure Backup for Elastic SAN General Availability",
+            "https://azure.microsoft.com/updates?id=999999",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        # 修正候補がないので警告のみ、記事は変わらない
+        out = mock_out.getvalue()
+        self.assertNotIn("修正済み", out)
+        self.assertIn("低スコア", out)
+        self.assertEqual(result, article)
+
+    def test_url_not_in_source_data_is_silently_skipped(self):
+        """source_data に存在しない URL はスキップ（validate_links で別途処理済み）。"""
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN",
+                "url": "https://azure.microsoft.com/updates?id=560904",
+                "description": "",
+                "source": "Azure",
+            },
+        ]
+        article = self._make_article(
+            "Azure Backup for Elastic SAN",
+            "https://example.com/completely-unrelated",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        # 存在しない URL はスキップし、警告は出ない（validate_links で処理される）
+        self.assertNotIn("低スコア", mock_out.getvalue())
+        self.assertEqual(result, article)
+
+    def test_empty_source_data_returns_article_unchanged(self):
+        """source_data が空の場合は記事を変えずに返す。"""
+        article = self._make_article("Test", "https://example.com/test")
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, [])
+        self.assertEqual(mock_out.getvalue(), "")
+        self.assertEqual(result, article)
+
+    def test_utm_stripped_url_matches_source(self):
+        """utm_* トラッキングパラメータ付き URL でも正規化後にソースと一致すれば問題なし。"""
+        source_data = [
+            {
+                "title": "Azure Kubernetes Service Update",
+                "url": "https://azure.microsoft.com/updates?id=123",
+                "description": "AKS update details...",
+                "source": "Azure",
+            },
+        ]
+        article = self._make_article(
+            "Azure Kubernetes Service Update",
+            "https://azure.microsoft.com/updates?id=123&utm_source=rss",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        self.assertNotIn("低スコア", mock_out.getvalue())
+        self.assertIn("問題なし", mock_out.getvalue())
+        self.assertEqual(result, article)
+
+    def test_daily_update_delegates_to_source_url_tracker(self):
+        """generate_daily_update の _verify_link_source_match は SourceUrlTracker に委譲する。"""
+        import generate_daily_update as du
+        self.assertIs(
+            du._verify_link_source_match,
+            SourceUrlTracker.verify_link_source_match,
+        )
+
+    def test_smallchat_delegates_to_source_url_tracker(self):
+        """generate_smallchat の _verify_link_source_match は SourceUrlTracker に委譲する。"""
+        import generate_smallchat as sc
+        self.assertIs(
+            sc._verify_link_source_match,
+            SourceUrlTracker.verify_link_source_match,
+        )
+
+
+class TestNormTitle(unittest.TestCase):
+    """SourceUrlTracker._norm_title() のテスト"""
+
+    def test_removes_bracket_prefix(self):
+        """[In preview] などの角括弧部分を除去する。"""
+        result = SourceUrlTracker._norm_title("[In preview] Azure Backup")
+        self.assertNotIn("[in preview]", result)
+        self.assertIn("azure", result)
+        self.assertIn("backup", result)
+
+    def test_removes_status_prefix(self):
+        """Public Preview: などのステータス語を除去する。"""
+        result = SourceUrlTracker._norm_title("Public Preview: New Feature")
+        self.assertNotIn("public", result)
+        self.assertNotIn("preview", result)
+        self.assertIn("new", result)
+        self.assertIn("feature", result)
+
+    def test_lowercases_and_strips_punctuation(self):
+        """小文字化・記号の除去が行われる。"""
+        result = SourceUrlTracker._norm_title("Azure VM: Scale Out!")
+        self.assertNotIn(":", result)
+        self.assertNotIn("!", result)
+        self.assertEqual(result, result.lower())
+
+    def test_same_result_as_old_inline_norm(self):
+        """以前の inline _norm() と同じ結果を返す（旧実装との後方互換）。"""
+        import re as _re
+        _bracket_re = _re.compile(r'\[[^\]]+\]')
+        _status_prefix_re = _re.compile(
+            r'\b(?:Public Preview|Generally Available|Preview|GA|'
+            r'Retirement|Retired?|Launched|In preview)\b\s*:?\s*',
+            _re.IGNORECASE,
+        )
+        def _old_norm(t):
+            t = _bracket_re.sub('', t)
+            t = _status_prefix_re.sub('', t)
+            return _re.sub(r'[^\w\s]', ' ', t.strip().lower())
+
+        samples = [
+            "[In preview] Public Preview: Azure Thing",
+            "Generally Available: Cool Feature!",
+            "GA: New VM Size",
+            "Azure Kubernetes Service Update v2.0",
+        ]
+        for s in samples:
+            self.assertEqual(SourceUrlTracker._norm_title(s), _old_norm(s), msg=s)

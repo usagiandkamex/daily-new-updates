@@ -10,7 +10,7 @@ import json
 import re
 import time
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote_plus, urlparse, urlunparse
+from urllib.parse import parse_qs, quote_plus, urlencode, urlparse, urlunparse
 
 import feedparser
 import requests
@@ -59,6 +59,21 @@ _RSS_CONTENT_TYPES = (
 # [In preview] のような角括弧を含むラベルも 1 段階までサポートする。
 # 例: [[In preview] Public Preview: Event Grid](https://...)
 _LINK_LABEL_RE = r'[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*'
+
+# URL 正規化時に除去するトラッキング専用クエリパラメータのパターン。
+# utm_* は Google Analytics 標準、fbclid/gclid/msclkid は各広告プラットフォームのクリック追跡用。
+# id= などのコンテンツ識別パラメータはここに含めず、正規化後も保持する。
+_TRACKING_PARAM_RE = re.compile(r'^(utm_|fbclid$|gclid$|msclkid$)', re.IGNORECASE)
+
+# タイトル正規化用プリコンパイル正規表現（SourceUrlTracker の複数メソッドで共用）。
+# [In preview] などの角括弧付きプレフィックスと Azure 系ステータス語を除去して
+# 単語レベルの重複スコアリングに使う共通正規化パターン。
+_TITLE_BRACKET_RE = re.compile(r'\[[^\]]+\]')
+_TITLE_STATUS_RE = re.compile(
+    r'\b(?:Public Preview|Generally Available|Preview|GA|'
+    r'Retirement|Retired?|Launched|In preview)\b\s*:?\s*',
+    re.IGNORECASE,
+)
 
 # 代替 URL 検索でネットワーク障害が発生した場合を示すセンチネル。
 # None（検索結果なし）と区別するために使用する。
@@ -180,7 +195,7 @@ def _search_alternative_url(query: str) -> "str | None | _SearchUnavailableSenti
 
 
 def _format_bare_reference_links(markdown: str) -> str:
-    """**参考リンク**: の後に裸の URL または URL をラベルにしたリンクがある場合、
+    """**リンク**: の後に裸の URL または URL をラベルにしたリンクがある場合、
     直近の ### 見出しをラベルにしたハイパーリンクへ変換する。"""
     lines = markdown.splitlines()
     current_heading = ""
@@ -190,11 +205,11 @@ def _format_bare_reference_links(markdown: str) -> str:
         if heading_match:
             current_heading = heading_match.group(1).strip()
 
-        # 裸の URL: **参考リンク**: https://...
-        ref_bare = re.match(r'^(\*\*参考リンク\*\*:\s*)(https?://\S+)\s*$', line)
-        # URL をラベルにしたリンク: **参考リンク**: [https://...](https://...)
+        # 裸の URL: **リンク**: https://...
+        ref_bare = re.match(r'^(\*\*リンク\*\*:\s*)(https?://\S+)\s*$', line)
+        # URL をラベルにしたリンク: **リンク**: [https://...](https://...)
         ref_url_label = re.match(
-            r'^(\*\*参考リンク\*\*:\s*)\[(https?://[^\]]+)\]\((https?://[^)]+)\)\s*$', line
+            r'^(\*\*リンク\*\*:\s*)\[(https?://[^\]]+)\]\((https?://[^)]+)\)\s*$', line
         )
         if ref_bare:
             prefix = ref_bare.group(1)
@@ -315,13 +330,13 @@ def verify_content(markdown: str) -> str:
 
     生成やリンク検証とは独立した検証プロセスとして、以下の項目をチェックする:
       1. 見出し（###）がハイパーリンク化されていないこと
-      2. 各トピックに **要約** と **参考リンク** が含まれること
-      3. **参考リンク** が [タイトル](URL) 形式であること
+      2. 各トピックに **要約** と **リンク** が含まれること
+      3. **リンク** が [タイトル](URL) 形式であること
       4. セクション末尾に不要な締め文がないこと
       5. 連続 --- セパレータや孤立セパレータがないこと
     修正可能な問題は自動修正し、全ての検出事項をログ出力する。
     コミュニティイベントセクション（「コミュニティ」を含む見出し）の
-    箇条書きサブセクション（📅・📝 で始まる見出し）は要約・参考リンクのチェックを省略する。
+    箇条書きサブセクション（📅・📝 で始まる見出し）は要約・リンクのチェックを省略する。
     """
     lines = markdown.split('\n')
     fixed_lines: list[str] = []
@@ -394,23 +409,23 @@ def verify_content(markdown: str) -> str:
             if not is_community_list and '**要約**' not in topic_block:
                 issues.append(f"要約なし: [{section_name}] {topic_title}")
 
-            # **参考リンク** チェック — コミュニティ箇条書きサブセクションは除外
-            if not is_community_list and '**参考リンク**' not in topic_block:
-                issues.append(f"参考リンクなし: [{section_name}] {topic_title}")
+            # **リンク** チェック — コミュニティ箇条書きサブセクションは除外
+            if not is_community_list and '**リンク**' not in topic_block:
+                issues.append(f"リンクなし: [{section_name}] {topic_title}")
             elif not is_community_list:
-                # 参考リンクの形式チェック: [text](URL) が含まれるか
-                ref_line_re = re.compile(r'\*\*参考リンク\*\*:\s*(.*)', re.MULTILINE)
+                # リンクの形式チェック: [text](URL) が含まれるか
+                ref_line_re = re.compile(r'\*\*リンク\*\*:\s*(.*)', re.MULTILINE)
                 ref_match = ref_line_re.search(topic_block)
                 if ref_match:
                     ref_value = ref_match.group(1).strip()
                     link_re = re.compile(rf'\[{_LINK_LABEL_RE}\]\(https?://[^)]+\)')
                     if not link_re.search(ref_value):
-                        issues.append(f"参考リンク形式不正: [{section_name}] {topic_title}")
+                        issues.append(f"リンク形式不正: [{section_name}] {topic_title}")
 
     # --- 3. セクション末尾の締め文検出 ---
-    # 最後のトピックの **参考リンク** (または ---) 以降に余分なテキストがないかチェック
+    # 最後のトピックの **リンク** (または ---) 以降に余分なテキストがないかチェック
     _closing_re = re.compile(
-        r'(\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\(https?://[^)]+\))'
+        r'(\*\*リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\(https?://[^)]+\))'
         r'(\n\n(?!###\s|##\s|---|\Z).*?)(?=\n(?:###\s|##\s|---)\b|\Z)',
         re.MULTILINE | re.DOTALL,
     )
@@ -675,7 +690,7 @@ def generate_section(
 
 
 class SourceUrlTracker:
-    """フィード取得したソース URL を管理し、LLM 生成後の参考リンク検証に使用するクラス。
+    """フィード取得したソース URL を管理し、LLM 生成後のリンク検証に使用するクラス。
 
     デイリーアップデート・テクニカル雑談の両ワークフローで共通して使用する。
     LLM が提供されたソースデータ外の URL を生成した可能性がある箇所を可視化し、
@@ -684,26 +699,52 @@ class SourceUrlTracker:
 
     @staticmethod
     def _normalize_url(url: str) -> str:
-        """URL を正規化してクエリパラメータとフラグメントを除去する。
+        """URL を正規化してトラッキングパラメータとフラグメントを除去する。
 
-        ?utm_source=... などのトラッキングパラメータや #section のフラグメントを
-        除去し、スキーム・ホスト・パスのみを残す。これにより、同一記事を指す
-        URL のバリエーションを同一視できる。
+        utm_* などのトラッキング専用パラメータと #section のフラグメントを除去する。
+        id= などのコンテンツ識別パラメータは保持する。これにより、同一記事を指す
+        URL のバリエーション（utm 追跡付き等）を同一視しつつ、?id= などで区別される
+        異なる記事は別の URL として扱う（例: Azure アップデートの ?id=NNNN）。
+        パラメータはキー昇順でソートし、比較時の順序差異を吸収する。
         """
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             return url
+        if not parsed.query:
+            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+        # トラッキングパラメータを除去し、コンテンツ識別パラメータは保持する
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        filtered = {k: v for k, v in params.items() if not _TRACKING_PARAM_RE.match(k)}
+        if filtered:
+            new_query = urlencode(sorted(filtered.items()), doseq=True)
+            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", new_query, ""))
         return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+
+    @staticmethod
+    def _norm_title(t: str) -> str:
+        """タイトル文字列を単語重複スコアリング用に正規化する。
+
+        モジュールレベルの _TITLE_BRACKET_RE・_TITLE_STATUS_RE を使用して
+        [In preview] などの角括弧部分と Azure ステータス語を除去した上で
+        記号を空白に変換して小文字化した文字列を返す。
+        replace_unsourced_reference_links と verify_link_source_match の両方で
+        共通して使用するため、ここに集約して重複定義を防ぐ。
+        """
+        t = _TITLE_BRACKET_RE.sub('', t)
+        t = _TITLE_STATUS_RE.sub('', t)
+        return re.sub(r'[^\w\s]', ' ', t.strip().lower())
 
     @staticmethod
     def collect_source_urls(*data_lists) -> frozenset[str]:
         """複数のデータリストから URL を収集して frozenset を返す。
 
         フィードから取得した記事・イベント URL を集約し、LLM 生成後の
-        参考リンク検証（log_unsourced_reference_links）に使用する。
+        リンク検証（log_unsourced_reference_links）に使用する。
         list[dict] 形式では "url"・"event_url" キーを参照する。
-        収集時に URL を正規化（クエリパラメータ・フラグメント除去）するため、
-        ?utm_source=... などのパラメータ付き URL とも一致する。
+        収集時に URL を正規化（utm_* などのトラッキングパラメータとフラグメントを除去）するため、
+        ?utm_source=... などのトラッキングパラメータ付き URL とも一致する。
+        id= などのコンテンツ識別パラメータは保持されるため、?id= で区別される
+        異なる記事 URL（例: Azure アップデート）は別々のエントリとして管理される。
         """
         urls: set[str] = set()
         for data in data_lists:
@@ -718,25 +759,26 @@ class SourceUrlTracker:
 
     @staticmethod
     def log_unsourced_reference_links(article: str, source_urls: frozenset[str]) -> None:
-        """参考リンクの URL がソースデータに含まれないものを検出・ログ出力する。
+        """リンクの URL がソースデータに含まれないものを検出・ログ出力する。
 
         LLM が提供されたソースデータ外の URL を生成した可能性がある箇所を可視化し、
         デバッグや品質改善に役立てる。URL の修正は validate_links() に委ねる。
-        参考リンクの URL は正規化（クエリパラメータ・フラグメント除去）してから照合する。
+        リンクの URL は正規化（utm_* などのトラッキングパラメータとフラグメントを除去）
+        してから照合する。
         """
         ref_link_pattern = re.compile(
-            r'\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\((https?://[^)]+)\)'
+            r'\*\*リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\((https?://[^)]+)\)'
         )
         unsourced = [
             m.group(1) for m in ref_link_pattern.finditer(article)
             if SourceUrlTracker._normalize_url(m.group(1)) not in source_urls
         ]
         if unsourced:
-            print(f"  ソース外参考リンク: {len(unsourced)} 件（HTTP 検証はこの後 validate_links() で実施）")
+            print(f"  ソース外リンク: {len(unsourced)} 件（HTTP 検証はこの後 validate_links() で実施）")
             for url in unsourced[:5]:
                 print(f"    ℹ {url[:80]}")
         else:
-            print("  参考リンク確認: 全てのリンクがソースデータと一致しています")
+            print("  リンク確認: 全てのリンクがソースデータと一致しています")
 
     @staticmethod
     def replace_unsourced_reference_links(
@@ -744,37 +786,51 @@ class SourceUrlTracker:
         source_data: "list[dict]",
         source_urls: frozenset[str],
     ) -> str:
-        """ソース外の参考リンク URL をソースデータの URL に置換する。
+        """ソース外のリンク URL をソースデータの URL に置換する。
 
         LLM がソースデータ外の URL を生成した場合、直近の ### 見出しと
         ソースデータのタイトルの単語一致でスコアリングし、最も近いソース URL に置換する。
-        一致スコアが 0.5 未満の場合は元の URL を保持する。
+        一致スコアが 0.5 未満でも、リンクラベルがソース名と一致する場合は
+        そのソースの記事に絞って再スコアリングし（閾値 0.3）、置換を試みる。
+        タイトル正規化は SourceUrlTracker._norm_title() を使用する。
         """
-        # Azure アップデート系の接頭辞を除去するための正規化関数
-        # 2 段階処理: (1) [In preview] 等の角括弧部分を除去、(2) "Public Preview:" 等を除去
-        _bracket_re = re.compile(r'\[[^\]]+\]')
-        _status_prefix_re = re.compile(
-            r'\b(?:Public Preview|Generally Available|Preview|GA|'
-            r'Retirement|Retired?|Launched|In preview)\b\s*:?\s*',
-            re.IGNORECASE,
-        )
-
-        def _norm(t: str) -> str:
-            t = _bracket_re.sub('', t)
-            t = _status_prefix_re.sub('', t)
-            return re.sub(r'[^\w\s]', ' ', t.strip().lower())
-
-        title_url_pairs: list[tuple[str, str]] = [
-            (_norm(item["title"]), item["url"])
-            for item in source_data
-            if item.get("title") and item.get("url")
-        ]
+        title_url_pairs: list[tuple[str, str]] = []
+        # ソース名 → (正規化タイトル, URL) リストのマッピング（ソース名ベースのフォールバック用）
+        source_name_map: dict[str, list[tuple[str, str]]] = {}
+        for item in source_data:
+            if not (item.get("title") and item.get("url")):
+                continue
+            norm_t = SourceUrlTracker._norm_title(item["title"])
+            url = item["url"]
+            title_url_pairs.append((norm_t, url))
+            source_name = item.get("source", "")
+            if source_name:
+                norm_source = re.sub(r'[^\w\s]', ' ', source_name.strip().lower())
+                if norm_source not in source_name_map:
+                    source_name_map[norm_source] = []
+                source_name_map[norm_source].append((norm_t, url))
 
         if not title_url_pairs:
             return article
 
+        def _best_match(hw: set, pairs: "list[tuple[str, str]]") -> "tuple[str, float]":
+            # hw または title_words が空の場合はスキップ（見出しが空、またはタイトルが空語）
+            best_url = ''
+            best_score = 0.0
+            for norm_t, src_url in pairs:
+                title_words = set(norm_t.split())
+                if not hw or not title_words:
+                    continue
+                common = hw & title_words
+                score = len(common) / max(len(hw), len(title_words), 1)
+                if score > best_score:
+                    best_score = score
+                    best_url = src_url
+            return best_url, best_score
+
+        # リンクラベルを独立したグループとして捕捉する（ソース名との照合に使用）
         ref_pattern = re.compile(
-            r'(\*\*参考リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\])\((https?://[^)]+)\)'
+            r'(\*\*リンク\*\*:\s*)\[(' + _LINK_LABEL_RE + r')\]\((https?://[^)]+)\)'
         )
 
         lines = article.split('\n')
@@ -787,8 +843,8 @@ class SourceUrlTracker:
             if m_h:
                 current_heading = m_h.group(1).strip()
 
-            if '**参考リンク**' in line and current_heading:
-                norm_heading = _norm(current_heading)
+            if '**リンク**' in line and current_heading:
+                norm_heading = SourceUrlTracker._norm_title(current_heading)
                 heading_words = set(norm_heading.split())
 
                 def _replacer(
@@ -797,29 +853,44 @@ class SourceUrlTracker:
                     _hw: set = heading_words,
                 ) -> str:
                     nonlocal replaced
-                    url = m.group(2)
+                    prefix = m.group(1)       # "**リンク**: "
+                    link_label = m.group(2)   # リンクのラベルテキスト
+                    url = m.group(3)          # URL
                     if SourceUrlTracker._normalize_url(url) in source_urls:
                         return m.group(0)
 
-                    best_url = ''
-                    best_score = 0.0
-                    for norm_t, src_url in title_url_pairs:
-                        title_words = set(norm_t.split())
-                        if not _hw or not title_words:
-                            continue
-                        common = _hw & title_words
-                        score = len(common) / max(len(_hw), len(title_words), 1)
-                        if score > best_score:
-                            best_score = score
-                            best_url = src_url
-
+                    # 1次マッチング: 見出し語 vs 全ソースタイトル語（閾値 0.5）
+                    best_url, best_score = _best_match(_hw, title_url_pairs)
                     if best_url and best_score >= 0.5:
                         replaced += 1
                         print(
                             f"    ✓ ソース外 URL 置換: {url[:50]} → {best_url[:50]}"
                             f" (score={best_score:.2f})"
                         )
-                        return f"{m.group(1)}({best_url})"
+                        return f"{prefix}[{link_label}]({best_url})"
+
+                    # 2次マッチング: リンクラベルがソース名と一致する場合、
+                    # そのソースの記事に絞って再マッチング（閾値 0.3）
+                    # LLM がソース名をラベルに使い、ソース名から URL を推測するケースを修正する。
+                    # 単語トークン単位で照合し、部分文字列の誤マッチを防ぐ。
+                    norm_label = re.sub(r'[^\w\s]', ' ', link_label.strip().lower())
+                    norm_label_words = set(norm_label.split())
+                    for norm_source, pairs in source_name_map.items():
+                        source_words = set(norm_source.split())
+                        # ソース名の全単語がラベルに含まれるか、またはその逆（双方向部分集合）
+                        if len(norm_source) >= 4 and source_words and (
+                            source_words <= norm_label_words
+                            or norm_label_words <= source_words
+                        ):
+                            fallback_url, fallback_score = _best_match(_hw, pairs)
+                            if fallback_url and fallback_score >= 0.3:
+                                replaced += 1
+                                print(
+                                    f"    ✓ ソース名ベース URL 置換: {url[:50]} → {fallback_url[:50]}"
+                                    f" (source='{norm_source}', score={fallback_score:.2f})"
+                                )
+                                return f"{prefix}[{link_label}]({fallback_url})"
+
                     return m.group(0)
 
                 line = ref_pattern.sub(_replacer, line)
@@ -827,5 +898,143 @@ class SourceUrlTracker:
             result.append(line)
 
         if replaced:
-            print(f"  ソース外参考リンク修正: {replaced} 件をソースデータの URL に置換しました")
+            print(f"  ソース外リンク修正: {replaced} 件をソースデータの URL に置換しました")
+        return '\n'.join(result)
+
+    @staticmethod
+    def verify_link_source_match(
+        article: str,
+        source_data: "list[dict]",
+    ) -> str:
+        """リンク URL とソースデータの内容近似性を検証し、不一致を修正して返す。
+
+        各トピックの **リンク** URL をソースデータの title・description と照合し、
+        トピック見出しとの単語重複スコアが低い場合（閾値 0.15 未満）に警告をログ出力する。
+        さらに全ソースデータから最適な URL（スコア >= 0.3）が見つかれば記事を修正して返す。
+        ネットワーク呼び出しは行わず、フィード取得時の title/description を使用する。
+
+        Azure アップデートのように固有の ?id= パラメータで記事を識別する URL では、
+        誤った ID が使われているケースをこのチェックで検出・修正できる。
+        日本語見出しと英語ソースタイトルの照合では英語産業語（製品名等）が重なる場合のみ
+        スコアが付くため、スコアが低くても必ずしも不一致とは限らない点に注意する。
+
+        スコアは len(共通語) / max(len(見出し語), len(ソース語)) で算出する
+        （簡易重複率。標準 Jaccard 指数とは異なる）。
+        タイトル正規化は SourceUrlTracker._norm_title() を使用する。
+        """
+        _LINK_MATCH_THRESHOLD = 0.15
+        _REPAIR_THRESHOLD = 0.3
+
+        # URL → source_item マッピングを構築（正規化済み URL をキーとする）
+        url_to_item: dict[str, dict] = {}
+        # 全ソースタイトル → URL ペアリスト（修正用のベストマッチ検索に使用）
+        title_url_pairs: list[tuple[str, str]] = []
+        for item in source_data:
+            url = item.get("url", "")
+            if url:
+                norm = SourceUrlTracker._normalize_url(url)
+                url_to_item[norm] = item
+            if item.get("title") and item.get("url"):
+                title_url_pairs.append(
+                    (SourceUrlTracker._norm_title(item["title"]), item["url"])
+                )
+
+        if not url_to_item:
+            return article
+
+        def _best_match(hw: set, pairs: "list[tuple[str, str]]") -> "tuple[str, float]":
+            best_url = ''
+            best_score = 0.0
+            for norm_t, src_url in pairs:
+                title_words = set(norm_t.split())
+                if not hw or not title_words:
+                    continue
+                common = hw & title_words
+                score = len(common) / max(len(hw), len(title_words), 1)
+                if score > best_score:
+                    best_score = score
+                    best_url = src_url
+            return best_url, best_score
+
+        # リンクラベルを独立したグループとして捕捉する（修正時にラベルを保持するため）
+        ref_pattern = re.compile(
+            r'(\*\*リンク\*\*:\s*)\[(' + _LINK_LABEL_RE + r')\]\((https?://[^)]+)\)'
+        )
+
+        lines = article.split('\n')
+        current_heading = ''
+        low_similarity: list[str] = []
+        repaired = 0
+        result: list[str] = []
+
+        for line in lines:
+            m_h = re.match(r'^###\s+(.+)', line)
+            if m_h:
+                current_heading = m_h.group(1).strip()
+                result.append(line)
+                continue
+
+            if '**リンク**' in line and current_heading:
+                heading_words = set(SourceUrlTracker._norm_title(current_heading).split())
+
+                def _checker(
+                    m: re.Match,
+                    _hw: set = heading_words,
+                    _heading: str = current_heading,
+                ) -> str:
+                    nonlocal repaired
+                    prefix = m.group(1)
+                    label = m.group(2)
+                    url = m.group(3)
+
+                    norm_url = SourceUrlTracker._normalize_url(url)
+                    item = url_to_item.get(norm_url)
+                    if item is None:
+                        return m.group(0)
+
+                    source_text = item.get("title", "") + " " + item.get("description", "")
+                    source_words = set(SourceUrlTracker._norm_title(source_text).split())
+
+                    if not _hw or not source_words:
+                        return m.group(0)
+
+                    common = _hw & source_words
+                    score = len(common) / max(len(_hw), len(source_words), 1)
+
+                    if score < _LINK_MATCH_THRESHOLD:
+                        # ソース全体から最適 URL を検索して修正を試みる
+                        best_url, best_score = _best_match(_hw, title_url_pairs)
+                        if best_url and best_score >= _REPAIR_THRESHOLD and best_url != url:
+                            repaired += 1
+                            low_similarity.append(
+                                f"[修正済み][{_heading[:50]}]"
+                                f" {url[:50]} → {best_url[:50]}"
+                                f" (before={score:.2f}, after={best_score:.2f})"
+                            )
+                            return f"{prefix}[{label}]({best_url})"
+                        # 修正候補なし: 警告のみ
+                        low_similarity.append(
+                            f"[{_heading[:50]}]"
+                            f" → {url[:60]}"
+                            f" (score={score:.2f},"
+                            f" source='{item.get('title', '')[:40]}')"
+                        )
+                    return m.group(0)
+
+                line = ref_pattern.sub(_checker, line)
+
+            result.append(line)
+
+        if low_similarity:
+            fixed = sum(1 for m in low_similarity if m.startswith("[修正済み]"))
+            unfixed = len(low_similarity) - fixed
+            print(
+                f"  ⚠ リンク内容近似性チェック: {len(low_similarity)} 件の低スコア"
+                f"（修正={fixed} 件、警告のみ={unfixed} 件）"
+            )
+            for msg in low_similarity:
+                print(f"    ℹ {msg}")
+        else:
+            print("  リンク内容近似性チェック: 問題なし")
+
         return '\n'.join(result)

@@ -764,9 +764,9 @@ def main():
     )
     article = _replace_unsourced_reference_links(article, all_source_data, source_urls)
 
-    # リンクとコンテンツの内容近似性を検証（最終品質確認）
+    # リンクとコンテンツの内容近似性を検証し、不一致があれば修正する
     print("\nリンク内容近似性を確認中...")
-    _verify_link_source_match(article, all_source_data)
+    article = _verify_link_source_match(article, all_source_data)
 
     article = validate_links(article)
 

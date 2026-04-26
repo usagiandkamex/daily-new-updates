@@ -1061,12 +1061,14 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             "https://azure.microsoft.com/updates?id=560904",
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            SourceUrlTracker.verify_link_source_match(article, source_data)
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
         self.assertNotIn("低スコア", mock_out.getvalue())
         self.assertIn("問題なし", mock_out.getvalue())
+        # 修正不要なので記事は変わらない
+        self.assertEqual(result, article)
 
-    def test_wrong_azure_id_logs_warning(self):
-        """Azure の ?id= が間違っている（異なる update を指す）場合に警告を出力する。"""
+    def test_wrong_azure_id_repaired_when_better_match_found(self):
+        """Azure の ?id= が間違っているが、正しい URL がソースにある場合は修正される。"""
         source_data = [
             {
                 "title": "Azure Backup for Elastic SAN General Availability",
@@ -1088,8 +1090,34 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             "https://azure.microsoft.com/updates?id=999999",
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            SourceUrlTracker.verify_link_source_match(article, source_data)
-        self.assertIn("低スコア", mock_out.getvalue())
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        # 修正済みログが出て、正しい URL に置換されている
+        self.assertIn("修正済み", mock_out.getvalue())
+        self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+        self.assertNotIn("?id=999999", result)
+
+    def test_wrong_azure_id_warns_when_no_repair_candidate(self):
+        """Azure の ?id= が間違っているが修正候補がない場合は警告のみ（記事は変えない）。"""
+        source_data = [
+            {
+                # 全く関係ないトピック
+                "title": "Azure Kubernetes Service monthly updates",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "AKS updates...",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = self._make_article(
+            "Azure Backup for Elastic SAN General Availability",
+            "https://azure.microsoft.com/updates?id=999999",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        # 修正候補がないので警告のみ、記事は変わらない
+        out = mock_out.getvalue()
+        self.assertNotIn("修正済み", out)
+        self.assertIn("低スコア", out)
+        self.assertEqual(result, article)
 
     def test_url_not_in_source_data_is_silently_skipped(self):
         """source_data に存在しない URL はスキップ（validate_links で別途処理済み）。"""
@@ -1106,16 +1134,18 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             "https://example.com/completely-unrelated",
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            SourceUrlTracker.verify_link_source_match(article, source_data)
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
         # 存在しない URL はスキップし、警告は出ない（validate_links で処理される）
         self.assertNotIn("低スコア", mock_out.getvalue())
+        self.assertEqual(result, article)
 
-    def test_empty_source_data_returns_silently(self):
-        """source_data が空の場合は何もしない。"""
+    def test_empty_source_data_returns_article_unchanged(self):
+        """source_data が空の場合は記事を変えずに返す。"""
         article = self._make_article("Test", "https://example.com/test")
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            SourceUrlTracker.verify_link_source_match(article, [])
+            result = SourceUrlTracker.verify_link_source_match(article, [])
         self.assertEqual(mock_out.getvalue(), "")
+        self.assertEqual(result, article)
 
     def test_utm_stripped_url_matches_source(self):
         """utm_* トラッキングパラメータ付き URL でも正規化後にソースと一致すれば問題なし。"""
@@ -1132,9 +1162,10 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             "https://azure.microsoft.com/updates?id=123&utm_source=rss",
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-            SourceUrlTracker.verify_link_source_match(article, source_data)
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
         self.assertNotIn("低スコア", mock_out.getvalue())
         self.assertIn("問題なし", mock_out.getvalue())
+        self.assertEqual(result, article)
 
     def test_daily_update_delegates_to_source_url_tracker(self):
         """generate_daily_update の _verify_link_source_match は SourceUrlTracker に委譲する。"""
@@ -1153,5 +1184,50 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
         )
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestNormTitle(unittest.TestCase):
+    """SourceUrlTracker._norm_title() のテスト"""
+
+    def test_removes_bracket_prefix(self):
+        """[In preview] などの角括弧部分を除去する。"""
+        result = SourceUrlTracker._norm_title("[In preview] Azure Backup")
+        self.assertNotIn("[in preview]", result)
+        self.assertIn("azure", result)
+        self.assertIn("backup", result)
+
+    def test_removes_status_prefix(self):
+        """Public Preview: などのステータス語を除去する。"""
+        result = SourceUrlTracker._norm_title("Public Preview: New Feature")
+        self.assertNotIn("public", result)
+        self.assertNotIn("preview", result)
+        self.assertIn("new", result)
+        self.assertIn("feature", result)
+
+    def test_lowercases_and_strips_punctuation(self):
+        """小文字化・記号の除去が行われる。"""
+        result = SourceUrlTracker._norm_title("Azure VM: Scale Out!")
+        self.assertNotIn(":", result)
+        self.assertNotIn("!", result)
+        self.assertEqual(result, result.lower())
+
+    def test_same_result_as_old_inline_norm(self):
+        """以前の inline _norm() と同じ結果を返す（旧実装との後方互換）。"""
+        import re as _re
+        _bracket_re = _re.compile(r'\[[^\]]+\]')
+        _status_prefix_re = _re.compile(
+            r'\b(?:Public Preview|Generally Available|Preview|GA|'
+            r'Retirement|Retired?|Launched|In preview)\b\s*:?\s*',
+            _re.IGNORECASE,
+        )
+        def _old_norm(t):
+            t = _bracket_re.sub('', t)
+            t = _status_prefix_re.sub('', t)
+            return _re.sub(r'[^\w\s]', ' ', t.strip().lower())
+
+        samples = [
+            "[In preview] Public Preview: Azure Thing",
+            "Generally Available: Cool Feature!",
+            "GA: New VM Size",
+            "Azure Kubernetes Service Update v2.0",
+        ]
+        for s in samples:
+            self.assertEqual(SourceUrlTracker._norm_title(s), _old_norm(s), msg=s)

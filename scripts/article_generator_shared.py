@@ -888,3 +888,102 @@ class SourceUrlTracker:
         if replaced:
             print(f"  ソース外リンク修正: {replaced} 件をソースデータの URL に置換しました")
         return '\n'.join(result)
+
+    @staticmethod
+    def verify_link_source_match(
+        article: str,
+        source_data: "list[dict]",
+    ) -> None:
+        """リンク URL とソースデータの内容近似性を検証してログ出力する（最終品質確認）。
+
+        各トピックの **リンク** URL をソースデータの title・description と照合し、
+        トピック見出しとの単語重複スコアが低い場合（閾値 0.15 未満）に警告をログ出力する。
+        ネットワーク呼び出しは行わず、フィード取得時の title/description を使用する。
+
+        Azure アップデートのように固有の ?id= パラメータで記事を識別する URL では、
+        誤った ID が使われているケースをこのチェックで検出できる。
+        日本語見出しと英語ソースタイトルの照合では英語産業語（製品名等）が重なる場合のみ
+        スコアが付くため、スコアが低くても必ずしも不一致とは限らない点に注意する。
+        これは修正ではなく品質確認プロセスであり、出力記事を変更しない。
+
+        スコアは len(共通語) / max(len(見出し語), len(ソース語)) で算出する
+        （_best_match と同じ簡易重複率。標準 Jaccard 指数とは異なる）。
+        """
+        _LINK_MATCH_THRESHOLD = 0.15
+
+        # URL → source_item マッピングを構築（正規化済み URL をキーとする）
+        url_to_item: dict[str, dict] = {}
+        for item in source_data:
+            url = item.get("url", "")
+            if url:
+                norm = SourceUrlTracker._normalize_url(url)
+                url_to_item[norm] = item
+
+        if not url_to_item:
+            return
+
+        # replace_unsourced_reference_links と同じ正規化ロジック
+        _bracket_re = re.compile(r'\[[^\]]+\]')
+        _status_prefix_re = re.compile(
+            r'\b(?:Public Preview|Generally Available|Preview|GA|'
+            r'Retirement|Retired?|Launched|In preview)\b\s*:?\s*',
+            re.IGNORECASE,
+        )
+
+        def _norm(t: str) -> str:
+            t = _bracket_re.sub('', t)
+            t = _status_prefix_re.sub('', t)
+            return re.sub(r'[^\w\s]', ' ', t.strip().lower())
+
+        # _LINK_LABEL_RE はモジュールレベル定数（このファイルの先頭付近で定義）
+        ref_pattern = re.compile(
+            r'\*\*リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\]\((https?://[^)]+)\)'
+        )
+
+        lines = article.split('\n')
+        current_heading = ''
+        low_similarity: list[str] = []
+
+        for line in lines:
+            m_h = re.match(r'^###\s+(.+)', line)
+            if m_h:
+                current_heading = m_h.group(1).strip()
+                continue
+
+            m_ref = ref_pattern.search(line)
+            if not m_ref or not current_heading:
+                continue
+
+            url = m_ref.group(1)
+            norm_url = SourceUrlTracker._normalize_url(url)
+            item = url_to_item.get(norm_url)
+
+            if item is None:
+                # URL がソースデータ外（validate_links で処理済み or 除去済み）
+                continue
+
+            heading_words = set(_norm(current_heading).split())
+            source_text = item.get("title", "") + " " + item.get("description", "")
+            source_words = set(_norm(source_text).split())
+
+            if not heading_words or not source_words:
+                continue
+
+            common = heading_words & source_words
+            # 簡易重複率: _best_match と同じ算出式（標準 Jaccard 指数とは異なる）
+            score = len(common) / max(len(heading_words), len(source_words), 1)
+
+            if score < _LINK_MATCH_THRESHOLD:
+                low_similarity.append(
+                    f"[{current_heading[:50]}]"
+                    f" → {url[:60]}"
+                    f" (score={score:.2f},"
+                    f" source='{item.get('title', '')[:40]}')"
+                )
+
+        if low_similarity:
+            print(f"  ⚠ リンク内容近似性チェック: {len(low_similarity)} 件の低スコアを検出")
+            for msg in low_similarity:
+                print(f"    ℹ {msg}")
+        else:
+            print("  リンク内容近似性チェック: 問題なし")

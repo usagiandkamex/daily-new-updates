@@ -354,6 +354,7 @@ def fetch_general_news(since: datetime, exclude_urls: set[str] | None = None) ->
 _collect_source_urls = SourceUrlTracker.collect_source_urls
 _log_unsourced_reference_links = SourceUrlTracker.log_unsourced_reference_links
 _replace_unsourced_reference_links = SourceUrlTracker.replace_unsourced_reference_links
+_verify_link_source_match = SourceUrlTracker.verify_link_source_match
 
 
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
@@ -1468,6 +1469,10 @@ def main():
     # ソース外リンクをソースデータの URL に置換する
     all_source_data = azure_news + tech_news + business_news + sns_news + event_reports
     article = _replace_unsourced_reference_links(article, all_source_data, source_urls)
+
+    # リンクとコンテンツの内容近似性を検証（最終品質確認）
+    print("\nリンク内容近似性を確認中...")
+    _verify_link_source_match(article, all_source_data)
 
     article = validate_links(article)
 

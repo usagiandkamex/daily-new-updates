@@ -1034,6 +1034,124 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
         )
 
 
+class TestVerifyLinkSourceMatch(unittest.TestCase):
+    """SourceUrlTracker.verify_link_source_match() のテスト"""
+
+    def _make_article(self, heading: str, url: str) -> str:
+        return (
+            "## 1. Azure アップデート情報\n\n"
+            f"### {heading}\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            f"**リンク**: [{heading}]({url})\n"
+        )
+
+    def test_matching_content_logs_no_warning(self):
+        """リンクのソースデータ title がトピック見出しと一致する場合は警告なし。"""
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN General Availability",
+                "url": "https://azure.microsoft.com/updates?id=560904",
+                "description": "Azure Backup now supports Elastic SAN...",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = self._make_article(
+            "Azure Backup for Elastic SAN General Availability",
+            "https://azure.microsoft.com/updates?id=560904",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            SourceUrlTracker.verify_link_source_match(article, source_data)
+        self.assertNotIn("低スコア", mock_out.getvalue())
+        self.assertIn("問題なし", mock_out.getvalue())
+
+    def test_wrong_azure_id_logs_warning(self):
+        """Azure の ?id= が間違っている（異なる update を指す）場合に警告を出力する。"""
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN General Availability",
+                "url": "https://azure.microsoft.com/updates?id=560904",
+                "description": "Azure Backup...",
+                "source": "Azure Release Communications",
+            },
+            {
+                # 全く異なるトピック — 誤 ID でこちらの URL が使われた場合
+                "title": "Azure Kubernetes Service monthly updates",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "AKS updates...",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # 記事の見出しは Elastic SAN だが、リンクは AKS の URL（id=999999）を指している
+        article = self._make_article(
+            "Azure Backup for Elastic SAN General Availability",
+            "https://azure.microsoft.com/updates?id=999999",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            SourceUrlTracker.verify_link_source_match(article, source_data)
+        self.assertIn("低スコア", mock_out.getvalue())
+
+    def test_url_not_in_source_data_is_silently_skipped(self):
+        """source_data に存在しない URL はスキップ（validate_links で別途処理済み）。"""
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN",
+                "url": "https://azure.microsoft.com/updates?id=560904",
+                "description": "",
+                "source": "Azure",
+            },
+        ]
+        article = self._make_article(
+            "Azure Backup for Elastic SAN",
+            "https://example.com/completely-unrelated",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            SourceUrlTracker.verify_link_source_match(article, source_data)
+        # 存在しない URL はスキップし、警告は出ない（validate_links で処理される）
+        self.assertNotIn("低スコア", mock_out.getvalue())
+
+    def test_empty_source_data_returns_silently(self):
+        """source_data が空の場合は何もしない。"""
+        article = self._make_article("Test", "https://example.com/test")
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            SourceUrlTracker.verify_link_source_match(article, [])
+        self.assertEqual(mock_out.getvalue(), "")
+
+    def test_utm_stripped_url_matches_source(self):
+        """utm_* トラッキングパラメータ付き URL でも正規化後にソースと一致すれば問題なし。"""
+        source_data = [
+            {
+                "title": "Azure Kubernetes Service Update",
+                "url": "https://azure.microsoft.com/updates?id=123",
+                "description": "AKS update details...",
+                "source": "Azure",
+            },
+        ]
+        article = self._make_article(
+            "Azure Kubernetes Service Update",
+            "https://azure.microsoft.com/updates?id=123&utm_source=rss",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            SourceUrlTracker.verify_link_source_match(article, source_data)
+        self.assertNotIn("低スコア", mock_out.getvalue())
+        self.assertIn("問題なし", mock_out.getvalue())
+
+    def test_daily_update_delegates_to_source_url_tracker(self):
+        """generate_daily_update の _verify_link_source_match は SourceUrlTracker に委譲する。"""
+        import generate_daily_update as du
+        self.assertIs(
+            du._verify_link_source_match,
+            SourceUrlTracker.verify_link_source_match,
+        )
+
+    def test_smallchat_delegates_to_source_url_tracker(self):
+        """generate_smallchat の _verify_link_source_match は SourceUrlTracker に委譲する。"""
+        import generate_smallchat as sc
+        self.assertIs(
+            sc._verify_link_source_match,
+            SourceUrlTracker.verify_link_source_match,
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

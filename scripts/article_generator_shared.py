@@ -779,6 +779,8 @@ class SourceUrlTracker:
                 print(f"    ℹ {url[:80]}")
         else:
             print("  リンク確認: 全てのリンクがソースデータと一致しています")
+
+    @staticmethod
     def replace_unsourced_reference_links(
         article: str,
         source_data: "list[dict]",

@@ -40,16 +40,17 @@ FEEDS = {
         {"name": "Reddit Microsoft", "url": "https://www.reddit.com/r/microsoft/.rss"},
         {"name": "Reddit Windows", "url": "https://www.reddit.com/r/Windows11/.rss"},
         {"name": "はてなブックマーク Microsoft", "url": "https://b.hatena.ne.jp/search/tag?q=Microsoft&mode=rss"},
-        {"name": "X(旧Twitter) Microsoft話題 JP", "url": "https://news.google.com/rss/search?q=X+%E6%97%A7Twitter+Microsoft+%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2+%E8%A9%B1%E9%A1%8C&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "Google News Microsoft", "url": "https://news.google.com/rss/search?q=Microsoft+latest&hl=en&gl=US&ceid=US:en"},
-        {"name": "Reddit Surface", "url": "https://www.reddit.com/r/Surface/.rss"},
         {"name": "Publickey", "url": "https://www.publickey1.jp/atom.xml"},
-        {"name": "Qiita Microsoft", "url": "https://qiita.com/tags/microsoft/feed"},
-        {"name": "Google News Microsoft Japan", "url": "https://news.google.com/rss/search?q=Microsoft+%E6%97%A5%E6%9C%AC&hl=ja&gl=JP&ceid=JP:ja"},
-        {"name": "Google News Windows", "url": "https://news.google.com/rss/search?q=Windows+update+new&hl=en&gl=US&ceid=US:en"},
         {"name": "Microsoft Blog", "url": "https://blogs.microsoft.com/feed/"},
         {"name": "Microsoft Japan Blog", "url": "https://news.microsoft.com/ja-jp/feed/"},
         {"name": "Microsoft Developer Blog", "url": "https://devblogs.microsoft.com/feed/"},
+        # Microsoft 以外の情報ソース（第三者視点の最新情報を補強）
+        {"name": "The Verge Microsoft", "url": "https://news.google.com/rss/search?q=Microsoft+site:theverge.com&hl=en&gl=US&ceid=US:en"},
+        {"name": "Ars Technica Microsoft", "url": "https://news.google.com/rss/search?q=Microsoft+site:arstechnica.com&hl=en&gl=US&ceid=US:en"},
+        {"name": "ZDNet Microsoft", "url": "https://news.google.com/rss/search?q=Microsoft+site:zdnet.com&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Microsoft Copilot EN", "url": "https://news.google.com/rss/search?q=Microsoft+Copilot+AI+latest&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Microsoft 新機能 JP", "url": "https://news.google.com/rss/search?q=Microsoft+%E6%96%B0%E6%A9%9F%E8%83%BD+%E3%82%A2%E3%83%83%E3%83%97%E3%83%87%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
     ],
     # --- AI ---
     "ai": [

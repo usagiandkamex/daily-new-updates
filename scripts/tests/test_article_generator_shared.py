@@ -112,8 +112,8 @@ class TestSourceUrlTrackerCollect(unittest.TestCase):
         result = tracker.collect_source_urls([{"url": "https://example.com/y"}])
         self.assertIn("https://example.com/y", result)
 
-    def test_normalizes_url_with_query_params(self):
-        """クエリパラメータ付き URL は正規化（パラメータ除去）して格納される。"""
+    def test_normalizes_url_with_utm_query_params(self):
+        """utm_* トラッキングパラメータ付き URL は正規化時にパラメータが除去される。"""
         data = [{"url": "https://example.com/article?utm_source=twitter&utm_medium=social"}]
         result = SourceUrlTracker.collect_source_urls(data)
         self.assertIn("https://example.com/article", result)
@@ -126,8 +126,8 @@ class TestSourceUrlTrackerCollect(unittest.TestCase):
         self.assertIn("https://example.com/article", result)
         self.assertNotIn("https://example.com/article#section1", result)
 
-    def test_deduplicates_urls_differing_only_in_query_params(self):
-        """クエリパラメータのみ異なる同一パスの URL は正規化後に重複除去される。"""
+    def test_deduplicates_urls_differing_only_in_utm_params(self):
+        """utm_* トラッキングパラメータのみ異なる同一パスの URL は正規化後に重複除去される。"""
         data = [
             {"url": "https://example.com/article?utm_source=twitter"},
             {"url": "https://example.com/article?utm_source=facebook"},
@@ -136,6 +136,28 @@ class TestSourceUrlTrackerCollect(unittest.TestCase):
         result = SourceUrlTracker.collect_source_urls(data)
         self.assertEqual(len(result), 1)
         self.assertIn("https://example.com/article", result)
+
+    def test_preserves_content_identifier_query_params(self):
+        """id= などのコンテンツ識別パラメータは正規化後も保持される。
+
+        Azure アップデートの URL（?id=NNNN）のように、クエリパラメータが
+        記事の識別子として機能する場合は除去しない。
+        異なる id を持つ URL は別々のエントリとして収集される。
+        """
+        data = [
+            {"url": "https://azure.microsoft.com/updates?id=560904"},
+            {"url": "https://azure.microsoft.com/updates?id=560987"},
+        ]
+        result = SourceUrlTracker.collect_source_urls(data)
+        self.assertEqual(len(result), 2)
+        self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+        self.assertIn("https://azure.microsoft.com/updates?id=560987", result)
+
+    def test_strips_utm_but_preserves_id_param(self):
+        """utm_* は除去するが id= は保持する（複合クエリパラメータ）。"""
+        data = [{"url": "https://azure.microsoft.com/updates?id=560904&utm_source=rss"}]
+        result = SourceUrlTracker.collect_source_urls(data)
+        self.assertEqual(result, frozenset({"https://azure.microsoft.com/updates?id=560904"}))
 
 class TestSourceUrlTrackerLog(unittest.TestCase):
     """SourceUrlTracker.log_unsourced_reference_links() のテスト"""
@@ -965,6 +987,35 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
             "https://www.reddit.com/r/artificial/comments/abc123/ai_safety_release/", result
         )
         self.assertNotIn("https://www.reddit.com/r/artificial/)\n", result)
+
+    def test_replaces_azure_url_with_wrong_id(self):
+        """LLM が生成した Azure URL の ?id= が異なる場合に正しい URL に置換する。
+
+        Azure アップデートの URL は ?id=NNNN で記事を識別する。以前の実装では
+        クエリパラメータを全除去するため異なる ID でも「一致」とみなされていたが、
+        修正後は id= を保持するため、誤 ID は「ソース外」と検出され置換される。
+        """
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN General Availability",
+                "url": "https://azure.microsoft.com/updates?id=560904",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 1. Azure アップデート情報\n\n"
+            "### Azure Backup for Elastic SAN General Availability\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Azure Backup for Elastic SAN](https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        source_urls = SourceUrlTracker.collect_source_urls(source_data)
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, source_data, source_urls
+            )
+        self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+        self.assertNotIn("?id=999999", result)
 
     def test_daily_update_delegates_to_source_url_tracker(self):
         """generate_daily_update の _replace_unsourced は SourceUrlTracker に委譲する。"""

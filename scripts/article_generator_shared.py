@@ -10,7 +10,7 @@ import json
 import re
 import time
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote_plus, urlparse, urlunparse
+from urllib.parse import parse_qs, quote_plus, urlencode, urlparse, urlunparse
 
 import feedparser
 import requests
@@ -59,6 +59,11 @@ _RSS_CONTENT_TYPES = (
 # [In preview] のような角括弧を含むラベルも 1 段階までサポートする。
 # 例: [[In preview] Public Preview: Event Grid](https://...)
 _LINK_LABEL_RE = r'[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*'
+
+# URL 正規化時に除去するトラッキング専用クエリパラメータのパターン。
+# utm_* は Google Analytics 標準、fbclid/gclid/msclkid は各広告プラットフォームのクリック追跡用。
+# id= などのコンテンツ識別パラメータはここに含めず、正規化後も保持する。
+_TRACKING_PARAM_RE = re.compile(r'^(utm_|fbclid$|gclid$|msclkid$)', re.IGNORECASE)
 
 # 代替 URL 検索でネットワーク障害が発生した場合を示すセンチネル。
 # None（検索結果なし）と区別するために使用する。
@@ -684,15 +689,25 @@ class SourceUrlTracker:
 
     @staticmethod
     def _normalize_url(url: str) -> str:
-        """URL を正規化してクエリパラメータとフラグメントを除去する。
+        """URL を正規化してトラッキングパラメータとフラグメントを除去する。
 
-        ?utm_source=... などのトラッキングパラメータや #section のフラグメントを
-        除去し、スキーム・ホスト・パスのみを残す。これにより、同一記事を指す
-        URL のバリエーションを同一視できる。
+        utm_* などのトラッキング専用パラメータと #section のフラグメントを除去する。
+        id= などのコンテンツ識別パラメータは保持する。これにより、同一記事を指す
+        URL のバリエーション（utm 追跡付き等）を同一視しつつ、?id= などで区別される
+        異なる記事は別の URL として扱う（例: Azure アップデートの ?id=NNNN）。
+        パラメータはキー昇順でソートし、比較時の順序差異を吸収する。
         """
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             return url
+        if not parsed.query:
+            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+        # トラッキングパラメータを除去し、コンテンツ識別パラメータは保持する
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        filtered = {k: v for k, v in params.items() if not _TRACKING_PARAM_RE.match(k)}
+        if filtered:
+            new_query = urlencode(sorted(filtered.items()), doseq=True)
+            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", new_query, ""))
         return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
 
     @staticmethod
@@ -702,8 +717,10 @@ class SourceUrlTracker:
         フィードから取得した記事・イベント URL を集約し、LLM 生成後の
         リンク検証（log_unsourced_reference_links）に使用する。
         list[dict] 形式では "url"・"event_url" キーを参照する。
-        収集時に URL を正規化（クエリパラメータ・フラグメント除去）するため、
-        ?utm_source=... などのパラメータ付き URL とも一致する。
+        収集時に URL を正規化（utm_* などのトラッキングパラメータとフラグメントを除去）するため、
+        ?utm_source=... などのトラッキングパラメータ付き URL とも一致する。
+        id= などのコンテンツ識別パラメータは保持されるため、?id= で区別される
+        異なる記事 URL（例: Azure アップデート）は別々のエントリとして管理される。
         """
         urls: set[str] = set()
         for data in data_lists:

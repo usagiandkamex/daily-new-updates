@@ -748,7 +748,8 @@ class SourceUrlTracker:
 
         LLM がソースデータ外の URL を生成した場合、直近の ### 見出しと
         ソースデータのタイトルの単語一致でスコアリングし、最も近いソース URL に置換する。
-        一致スコアが 0.5 未満の場合は元の URL を保持する。
+        一致スコアが 0.5 未満でも、リンクラベルがソース名と一致する場合は
+        そのソースの記事に絞って再スコアリングし（閾値 0.3）、置換を試みる。
         """
         # Azure アップデート系の接頭辞を除去するための正規化関数
         # 2 段階処理: (1) [In preview] 等の角括弧部分を除去、(2) "Public Preview:" 等を除去
@@ -764,17 +765,43 @@ class SourceUrlTracker:
             t = _status_prefix_re.sub('', t)
             return re.sub(r'[^\w\s]', ' ', t.strip().lower())
 
-        title_url_pairs: list[tuple[str, str]] = [
-            (_norm(item["title"]), item["url"])
-            for item in source_data
-            if item.get("title") and item.get("url")
-        ]
+        title_url_pairs: list[tuple[str, str]] = []
+        # ソース名 → (正規化タイトル, URL) リストのマッピング（ソース名ベースのフォールバック用）
+        source_name_map: dict[str, list[tuple[str, str]]] = {}
+        for item in source_data:
+            if not (item.get("title") and item.get("url")):
+                continue
+            norm_t = _norm(item["title"])
+            url = item["url"]
+            title_url_pairs.append((norm_t, url))
+            source_name = item.get("source", "")
+            if source_name:
+                norm_source = re.sub(r'[^\w\s]', ' ', source_name.strip().lower())
+                if norm_source not in source_name_map:
+                    source_name_map[norm_source] = []
+                source_name_map[norm_source].append((norm_t, url))
 
         if not title_url_pairs:
             return article
 
+        def _best_match(hw: set, pairs: "list[tuple[str, str]]") -> "tuple[str, float]":
+            # hw または title_words が空の場合はスキップ（見出しが空、またはタイトルが空語）
+            best_url = ''
+            best_score = 0.0
+            for norm_t, src_url in pairs:
+                title_words = set(norm_t.split())
+                if not hw or not title_words:
+                    continue
+                common = hw & title_words
+                score = len(common) / max(len(hw), len(title_words), 1)
+                if score > best_score:
+                    best_score = score
+                    best_url = src_url
+            return best_url, best_score
+
+        # リンクラベルを独立したグループとして捕捉する（ソース名との照合に使用）
         ref_pattern = re.compile(
-            r'(\*\*リンク\*\*:\s*\[' + _LINK_LABEL_RE + r'\])\((https?://[^)]+)\)'
+            r'(\*\*リンク\*\*:\s*)\[(' + _LINK_LABEL_RE + r')\]\((https?://[^)]+)\)'
         )
 
         lines = article.split('\n')
@@ -797,29 +824,44 @@ class SourceUrlTracker:
                     _hw: set = heading_words,
                 ) -> str:
                     nonlocal replaced
-                    url = m.group(2)
+                    prefix = m.group(1)       # "**リンク**: "
+                    link_label = m.group(2)   # リンクのラベルテキスト
+                    url = m.group(3)          # URL
                     if SourceUrlTracker._normalize_url(url) in source_urls:
                         return m.group(0)
 
-                    best_url = ''
-                    best_score = 0.0
-                    for norm_t, src_url in title_url_pairs:
-                        title_words = set(norm_t.split())
-                        if not _hw or not title_words:
-                            continue
-                        common = _hw & title_words
-                        score = len(common) / max(len(_hw), len(title_words), 1)
-                        if score > best_score:
-                            best_score = score
-                            best_url = src_url
-
+                    # 1次マッチング: 見出し語 vs 全ソースタイトル語（閾値 0.5）
+                    best_url, best_score = _best_match(_hw, title_url_pairs)
                     if best_url and best_score >= 0.5:
                         replaced += 1
                         print(
                             f"    ✓ ソース外 URL 置換: {url[:50]} → {best_url[:50]}"
                             f" (score={best_score:.2f})"
                         )
-                        return f"{m.group(1)}({best_url})"
+                        return f"{prefix}[{link_label}]({best_url})"
+
+                    # 2次マッチング: リンクラベルがソース名と一致する場合、
+                    # そのソースの記事に絞って再マッチング（閾値 0.3）
+                    # LLM がソース名をラベルに使い、ソース名から URL を推測するケースを修正する。
+                    # 単語トークン単位で照合し、部分文字列の誤マッチを防ぐ。
+                    norm_label = re.sub(r'[^\w\s]', ' ', link_label.strip().lower())
+                    norm_label_words = set(norm_label.split())
+                    for norm_source, pairs in source_name_map.items():
+                        source_words = set(norm_source.split())
+                        # ソース名の全単語がラベルに含まれるか、またはその逆（双方向部分集合）
+                        if len(norm_source) >= 4 and source_words and (
+                            source_words <= norm_label_words
+                            or norm_label_words <= source_words
+                        ):
+                            fallback_url, fallback_score = _best_match(_hw, pairs)
+                            if fallback_url and fallback_score >= 0.3:
+                                replaced += 1
+                                print(
+                                    f"    ✓ ソース名ベース URL 置換: {url[:50]} → {fallback_url[:50]}"
+                                    f" (source='{norm_source}', score={fallback_score:.2f})"
+                                )
+                                return f"{prefix}[{link_label}]({fallback_url})"
+
                     return m.group(0)
 
                 line = ref_pattern.sub(_replacer, line)

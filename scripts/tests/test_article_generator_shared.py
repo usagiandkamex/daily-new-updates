@@ -929,6 +929,43 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
             )
         self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
 
+    def test_replaces_using_source_name_label_when_primary_fails(self):
+        """リンクラベルがソース名と一致し、1次マッチングが閾値未満でも置換する。
+
+        LLM がソース名をラベルに使い、ソース名から推測した URL（e.g. サブレディット root）を
+        生成するケースを想定。2次マッチング（ソース名絞り込み + 閾値 0.3）で正しい URL に置換する。
+        """
+        source_data = [
+            {
+                # 見出し "AI Safety Release Concerns and Tech Impact Analysis" との1次スコア:
+                # 共通語 {"ai", "safety", "release"} = 3、max(8, 4) = 8 → 0.375 (< 0.5, ≥ 0.3)
+                "title": "AI Safety: Release Considerations",
+                "url": "https://www.reddit.com/r/artificial/comments/abc123/ai_safety_release/",
+                "source": "Reddit Artificial",
+            },
+            {
+                "title": "Azure Kubernetes Service Update",
+                "url": "https://azure.microsoft.com/updates?id=123",
+                "source": "Azure Blog",
+            },
+        ]
+        article = (
+            "## 2. AI\n\n"
+            "### AI Safety Release Concerns and Tech Impact Analysis\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Reddit Artificial](https://www.reddit.com/r/artificial/)\n"
+        )
+        source_urls = SourceUrlTracker.collect_source_urls(source_data)
+        with patch('sys.stdout', new_callable=io.StringIO):
+            result = SourceUrlTracker.replace_unsourced_reference_links(
+                article, source_data, source_urls
+            )
+        self.assertIn(
+            "https://www.reddit.com/r/artificial/comments/abc123/ai_safety_release/", result
+        )
+        self.assertNotIn("https://www.reddit.com/r/artificial/)\n", result)
+
     def test_daily_update_delegates_to_source_url_tracker(self):
         """generate_daily_update の _replace_unsourced は SourceUrlTracker に委譲する。"""
         import generate_daily_update as du

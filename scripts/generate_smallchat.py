@@ -50,6 +50,12 @@ FEEDS = {
         {"name": "Microsoft Blog", "url": "https://blogs.microsoft.com/feed/"},
         {"name": "Microsoft Japan Blog", "url": "https://news.microsoft.com/ja-jp/feed/"},
         {"name": "Microsoft Developer Blog", "url": "https://devblogs.microsoft.com/feed/"},
+        # Microsoft 以外の情報ソース（第三者視点の最新情報を補強）
+        {"name": "The Verge Microsoft", "url": "https://news.google.com/rss/search?q=Microsoft+site:theverge.com&hl=en&gl=US&ceid=US:en"},
+        {"name": "Ars Technica Microsoft", "url": "https://news.google.com/rss/search?q=Microsoft+site:arstechnica.com&hl=en&gl=US&ceid=US:en"},
+        {"name": "ZDNet Microsoft", "url": "https://news.google.com/rss/search?q=Microsoft+site:zdnet.com&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Microsoft Copilot EN", "url": "https://news.google.com/rss/search?q=Microsoft+Copilot+AI+latest&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Microsoft 新機能 JP", "url": "https://news.google.com/rss/search?q=Microsoft+%E6%96%B0%E6%A9%9F%E8%83%BD+%E3%82%A2%E3%83%83%E3%83%97%E3%83%87%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
     ],
     # --- AI ---
     "ai": [

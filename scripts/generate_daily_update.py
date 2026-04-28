@@ -1082,7 +1082,7 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
         elif accepted > 0:
             block_lines.append(f"**参加状況**: {accepted}名（定員なし）")
 
-        blocks.append("\n".join(block_lines))
+        blocks.append("\n\n".join(block_lines))
 
     return "### 📅 申し込み受付中のイベント\n\n" + "\n\n---\n\n".join(blocks)
 

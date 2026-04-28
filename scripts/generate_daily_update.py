@@ -1067,20 +1067,20 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
             block_lines.append(f"**{title}**")
 
         if series:
-            block_lines.append(f"コミュニティ: {series}")
+            block_lines.append(f"**コミュニティ**: {series}")
         if started_at:
-            block_lines.append(f"開催日時: {started_at}")
+            block_lines.append(f"**開催日時**: {started_at}")
         if place:
-            block_lines.append(f"場所: {place}")
+            block_lines.append(f"**場所**: {place}")
         if catch:
             summary = catch[:150]
             if len(catch) > 150:
                 summary += "..."
-            block_lines.append(f"概要: {summary}")
+            block_lines.append(f"**概要**: {summary}")
         if limit > 0:
-            block_lines.append(f"参加状況: {accepted}/{limit}名")
+            block_lines.append(f"**参加状況**: {accepted}/{limit}名")
         elif accepted > 0:
-            block_lines.append(f"参加状況: {accepted}名（定員なし）")
+            block_lines.append(f"**参加状況**: {accepted}名（定員なし）")
 
         blocks.append("\n".join(block_lines))
 

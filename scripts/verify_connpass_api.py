@@ -219,7 +219,8 @@ def main() -> int:
             "(例: 20260601)",
             file=sys.stderr,
         )
-        return 2
+        # スキップ (CONNPASS_API_KEY 未設定) との区別のため、入力エラーは 1 を返す。
+        return 1
 
     print(f"connpass v2 API ({du.CONNPASS_API_URL}) の動作確認を開始します。")
     print(f"  対象日: {target_date}")

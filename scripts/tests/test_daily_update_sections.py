@@ -818,6 +818,99 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         )
         self.assertEqual(matching[0]["started_at"], "2026/05/15 19:00")
 
+    def test_fetch_connpass_v2_paginates_when_results_available_exceeds_count(self):
+        """results_available > count の月では start パラメータでページングし、
+        後続ページのイベントも取得する。"""
+        # ym=202605 のときだけ 2 ページ分のレスポンスを返すフェイク。
+        # ページ1: results_returned=100, results_available=150 (start=1)
+        # ページ2: results_returned=50, results_available=150 (start=101)
+        captured: list[dict] = []
+
+        def make_event(eid: int, day: int = 20) -> dict:
+            return {
+                "event_id": eid,
+                "title": f"Tokyo Cloud Meetup {eid}",
+                "catch": "Kubernetes ハンズオン",
+                "url": f"https://connpass.com/event/{eid}/",
+                "started_at": f"2026-05-{day:02d}T19:00:00+09:00",
+                "place": "東京",
+                "address": "東京都渋谷区",
+                "accepted": 10,
+                "limit": 50,
+                "series": {"title": "Series"},
+            }
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            if not (headers and "X-API-Key" in headers):
+                resp.json.return_value = {"events": [], "results_returned": 0}
+                return resp
+            captured.append(dict(params or {}))
+            ym = params.get("ym")
+            start = int(params.get("start", 1))
+            if ym == "202605":
+                if start == 1:
+                    # ページ1 のイベントは月の後半 (5/25) → ソート後にカットされやすい
+                    events = [make_event(1000 + i, day=25) for i in range(100)]
+                    resp.json.return_value = {
+                        "events": events,
+                        "results_returned": 100,
+                        "results_available": 150,
+                        "results_start": 1,
+                    }
+                elif start == 101:
+                    # ページ2 のイベントは月の前半 (5/05) → ソートで先頭に来るので
+                    # CONNPASS_MAX_EVENTS のカット後も生き残る。これにより
+                    # ページングが効いていなければ結果に現れない、を担保できる。
+                    events = [make_event(2000 + i, day=5) for i in range(50)]
+                    resp.json.return_value = {
+                        "events": events,
+                        "results_returned": 50,
+                        "results_available": 150,
+                        "results_start": 101,
+                    }
+                else:
+                    resp.json.return_value = {
+                        "events": [],
+                        "results_returned": 0,
+                        "results_available": 150,
+                    }
+            else:
+                resp.json.return_value = {
+                    "events": [],
+                    "results_returned": 0,
+                    "results_available": 0,
+                }
+            return resp
+
+        with (
+            patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
+            result = du.fetch_connpass_events("20260501")
+
+        # 202605 については start=1 と start=101 の 2 リクエストが発生していること
+        ym_starts = [
+            (p.get("ym"), int(p.get("start", 1)))
+            for p in captured if p.get("ym") == "202605"
+        ]
+        # 2 都道府県 × 2 ページ = 4 リクエスト（少なくとも start=1 と start=101 の両方）
+        starts_for_ym = {start for _, start in ym_starts}
+        self.assertIn(1, starts_for_ym, "start=1 のリクエストが発生していない")
+        self.assertIn(101, starts_for_ym,
+                      "start=101 のページングリクエストが発生していない")
+
+        # ページング結果として後続ページのイベント（event_id 2000+）も取得結果に含まれる
+        result_titles = {e["title"] for e in result}
+        self.assertTrue(
+            any(t.startswith("Tokyo Cloud Meetup 20") for t in result_titles),
+            f"ページ2 のイベントが結果に含まれていない: titles={sorted(result_titles)[:5]}",
+        )
+
 
 class TestFetchOtherPlatformEvents(unittest.TestCase):
     """_fetch_other_platform_events() のテスト"""

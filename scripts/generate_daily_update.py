@@ -367,6 +367,9 @@ CONNPASS_TARGET_PREFECTURES = ["東京都", "神奈川県"]
 CONNPASS_MAX_EVENTS = 20
 # API 1 リクエストで取得する最大件数（connpass v2 API の上限は 100）
 CONNPASS_API_FETCH_COUNT = 100
+# 同一 (pref, ym) でページングする最大ページ数（安全装置）。
+# count=100 × 10 ページ = 最大 1000 件/月 までカバーする。
+CONNPASS_API_MAX_PAGES = 10
 # 遡及日数（実行日から何日前まで検索対象にするか）
 CONNPASS_LOOKBACK_DAYS = 90
 
@@ -914,83 +917,110 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                 ay += 1
         for pref in CONNPASS_TARGET_PREFECTURES:
             for ym in api_yms:
-                params = {
-                    "keyword": pref,
-                    "ym": ym,
-                    "count": CONNPASS_API_FETCH_COUNT,
-                    "order": 2,
-                }
-                connpass_headers = {
-                    **HTTP_HEADERS,
-                    "Accept": "application/json",
-                    "X-API-Key": api_key,
-                }
-                try:
-                    resp = requests.get(
-                        CONNPASS_API_URL,
-                        params=params,
-                        headers=connpass_headers,
-                        timeout=30,
-                    )
-                    resp.raise_for_status()
-                    data = resp.json()
-                    print(
-                        f"    connpass API ({pref} {ym}): "
-                        f"{data.get('results_returned', 0)} 件取得"
-                    )
-                except Exception as e:
-                    print(f"    connpass API ({pref} {ym}): 取得失敗 ({e})")
-                    continue
-
-                for event in data.get("events", []):
-                    # connpass v2 のイベント識別子は event_id。古いレスポンスの id にもフォールバック。
-                    event_id = event.get("event_id") or event.get("id")
-                    if event_id and event_id in seen_ids:
-                        continue
-                    if event_id:
-                        seen_ids.add(event_id)
-
-                    started_at_str = event.get("started_at", "")
-                    if not started_at_str:
-                        continue
-                    try:
-                        event_dt = datetime.fromisoformat(
-                            started_at_str.replace("Z", "+00:00")
-                        ).astimezone(JST)
-                    except (ValueError, TypeError):
-                        continue
-
-                    if event_dt < target_dt or event_dt > end_dt:
-                        continue
-
-                    accepted = event.get("accepted", 0) or 0
-                    limit = event.get("limit", 0) or 0
-                    if limit > 0 and accepted >= limit:
-                        continue
-
-                    series_title = ""
-                    if isinstance(event.get("series"), dict):
-                        series_title = event["series"].get("title", "")
-
-                    event_url = event.get("url") or event.get("event_url", "")
-                    if event_url in seen_urls:
-                        continue
-
-                    event_dict = {
-                        "title": event.get("title", "").strip(),
-                        "catch": event.get("catch", "").strip(),
-                        "event_url": event_url,
-                        "started_at": event_dt.strftime("%Y/%m/%d %H:%M"),
-                        "place": event.get("place", "").strip(),
-                        "address": event.get("address", "").strip(),
-                        "accepted": accepted,
-                        "limit": limit,
-                        "series": series_title,
+                # connpass v2 API は count(最大100) + start(1-indexed) でページングする。
+                # results_available が count を超える月（東京都など）では、後続ページに
+                # target_dt 以降のイベントが含まれることがあるため、必要な範囲をカバー
+                # するまで追加取得する。安全装置として最大ページ数で打ち切る。
+                start = 1
+                page = 0
+                max_pages = CONNPASS_API_MAX_PAGES
+                while page < max_pages:
+                    page += 1
+                    params = {
+                        "keyword": pref,
+                        "ym": ym,
+                        "count": CONNPASS_API_FETCH_COUNT,
+                        "start": start,
+                        "order": 2,
                     }
-                    if not _is_it_event(event_dict):
-                        continue
-                    seen_urls.add(event_url)
-                    all_events.append(event_dict)
+                    connpass_headers = {
+                        **HTTP_HEADERS,
+                        "Accept": "application/json",
+                        "X-API-Key": api_key,
+                    }
+                    try:
+                        resp = requests.get(
+                            CONNPASS_API_URL,
+                            params=params,
+                            headers=connpass_headers,
+                            timeout=30,
+                        )
+                        resp.raise_for_status()
+                        data = resp.json()
+                        returned = int(data.get("results_returned", 0) or 0)
+                        available = int(data.get("results_available", 0) or 0)
+                        print(
+                            f"    connpass API ({pref} {ym} p{page} start={start}): "
+                            f"{returned}/{available} 件取得"
+                        )
+                    except Exception as e:
+                        print(
+                            f"    connpass API ({pref} {ym} p{page}): 取得失敗 ({e})"
+                        )
+                        break
+
+                    for event in data.get("events", []):
+                        # connpass v2 のイベント識別子は event_id。古いレスポンスの id にもフォールバック。
+                        event_id = event.get("event_id") or event.get("id")
+                        if event_id and event_id in seen_ids:
+                            continue
+                        if event_id:
+                            seen_ids.add(event_id)
+
+                        started_at_str = event.get("started_at", "")
+                        if not started_at_str:
+                            continue
+                        try:
+                            event_dt = datetime.fromisoformat(
+                                started_at_str.replace("Z", "+00:00")
+                            ).astimezone(JST)
+                        except (ValueError, TypeError):
+                            continue
+
+                        if event_dt < target_dt or event_dt > end_dt:
+                            continue
+
+                        accepted = event.get("accepted", 0) or 0
+                        limit = event.get("limit", 0) or 0
+                        if limit > 0 and accepted >= limit:
+                            continue
+
+                        series_title = ""
+                        if isinstance(event.get("series"), dict):
+                            series_title = event["series"].get("title", "")
+
+                        event_url = event.get("url") or event.get("event_url", "")
+                        if event_url in seen_urls:
+                            continue
+
+                        event_dict = {
+                            "title": event.get("title", "").strip(),
+                            "catch": event.get("catch", "").strip(),
+                            "event_url": event_url,
+                            "started_at": event_dt.strftime("%Y/%m/%d %H:%M"),
+                            "place": event.get("place", "").strip(),
+                            "address": event.get("address", "").strip(),
+                            "accepted": accepted,
+                            "limit": limit,
+                            "series": series_title,
+                        }
+                        if not _is_it_event(event_dict):
+                            continue
+                        seen_urls.add(event_url)
+                        all_events.append(event_dict)
+
+                    # ページング終了条件:
+                    #   - 0 件返却（取り尽くした / 該当なし）
+                    #   - 取得済み件数が available 以上
+                    #   - count に満たない返却（最終ページ）
+                    if returned <= 0:
+                        break
+                    fetched_total = start - 1 + returned
+                    if available > 0 and fetched_total >= available:
+                        break
+                    if returned < CONNPASS_API_FETCH_COUNT:
+                        break
+                    start = fetched_total + 1
 
     # 過去イベントを除外し、開始日の近い順（未来の早い順）にソートする
     # started_at が空（日時不明）のイベントは有日時イベントの後に配置する

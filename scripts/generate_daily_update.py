@@ -92,6 +92,8 @@ FEEDS = {
         {"name": "Airbnb Engineering Blog", "url": "https://medium.com/airbnb-engineering/feed"},
         {"name": "Discord Engineering Blog", "url": "https://discord.com/category/engineering/rss"},
         {"name": "InfoQ", "url": "https://feed.infoq.com/"},
+        # Anthropic は公式 RSS を提供していないため、Google News RSS で代替する
+        {"name": "Google News - Anthropic", "url": "https://news.google.com/rss/search?q=Anthropic+Claude+site%3Aanthropic.com+OR+Anthropic+AI&hl=en&gl=US&ceid=US:en"},
     ],
     # --- ビジネス系 (日本語) ---
     "business_ja": [

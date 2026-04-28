@@ -156,6 +156,9 @@ FEEDS = {
         {"name": "InfoQ", "url": "https://feed.infoq.com/"},
         {"name": "Hacker News (Best)", "url": "https://hnrss.org/best"},
         {"name": "Google News Engineering Blog EN", "url": "https://news.google.com/rss/search?q=engineering+blog+tech+Netflix+OR+Uber+OR+Meta+OR+GitHub+OR+Stripe&hl=en&gl=US&ceid=US:en"},
+        # Anthropic Engineering Blog は公式 RSS を提供していないため、
+        # Google News RSS で anthropic.com/engineering 配下の記事に絞り込む
+        {"name": "Google News - Anthropic Engineering", "url": "https://news.google.com/rss/search?q=site%3Aanthropic.com%2Fengineering&hl=en&gl=US&ceid=US:en"},
     ],
 }
 

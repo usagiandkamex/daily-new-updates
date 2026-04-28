@@ -894,36 +894,57 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     all_events.extend(other_events)
 
     # --- 段階 5 (任意): connpass v2 API で補完 ---
+    # connpass v2 API（https://connpass.com/about/api/v2/）の公式パラメータのみ使用する。
+    # サポートされる日付絞り込みは ym（YYYYMM）/ ymd（YYYYMMDD）のみで、
+    # started_at_gte / accepted_end_at_gte 等の v1 系パラメータは存在しない。
+    # 未文書パラメータは API 側で無視されるため、当日以降のイベントは ym を月単位で指定して取得する。
+    # order=2 は「開催日時順（昇順）」を意味する（v2 仕様）。
     api_key = os.environ.get("CONNPASS_API_KEY", "")
     if api_key:
         print("    connpass: 段階5 — API v2 で補完")
         seen_ids: set[int] = set()
+        # 当月から CONNPASS_LOOKBACK_DAYS 先までの YYYYMM 一覧を構築
+        api_yms: list[str] = []
+        ay, am = target_dt.year, target_dt.month
+        while (ay, am) <= (end_dt.year, end_dt.month):
+            api_yms.append(f"{ay:04d}{am:02d}")
+            am += 1
+            if am > 12:
+                am = 1
+                ay += 1
         for pref in CONNPASS_TARGET_PREFECTURES:
-            params = {
-                "keyword": pref,
-                "count": CONNPASS_API_FETCH_COUNT,
-                "order": 2,
-                "started_at_gte": target_dt.strftime("%Y-%m-%d"),
-                "accepted_end_at_gte": target_dt.strftime("%Y-%m-%d"),
-            }
-            connpass_headers = {
-                **HTTP_HEADERS,
-                "Accept": "application/json",
-                "X-API-Key": api_key,
-            }
-            try:
-                resp = requests.get(
-                    CONNPASS_API_URL,
-                    params=params,
-                    headers=connpass_headers,
-                    timeout=30,
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                print(f"    connpass API ({pref}): {data.get('results_returned', 0)} 件取得")
+            for ym in api_yms:
+                params = {
+                    "keyword": pref,
+                    "ym": ym,
+                    "count": CONNPASS_API_FETCH_COUNT,
+                    "order": 2,
+                }
+                connpass_headers = {
+                    **HTTP_HEADERS,
+                    "Accept": "application/json",
+                    "X-API-Key": api_key,
+                }
+                try:
+                    resp = requests.get(
+                        CONNPASS_API_URL,
+                        params=params,
+                        headers=connpass_headers,
+                        timeout=30,
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    print(
+                        f"    connpass API ({pref} {ym}): "
+                        f"{data.get('results_returned', 0)} 件取得"
+                    )
+                except Exception as e:
+                    print(f"    connpass API ({pref} {ym}): 取得失敗 ({e})")
+                    continue
 
                 for event in data.get("events", []):
-                    event_id = event.get("id")
+                    # connpass v2 のイベント識別子は event_id。古いレスポンスの id にもフォールバック。
+                    event_id = event.get("event_id") or event.get("id")
                     if event_id and event_id in seen_ids:
                         continue
                     if event_id:
@@ -970,8 +991,6 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                         continue
                     seen_urls.add(event_url)
                     all_events.append(event_dict)
-            except Exception as e:
-                print(f"    connpass API ({pref}): 取得失敗 ({e})")
 
     # 過去イベントを除外し、開始日の近い順（未来の早い順）にソートする
     # started_at が空（日時不明）のイベントは有日時イベントの後に配置する

@@ -752,32 +752,45 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
 
     def test_fetch_connpass_v2_handles_event_id_field(self):
         """CONNPASS_API_KEY が設定された場合、v2 レスポンスの event_id フィールドで
-        重複排除できる（旧 id フィールドにもフォールバック）。"""
-        # 同じ event_id を持つ重複イベントを2回返し、片方しか採用されないことを確認
-        sample_event = {
-            "event_id": 99999,
-            "title": "クラウドネイティブ勉強会",
-            "catch": "Kubernetes と Azure のハンズオン",
-            "url": "https://connpass.com/event/99999/",
-            "started_at": "2026-05-15T19:00:00+09:00",
-            "place": "東京",
-            "address": "東京都渋谷区",
-            "accepted": 10,
-            "limit": 30,
-            "series": {"title": "TestSeries"},
-        }
+        重複排除できる（旧 id フィールドにもフォールバック）。
+
+        event_id を読めていないと seen_ids が空のままとなり重複排除が機能しない。
+        URL ベースの seen_urls 重複排除をすり抜けるため、呼び出しごとに **異なる
+        URL** を返しつつ **同じ event_id** を返すフェイクを使う。これにより
+        event_id 重複排除が実際に効いていなければ複数件採用されてしまうため、
+        event_id 経由の dedup のみがテストの成否を決める。
+        """
+        # 呼び出しごとに URL を変化させて seen_urls dedup を意図的にすり抜ける
+        call_counter = {"n": 0}
 
         def fake_get(url, params=None, headers=None, timeout=None):
             resp = MagicMock()
             resp.raise_for_status.return_value = None
+            resp.content = b""
             if headers and "X-API-Key" in headers:
+                call_counter["n"] += 1
+                # 同じ event_id だが URL は呼び出し毎にユニーク
+                event = {
+                    "event_id": 99999,
+                    "title": "クラウドネイティブ勉強会",
+                    "catch": "Kubernetes と Azure のハンズオン",
+                    "url": (
+                        f"https://connpass.com/event/99999/"
+                        f"?call={call_counter['n']}"
+                    ),
+                    "started_at": "2026-05-15T19:00:00+09:00",
+                    "place": "東京",
+                    "address": "東京都渋谷区",
+                    "accepted": 10,
+                    "limit": 30,
+                    "series": {"title": "TestSeries"},
+                }
                 resp.json.return_value = {
-                    "events": [sample_event],
+                    "events": [event],
                     "results_returned": 1,
                 }
             else:
                 resp.json.return_value = {"events": [], "results_returned": 0}
-            resp.content = b""
             return resp
 
         with (
@@ -788,10 +801,21 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             mock_fp.parse.return_value = MagicMock(entries=[])
             result = du.fetch_connpass_events("20260501")
 
-        # 同じ event_id のイベントは複数月・複数都道府県呼び出しでも 1 件だけ採用される
-        matching = [e for e in result if e.get("event_url") == sample_event["url"]]
-        self.assertEqual(len(matching), 1, "event_id による重複排除が機能していない")
-        self.assertEqual(matching[0]["title"], sample_event["title"])
+        # 段階5 が複数都道府県・複数月にわたって呼ばれていることを前提条件として確認
+        # （でなければそもそも重複排除のテストにならない）
+        self.assertGreater(
+            call_counter["n"], 1,
+            "段階5 の v2 API 呼び出しが複数回発生していない（テスト前提が崩れている）",
+        )
+
+        # 同じ event_id のイベントは複数月・複数都道府県呼び出しでも 1 件だけ採用される。
+        # URL は呼び出し毎にユニークなので、event_id 重複排除が機能していないと
+        # 複数件採用されてしまう。
+        matching = [e for e in result if e.get("title") == "クラウドネイティブ勉強会"]
+        self.assertEqual(
+            len(matching), 1,
+            f"event_id による重複排除が機能していない (採用件数={len(matching)})",
+        )
         self.assertEqual(matching[0]["started_at"], "2026/05/15 19:00")
 
 

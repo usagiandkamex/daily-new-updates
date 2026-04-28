@@ -2106,6 +2106,25 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
         result = du._build_connpass_section_scripted(events)
         self.assertIn("（タイトルなし）", result)
 
+    def test_fields_separated_by_blank_lines(self):
+        """各フィールド間に空行（二重改行）が入る。"""
+        events = [{
+            "title": "テストイベント",
+            "event_url": "https://connpass.com/event/1/",
+            "series": "JAWS-UG Tokyo",
+            "started_at": "2026/05/15 19:00",
+            "place": "東京都渋谷区",
+            "catch": "テスト概要",
+            "accepted": 10,
+            "limit": 30,
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("**[テストイベント](https://connpass.com/event/1/)**\n\n**コミュニティ**", result)
+        self.assertIn("**コミュニティ**: JAWS-UG Tokyo\n\n**開催日時**", result)
+        self.assertIn("**開催日時**: 2026/05/15 19:00\n\n**場所**", result)
+        self.assertIn("**場所**: 東京都渋谷区\n\n**概要**", result)
+        self.assertIn("**概要**: テスト概要\n\n**参加状況**", result)
+
 
 class TestGenerateCommunitySectionHybrid(unittest.TestCase):
     """_generate_community_section() のテスト（ハイブリッド生成）"""

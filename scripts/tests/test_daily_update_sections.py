@@ -307,12 +307,24 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         self.assertIn("東京都", du.CONNPASS_TARGET_PREFECTURES)
         self.assertIn("神奈川県", du.CONNPASS_TARGET_PREFECTURES)
 
-    def test_fetch_connpass_uses_started_at_gte(self):
-        """CONNPASS_API_KEY が設定された場合、API に started_at_gte パラメータを送信する。"""
-        captured_params: dict = {}
+    def test_fetch_connpass_uses_ym(self):
+        """CONNPASS_API_KEY が設定された場合、API に v2 公式の ym パラメータを送信する。
+
+        connpass v2 API（https://connpass.com/about/api/v2/）の公式日付パラメータは
+        ym (YYYYMM) と ymd (YYYYMMDD) のみ。v1 由来の started_at_gte 等は存在しないため
+        使用しない。
+        """
+        captured_yms: list[str] = []
+        captured_started_at_gte: list = []
 
         def fake_get(url, params=None, headers=None, timeout=None):
-            captured_params.update(params or {})
+            params = params or {}
+            # v2 API への呼び出しのみを対象（X-API-Key ヘッダーで判別）
+            if headers and "X-API-Key" in headers:
+                if "ym" in params:
+                    captured_yms.append(params["ym"])
+                if "started_at_gte" in params:
+                    captured_started_at_gte.append(params["started_at_gte"])
             resp = MagicMock()
             resp.raise_for_status.return_value = None
             resp.json.return_value = {"events": [], "results_returned": 0}
@@ -327,15 +339,24 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             mock_fp.parse.return_value = MagicMock(entries=[])
             du.fetch_connpass_events("20260501")
 
-        self.assertIn("started_at_gte", captured_params)
-        self.assertEqual(captured_params["started_at_gte"], "2026-05-01")
+        # ym パラメータが送信され、対象月（202605）が含まれる
+        self.assertTrue(captured_yms, "v2 API に ym パラメータが送信されていない")
+        self.assertIn("202605", captured_yms)
+        # 未文書の started_at_gte は送信されない
+        self.assertEqual(
+            captured_started_at_gte,
+            [],
+            "未文書の started_at_gte は v2 API に送信してはならない",
+        )
 
     def test_fetch_connpass_uses_api_fetch_count(self):
         """CONNPASS_API_KEY が設定された場合、API に CONNPASS_API_FETCH_COUNT を送信する。"""
         captured_params: dict = {}
 
         def fake_get(url, params=None, headers=None, timeout=None):
-            captured_params.update(params or {})
+            # v2 API 呼び出しのみ対象
+            if headers and "X-API-Key" in headers:
+                captured_params.update(params or {})
             resp = MagicMock()
             resp.raise_for_status.return_value = None
             resp.json.return_value = {"events": [], "results_returned": 0}
@@ -689,13 +710,19 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
                 first_no_date_idx = result.index(no_date_events[0])
                 self.assertLess(first_dated_idx, first_no_date_idx)
 
-    def test_fetch_connpass_uses_accepted_end_at_gte(self):
-        """CONNPASS_API_KEY が設定された場合、API に accepted_end_at_gte パラメータを送信する。"""
-        captured_params: dict = {}
+    def test_fetch_connpass_v2_does_not_send_undocumented_params(self):
+        """CONNPASS_API_KEY が設定された場合、v2 API には未文書パラメータを送信しない。
+
+        connpass v2 API（https://connpass.com/about/api/v2/）の公式パラメータは
+        event_id / keyword / keyword_or / ym / ymd / nickname / owner_id /
+        series_id / subdomain / start / order / count / format のみ。
+        v1 由来の started_at_gte / accepted_end_at_gte は v2 では存在しない。
+        """
+        captured_params_list: list[dict] = []
 
         def fake_get(url, params=None, headers=None, timeout=None):
-            if params and "accepted_end_at_gte" in params:
-                captured_params.update(params)
+            if headers and "X-API-Key" in headers:
+                captured_params_list.append(dict(params or {}))
             resp = MagicMock()
             resp.raise_for_status.return_value = None
             resp.json.return_value = {"events": [], "results_returned": 0}
@@ -710,8 +737,179 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             mock_fp.parse.return_value = MagicMock(entries=[])
             du.fetch_connpass_events("20260501")
 
-        self.assertIn("accepted_end_at_gte", captured_params)
-        self.assertEqual(captured_params["accepted_end_at_gte"], "2026-05-01")
+        self.assertTrue(captured_params_list, "v2 API が呼び出されていない")
+        allowed_keys = {
+            "event_id", "keyword", "keyword_or", "ym", "ymd",
+            "nickname", "owner_id", "series_id", "subdomain",
+            "start", "order", "count", "format",
+        }
+        for params in captured_params_list:
+            for key in params.keys():
+                self.assertIn(
+                    key, allowed_keys,
+                    f"v2 API に未文書パラメータ {key!r} が送信されている",
+                )
+
+    def test_fetch_connpass_v2_handles_event_id_field(self):
+        """CONNPASS_API_KEY が設定された場合、v2 レスポンスの event_id フィールドで
+        重複排除できる（旧 id フィールドにもフォールバック）。
+
+        event_id を読めていないと seen_ids が空のままとなり重複排除が機能しない。
+        URL ベースの seen_urls 重複排除をすり抜けるため、呼び出しごとに **異なる
+        URL** を返しつつ **同じ event_id** を返すフェイクを使う。これにより
+        event_id 重複排除が実際に効いていなければ複数件採用されてしまうため、
+        event_id 経由の dedup のみがテストの成否を決める。
+        """
+        # 呼び出しごとに URL を変化させて seen_urls dedup を意図的にすり抜ける
+        call_counter = {"n": 0}
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            if headers and "X-API-Key" in headers:
+                call_counter["n"] += 1
+                # 同じ event_id だが URL は呼び出し毎にユニーク
+                event = {
+                    "event_id": 99999,
+                    "title": "クラウドネイティブ勉強会",
+                    "catch": "Kubernetes と Azure のハンズオン",
+                    "url": (
+                        f"https://connpass.com/event/99999/"
+                        f"?call={call_counter['n']}"
+                    ),
+                    "started_at": "2026-05-15T19:00:00+09:00",
+                    "place": "東京",
+                    "address": "東京都渋谷区",
+                    "accepted": 10,
+                    "limit": 30,
+                    "series": {"title": "TestSeries"},
+                }
+                resp.json.return_value = {
+                    "events": [event],
+                    "results_returned": 1,
+                }
+            else:
+                resp.json.return_value = {"events": [], "results_returned": 0}
+            return resp
+
+        with (
+            patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
+            result = du.fetch_connpass_events("20260501")
+
+        # 段階5 が複数都道府県・複数月にわたって呼ばれていることを前提条件として確認
+        # （でなければそもそも重複排除のテストにならない）
+        self.assertGreater(
+            call_counter["n"], 1,
+            "段階5 の v2 API 呼び出しが複数回発生していない（テスト前提が崩れている）",
+        )
+
+        # 同じ event_id のイベントは複数月・複数都道府県呼び出しでも 1 件だけ採用される。
+        # URL は呼び出し毎にユニークなので、event_id 重複排除が機能していないと
+        # 複数件採用されてしまう。
+        matching = [e for e in result if e.get("title") == "クラウドネイティブ勉強会"]
+        self.assertEqual(
+            len(matching), 1,
+            f"event_id による重複排除が機能していない (採用件数={len(matching)})",
+        )
+        self.assertEqual(matching[0]["started_at"], "2026/05/15 19:00")
+
+    def test_fetch_connpass_v2_paginates_when_results_available_exceeds_count(self):
+        """results_available > count の月では start パラメータでページングし、
+        後続ページのイベントも取得する。"""
+        # ym=202605 のときだけ 2 ページ分のレスポンスを返すフェイク。
+        # ページ1: results_returned=100, results_available=150 (start=1)
+        # ページ2: results_returned=50, results_available=150 (start=101)
+        captured: list[dict] = []
+
+        def make_event(eid: int, day: int = 20) -> dict:
+            return {
+                "event_id": eid,
+                "title": f"Tokyo Cloud Meetup {eid}",
+                "catch": "Kubernetes ハンズオン",
+                "url": f"https://connpass.com/event/{eid}/",
+                "started_at": f"2026-05-{day:02d}T19:00:00+09:00",
+                "place": "東京",
+                "address": "東京都渋谷区",
+                "accepted": 10,
+                "limit": 50,
+                "series": {"title": "Series"},
+            }
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            if not (headers and "X-API-Key" in headers):
+                resp.json.return_value = {"events": [], "results_returned": 0}
+                return resp
+            captured.append(dict(params or {}))
+            ym = params.get("ym")
+            start = int(params.get("start", 1))
+            if ym == "202605":
+                if start == 1:
+                    # ページ1 のイベントは月の後半 (5/25) → ソート後にカットされやすい
+                    events = [make_event(1000 + i, day=25) for i in range(100)]
+                    resp.json.return_value = {
+                        "events": events,
+                        "results_returned": 100,
+                        "results_available": 150,
+                        "results_start": 1,
+                    }
+                elif start == 101:
+                    # ページ2 のイベントは月の前半 (5/05) → ソートで先頭に来るので
+                    # CONNPASS_MAX_EVENTS のカット後も生き残る。これにより
+                    # ページングが効いていなければ結果に現れない、を担保できる。
+                    events = [make_event(2000 + i, day=5) for i in range(50)]
+                    resp.json.return_value = {
+                        "events": events,
+                        "results_returned": 50,
+                        "results_available": 150,
+                        "results_start": 101,
+                    }
+                else:
+                    resp.json.return_value = {
+                        "events": [],
+                        "results_returned": 0,
+                        "results_available": 150,
+                    }
+            else:
+                resp.json.return_value = {
+                    "events": [],
+                    "results_returned": 0,
+                    "results_available": 0,
+                }
+            return resp
+
+        with (
+            patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[])
+            result = du.fetch_connpass_events("20260501")
+
+        # 202605 については start=1 と start=101 の 2 リクエストが発生していること
+        ym_starts = [
+            (p.get("ym"), int(p.get("start", 1)))
+            for p in captured if p.get("ym") == "202605"
+        ]
+        # 2 都道府県 × 2 ページ = 4 リクエスト（少なくとも start=1 と start=101 の両方）
+        starts_for_ym = {start for _, start in ym_starts}
+        self.assertIn(1, starts_for_ym, "start=1 のリクエストが発生していない")
+        self.assertIn(101, starts_for_ym,
+                      "start=101 のページングリクエストが発生していない")
+
+        # ページング結果として後続ページのイベント（event_id 2000+）も取得結果に含まれる
+        result_titles = {e["title"] for e in result}
+        self.assertTrue(
+            any(t.startswith("Tokyo Cloud Meetup 20") for t in result_titles),
+            f"ページ2 のイベントが結果に含まれていない: titles={sorted(result_titles)[:5]}",
+        )
 
 
 class TestFetchOtherPlatformEvents(unittest.TestCase):

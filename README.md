@@ -38,7 +38,7 @@
 | `AZURE_OPENAI_ENDPOINT` | - | Azure OpenAI を使用する場合のエンドポイント URL |
 | `AZURE_OPENAI_DEPLOYMENT` | - | Azure OpenAI のデプロイメント名（既定: `gpt-4o`） |
 | `AZURE_OPENAI_API_KEY` | - | Azure OpenAI 専用キー（未設定時は `OPENAI_API_KEY` を使用） |
-| `CONNPASS_API_KEY` | - | connpass API v2 キー（未設定時は RSS フォールバック） |
+| `CONNPASS_API_KEY` | - | connpass API v2 キー（未設定時は RSS フォールバック）。設定後に `python scripts/verify_connpass_api.py` で実 API の動作確認が可能。 |
 
 ### ニュースソース
 

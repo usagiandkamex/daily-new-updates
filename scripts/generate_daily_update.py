@@ -5,7 +5,6 @@
 GitHub Copilot (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
 """
 
-import html
 import os
 import re
 import sys
@@ -1046,9 +1045,9 @@ _EXCLUDE_HEADING_KEYWORDS = (
     "注意事項", "キャンセル", "参加条件", "持ち物", "アクセス",
     "事前準備", "禁止事項", "免責", "プライバシー", "個人情報", "お問い合わせ",
 )
-# マークダウン見出しパターン（プレーンテキスト description 用）
+# マークダウン見出しパターン（プレーンテキスト description 用・h1〜h6 相当）
 _EVENT_EXCLUDE_SECTION_MD_RE = re.compile(
-    r"(?:^|\n)\s*#{1,3}\s*(?:" + "|".join(_EXCLUDE_HEADING_KEYWORDS) + ")",
+    r"(?:^|\n)\s*#{1,6}\s*(?:" + "|".join(_EXCLUDE_HEADING_KEYWORDS) + ")",
     re.IGNORECASE,
 )
 # イベント概要の最大文字数（2〜3 行相当）
@@ -1107,6 +1106,8 @@ def _build_event_summary(catch: str, description: str) -> str:
     description が空の場合は catch をそのまま返す。
     catch も description も空の場合は空文字列を返す。
     """
+    catch = catch or ""
+    description = description or ""
     desc_text = ""
     if description:
         # HTML パーサーで本文を抽出（見出しは除去し、除外セクション以降は停止）
@@ -1117,8 +1118,6 @@ def _build_event_summary(catch: str, description: str) -> str:
         m = _EVENT_EXCLUDE_SECTION_MD_RE.search(text)
         if m:
             text = text[: m.start()]
-        # HTML エンティティをデコード（HTMLParser の convert_charrefs で未変換のものに対応）
-        text = html.unescape(text)
         # 連続する空白・改行を 1 スペースにまとめる
         text = re.sub(r"\s+", " ", text).strip()
         desc_text = text

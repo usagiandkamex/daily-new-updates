@@ -1984,6 +1984,16 @@ class TestBuildEventSummary(unittest.TestCase):
         result = du._build_event_summary("短い概要", "")
         self.assertEqual(result, "短い概要")
 
+    def test_none_inputs_returns_empty_string(self):
+        """catch も description も None の場合、空文字列を返す（TypeError が起きない）。"""
+        result = du._build_event_summary(None, None)
+        self.assertEqual(result, "")
+
+    def test_none_catch_fallback_to_empty(self):
+        """catch が None、description が空の場合、空文字列を返す。"""
+        result = du._build_event_summary(None, "")
+        self.assertEqual(result, "")
+
     def test_empty_inputs_returns_empty_string(self):
         """catch も description も空の場合、空文字列を返す。"""
         result = du._build_event_summary("", "")
@@ -2010,6 +2020,13 @@ class TestBuildEventSummary(unittest.TestCase):
     def test_exclude_section_markdown_heading_cut(self):
         """マークダウン見出し ## 注意事項 以降は切り捨てられる（HTML 除去後）。"""
         desc = "概要テキスト\n## 注意事項\nキャンセル禁止"
+        result = du._build_event_summary("", desc)
+        self.assertIn("概要テキスト", result)
+        self.assertNotIn("キャンセル禁止", result)
+
+    def test_exclude_section_markdown_deep_heading_cut(self):
+        """マークダウン見出し #### 注意事項（h4）以降も切り捨てられる。"""
+        desc = "概要テキスト\n#### 注意事項\nキャンセル禁止"
         result = du._build_event_summary("", desc)
         self.assertIn("概要テキスト", result)
         self.assertNotIn("キャンセル禁止", result)

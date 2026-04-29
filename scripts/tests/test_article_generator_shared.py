@@ -1167,6 +1167,104 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
         self.assertIn("問題なし", mock_out.getvalue())
         self.assertEqual(result, article)
 
+    def test_label_mismatch_repaired_when_better_match_found(self):
+        """リンクラベルがリンク先ソースタイトルと一致しないが、正しいURLがソースにある場合は修正される。
+
+        LLM がラベルにソースタイトルを使いながら URL を誤って別の記事のものにしたケース。
+        たとえば Azure で「Memory in Foundry Agent Service」の記事を要約したが、
+        別の Azure アップデート記事の URL を誤って付けてしまった場合の修正を検証する。
+        """
+        source_data = [
+            {
+                "title": "Public Preview: Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service is now available.",
+                "source": "Azure Release Communications",
+            },
+            {
+                "title": "Public Preview: Azure Container Apps networking update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Container Apps networking improvements.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベルは正しい記事（Memory in Foundry Agent Service）を指しているが、
+        # URL が誤って Container Apps の記事（id=999999）を指している
+        article = (
+            "## 3. Azure\n\n"
+            "### [In preview] Public Preview: Memory in Foundry Agent Service\n\n"
+            "**要約**: Foundry Agent Service におけるメモリ機能がパブリックプレビューとして利用可能になりました。\n\n"
+            "**影響**: 開発者にとって長期的なメモリ管理が容易になります。\n\n"
+            "**リンク**: [Public Preview: Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # ラベル不一致が検出され、ラベルベースの修正済みログが出ている
+        self.assertIn("ラベル不一致→修正済み", out)
+        # 正しい URL（id=111111）に置換されている
+        self.assertIn("https://azure.microsoft.com/updates?id=111111", result)
+        # 誤った URL（id=999999）は除去されている
+        self.assertNotIn("?id=999999", result)
+
+    def test_label_mismatch_warns_when_no_repair_candidate(self):
+        """ラベルとリンク先が不一致で修正候補もない場合は警告のみ（記事は変えない）。"""
+        source_data = [
+            {
+                "title": "Public Preview: Azure Container Apps networking update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Container Apps networking improvements.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベル「Memory in Foundry Agent Service」は source_data のどの記事とも一致しない
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 修正候補がないので修正はされていない
+        self.assertNotIn("修正済み", out)
+        # ラベル不一致の警告が出ている
+        self.assertIn("ラベル不一致", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
+    def test_label_matching_source_title_no_false_positive(self):
+        """ラベルとリンク先ソースタイトルが一致する場合は誤検知なし（問題なし）。"""
+        source_data = [
+            {
+                "title": "Public Preview: Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Public Preview: Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=111111)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 正しいリンクなので修正も警告も出ない
+        self.assertNotIn("修正済み", out)
+        self.assertNotIn("低スコア", out)
+        self.assertIn("問題なし", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
     def test_daily_update_delegates_to_source_url_tracker(self):
         """generate_daily_update の _verify_link_source_match は SourceUrlTracker に委譲する。"""
         import generate_daily_update as du

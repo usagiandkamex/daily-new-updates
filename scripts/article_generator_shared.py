@@ -918,12 +918,21 @@ class SourceUrlTracker:
         日本語見出しと英語ソースタイトルの照合では英語産業語（製品名等）が重なる場合のみ
         スコアが付くため、スコアが低くても必ずしも不一致とは限らない点に注意する。
 
+        リンクラベルとリンク先ソースタイトルの類似スコアも補助的に検証する
+        （ラベルは LLM がソースタイトルから直接コピーすることが多いため精度が高い）。
+        ラベルスコアが閾値 0.3 未満で、かつラベルと高く一致する別のソース記事が存在する
+        場合は URL の誤りと判断して修正する。
+
         スコアは len(共通語) / max(len(見出し語), len(ソース語)) で算出する
         （簡易重複率。標準 Jaccard 指数とは異なる）。
         タイトル正規化は SourceUrlTracker._norm_title() を使用する。
         """
         _LINK_MATCH_THRESHOLD = 0.15
         _REPAIR_THRESHOLD = 0.3
+        # リンクラベルとリンク先ソースタイトルの類似スコア閾値。
+        # LLM はラベルにソースタイトルを直接コピーすることが多いため、
+        # この閾値未満の場合は URL の誤りを疑って修正を試みる。
+        _LABEL_TITLE_THRESHOLD = 0.3
 
         # URL → source_item マッピングを構築（正規化済み URL をキーとする）
         url_to_item: dict[str, dict] = {}
@@ -1001,6 +1010,46 @@ class SourceUrlTracker:
                     common = _hw & source_words
                     score = len(common) / max(len(_hw), len(source_words), 1)
 
+                    # ラベルとリンク先ソースタイトルの類似スコアチェック（補助検証）。
+                    # LLM はラベルにソースタイトルを直接コピーすることが多いため、
+                    # ラベルとリンク先タイトルの一致が低い場合は URL の誤りを疑う。
+                    norm_label_words = set(SourceUrlTracker._norm_title(label).split())
+                    source_title_words = set(
+                        SourceUrlTracker._norm_title(item.get("title", "")).split()
+                    )
+                    if norm_label_words and source_title_words:
+                        label_common = norm_label_words & source_title_words
+                        label_title_score = len(label_common) / max(
+                            len(norm_label_words), len(source_title_words), 1
+                        )
+                        if label_title_score < _LABEL_TITLE_THRESHOLD:
+                            # ラベル語で全ソースから最適 URL を検索して修正を試みる。
+                            # この _best_match 呼び出しはラベル語（英語タイトル由来）を使用するため、
+                            # 後述の見出し語（日本語混じり）を使う _best_match とは意図的に別物。
+                            best_by_label_url, best_by_label_score = _best_match(
+                                norm_label_words, title_url_pairs
+                            )
+                            if (
+                                best_by_label_score >= _REPAIR_THRESHOLD
+                                and best_by_label_url
+                                and best_by_label_url != url
+                            ):
+                                repaired += 1
+                                low_similarity.append(
+                                    f"[ラベル不一致→修正済み][{_heading[:50]}]"
+                                    f" {url[:50]} → {best_by_label_url[:50]}"
+                                    f" (label_score={label_title_score:.2f},"
+                                    f" repair_score={best_by_label_score:.2f})"
+                                )
+                                return f"{prefix}[{label}]({best_by_label_url})"
+                            # 修正候補なし: 警告のみ
+                            low_similarity.append(
+                                f"[ラベル不一致][{_heading[:50]}]"
+                                f" {url[:60]}"
+                                f" (label_score={label_title_score:.2f},"
+                                f" label='{label[:40]}')"
+                            )
+
                     if score < _LINK_MATCH_THRESHOLD:
                         # ソース全体から最適 URL を検索して修正を試みる
                         best_url, best_score = _best_match(_hw, title_url_pairs)
@@ -1026,7 +1075,7 @@ class SourceUrlTracker:
             result.append(line)
 
         if low_similarity:
-            fixed = sum(1 for m in low_similarity if m.startswith("[修正済み]"))
+            fixed = sum(1 for m in low_similarity if "修正済み" in m)
             unfixed = len(low_similarity) - fixed
             print(
                 f"  ⚠ リンク内容近似性チェック: {len(low_similarity)} 件の低スコア"

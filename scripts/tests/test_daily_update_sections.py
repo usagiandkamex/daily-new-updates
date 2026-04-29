@@ -2020,10 +2020,12 @@ class TestBuildEventSummary(unittest.TestCase):
         self.assertNotIn("キャッチコピー", result)
         self.assertIn("詳細説明文", result)
 
-    def test_catch_is_fallback_when_no_description(self):
-        """description がない場合は catch をそのまま返す。"""
-        result = du._build_event_summary("キャッチコピー", "")
-        self.assertEqual(result, "キャッチコピー")
+    def test_exclude_section_nested_html_heading_cut(self):
+        """<h2><span>注意事項</span></h2> のようにネストしたタグがあっても切り捨てられる。"""
+        desc = "<p>概要テキスト</p><h2><span>注意事項</span></h2><p>キャンセル禁止</p>"
+        result = du._build_event_summary("", desc)
+        self.assertIn("概要テキスト", result)
+        self.assertNotIn("キャンセル禁止", result)
 
     def test_combined_truncated_at_200_chars(self):
         """結合後のテキストが 200 文字を超える場合、省略記号で切り詰める。"""

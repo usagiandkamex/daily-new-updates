@@ -5,11 +5,13 @@
 GitHub Copilot (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
 """
 
+import html
 import os
 import re
 import sys
 import calendar
 from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
 from urllib.parse import quote_plus
 
 import feedparser
@@ -1039,56 +1041,84 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     return all_events
 
 
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
-_HTML_ENTITY_MAP = {
-    "&amp;": "&",
-    "&lt;": "<",
-    "&gt;": ">",
-    "&quot;": '"',
-    "&nbsp;": " ",
-    "&#39;": "'",
-}
-# 注意事項・キャンセルポリシーなど詳細セクションの HTML 見出しパターン
-_EVENT_EXCLUDE_SECTION_HTML_RE = re.compile(
-    r"<h[1-6][^>]*>\s*(?:注意事項|キャンセル|参加条件|持ち物|アクセス"
-    r"|事前準備|禁止事項|免責|プライバシー|個人情報|お問い合わせ)",
-    re.IGNORECASE,
+# 除外セクションキーワード（注意事項・キャンセルポリシー等）
+_EXCLUDE_HEADING_KEYWORDS = (
+    "注意事項", "キャンセル", "参加条件", "持ち物", "アクセス",
+    "事前準備", "禁止事項", "免責", "プライバシー", "個人情報", "お問い合わせ",
 )
-# 同・マークダウン見出しパターン（HTML 除去後のテキスト用）
+# マークダウン見出しパターン（プレーンテキスト description 用）
 _EVENT_EXCLUDE_SECTION_MD_RE = re.compile(
-    r"(?:^|\n)\s*#{1,3}\s*(?:注意事項|キャンセル|参加条件|持ち物|アクセス"
-    r"|事前準備|禁止事項|免責|プライバシー|個人情報|お問い合わせ)",
+    r"(?:^|\n)\s*#{1,3}\s*(?:" + "|".join(_EXCLUDE_HEADING_KEYWORDS) + ")",
     re.IGNORECASE,
 )
 # イベント概要の最大文字数（2〜3 行相当）
 _EVENT_SUMMARY_MAX_LENGTH = 200
 
 
-def _build_event_summary(catch: str, description: str) -> str:
-    """catch フィールドとイベント説明文（HTML/テキスト）から 2〜3 行分の概要を組み立てる。
+class _DescriptionHTMLParser(HTMLParser):
+    """HTML description フィールドから本文テキストを抽出するパーサー。
 
-    description が指定されている場合は HTML タグを除去し、注意事項・キャンセルポリシー
-    などの詳細セクションを除いた内容を抽出する。catch と合わせて最大
-    _EVENT_SUMMARY_MAX_LENGTH 文字に制限した概要文字列を返す。
+    見出し（h1〜h6）のテキストはセクション名の混入を防ぐため除外する。
+    _EXCLUDE_HEADING_KEYWORDS に含まれるキーワードを持つ見出し以降は
+    テキストの収集を停止する（注意事項・キャンセルポリシー等）。
+    """
+
+    _HEADING_TAGS = frozenset(["h1", "h2", "h3", "h4", "h5", "h6"])
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._parts: list[str] = []
+        self._in_heading = False
+        self._heading_buf: list[str] = []
+        self._done = False
+
+    def handle_starttag(self, tag: str, attrs: list) -> None:
+        if not self._done and tag in self._HEADING_TAGS:
+            self._in_heading = True
+            self._heading_buf = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._done or tag not in self._HEADING_TAGS or not self._in_heading:
+            return
+        heading_text = "".join(self._heading_buf).strip()
+        self._in_heading = False
+        self._heading_buf = []
+        if any(kw in heading_text for kw in _EXCLUDE_HEADING_KEYWORDS):
+            self._done = True
+
+    def handle_data(self, data: str) -> None:
+        if self._done:
+            return
+        if self._in_heading:
+            self._heading_buf.append(data)
+        else:
+            self._parts.append(data)
+
+    def get_text(self) -> str:
+        return " ".join(self._parts)
+
+
+def _build_event_summary(catch: str, description: str) -> str:
+    """イベント説明文（HTML/テキスト）から 2〜3 行分の概要を返す。
+
+    description が指定されている場合は HTML を解析して本文のみを抽出し、
+    注意事項・キャンセルポリシーなどの除外セクション以降を切り捨てる。
+    抽出結果を最大 _EVENT_SUMMARY_MAX_LENGTH 文字に制限して返す。
+    description が空の場合は catch をそのまま返す。
     catch も description も空の場合は空文字列を返す。
     """
     desc_text = ""
     if description:
-        # 除外セクション（注意事項等）の HTML 見出し以降を切り捨て
-        m = _EVENT_EXCLUDE_SECTION_HTML_RE.search(description)
+        # HTML パーサーで本文を抽出（見出しは除去し、除外セクション以降は停止）
+        parser = _DescriptionHTMLParser()
+        parser.feed(description)
+        text = parser.get_text()
+        # 除外セクション（マークダウン見出し形式）以降を切り捨て（プレーンテキスト用）
+        m = _EVENT_EXCLUDE_SECTION_MD_RE.search(text)
         if m:
-            description = description[: m.start()]
-        # h1〜h6 見出しタグとその内容を除去（セクション名が本文に混入しないように）
-        text = re.sub(r"<h[1-6][^>]*>.*?</h[1-6]>", " ", description, flags=re.IGNORECASE | re.DOTALL)
-        # HTML タグを空白に置換
-        text = _HTML_TAG_RE.sub(" ", text)
-        # 除外セクション（マークダウン見出し形式）以降を切り捨て
-        m2 = _EVENT_EXCLUDE_SECTION_MD_RE.search(text)
-        if m2:
-            text = text[: m2.start()]
-        # HTML エンティティを変換
-        for entity, char in _HTML_ENTITY_MAP.items():
-            text = text.replace(entity, char)
+            text = text[: m.start()]
+        # HTML エンティティをデコード（HTMLParser の convert_charrefs で未変換のものに対応）
+        text = html.unescape(text)
         # 連続する空白・改行を 1 スペースにまとめる
         text = re.sub(r"\s+", " ", text).strip()
         desc_text = text

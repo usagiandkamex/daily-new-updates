@@ -508,6 +508,82 @@ class TestSharedFunctionsModule(unittest.TestCase):
         self.assertIn("記事A", prompt)
 
 
+class TestFetchPageTitle(unittest.TestCase):
+    """_fetch_page_title() のテスト"""
+
+    def _make_mock_resp(self, html_bytes: bytes, content_type: str = "text/html; charset=utf-8"):
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = content_type
+        mock_resp.iter_content.return_value = iter([html_bytes])
+        mock_resp.close.return_value = None
+        return mock_resp
+
+    def test_extracts_og_title(self):
+        """og:title メタタグからタイトルを取得する。"""
+        import article_generator_shared as ags
+        html = b'<meta property="og:title" content="Azure Memory Feature Update"/>'
+        with patch.object(ags.requests, "get", return_value=self._make_mock_resp(html)):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=1")
+        self.assertEqual(title, "Azure Memory Feature Update")
+
+    def test_falls_back_to_title_tag(self):
+        """og:title がなければ <title> タグを使用する。"""
+        import article_generator_shared as ags
+        html = b"<html><head><title>Azure Kubernetes Service | Azure</title></head></html>"
+        with patch.object(ags.requests, "get", return_value=self._make_mock_resp(html)):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=2")
+        self.assertEqual(title, "Azure Kubernetes Service | Azure")
+
+    def test_connection_error_returns_empty(self):
+        """接続エラー時は空文字列を返す（ソフトフェイル）。"""
+        import article_generator_shared as ags
+        with patch.object(ags.requests, "get", side_effect=ags.requests.ConnectionError("no network")):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=3")
+        self.assertEqual(title, "")
+
+    def test_timeout_returns_empty(self):
+        """タイムアウト時は空文字列を返す（ソフトフェイル）。"""
+        import article_generator_shared as ags
+        with patch.object(ags.requests, "get", side_effect=ags.requests.Timeout("timed out")):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=4")
+        self.assertEqual(title, "")
+
+    def test_non_html_content_returns_empty(self):
+        """Content-Type が HTML でない場合は空文字列を返す。"""
+        import article_generator_shared as ags
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = "application/json"
+        mock_resp.close.return_value = None
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            title = ags._fetch_page_title("https://api.example.com/data.json")
+        self.assertEqual(title, "")
+        mock_resp.iter_content.assert_not_called()
+
+    def test_http_error_returns_empty(self):
+        """HTTP 4xx/5xx レスポンス時は空文字列を返す。"""
+        import article_generator_shared as ags
+        mock_resp = MagicMock()
+        mock_resp.ok = False
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            title = ags._fetch_page_title("https://example.com/404")
+        self.assertEqual(title, "")
+
+    def test_og_title_alternative_attribute_order(self):
+        """og:title の content と property 属性順序が逆でも取得できる。"""
+        import article_generator_shared as ags
+        html = b'<meta content="Azure Spring Apps Retirement" property="og:title"/>'
+        with patch.object(ags.requests, "get", return_value=self._make_mock_resp(html)):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=5")
+        self.assertEqual(title, "Azure Spring Apps Retirement")
+
+    def test_fetch_page_title_is_accessible_from_module(self):
+        """_fetch_page_title は article_generator_shared モジュールから参照できる。"""
+        import article_generator_shared as ags
+        self.assertTrue(callable(ags._fetch_page_title))
+
+
 class TestValidateUrlSoftFail(unittest.TestCase):
     """_validate_url() のソフトフェイル動作テスト"""
 
@@ -1352,8 +1428,202 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             SourceUrlTracker.verify_link_source_match,
         )
 
+    def test_page_title_mismatch_repaired_when_better_match_found(self):
+        """実際のリンク先ページタイトルがラベルと一致しない場合に修正される。
 
-class TestNormTitle(unittest.TestCase):
+        静的チェック（①〜③）をパスするが、HTTP で取得したページタイトルが
+        ラベルと異なる場合に修正される（Azure に限らず全セクション対応）。
+
+        source_data に id=999999 の記事タイトルが "Foundry Agent Service Infrastructure Update"
+        のようにラベルと単語重複が高い場合、静的チェックでは検出できない。
+        しかし実際にページを取得したタイトルが "Azure Container Apps Networking Changes"
+        のようにラベルと全く異なる場合、step ④ で検出・修正できる。
+        """
+        import article_generator_shared as ags
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+            {
+                # source_data タイトルがラベルと高い単語重複を持つため静的チェックをパスする
+                "title": "Foundry Agent Service Infrastructure Update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Infrastructure improvements for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベルは "Memory in Foundry Agent Service" だが URL は id=999999（別記事）を指している。
+        # source_data タイトル "Foundry Agent Service Infrastructure Update" との重複が 0.6 のため
+        # 静的チェック（label check / heading check）は通過してしまう。
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        # ページを実際に取得したら全く異なる内容（Container Apps）が返ってくる想定
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = "text/html"
+        mock_resp.iter_content.return_value = iter(
+            [b"<title>Azure Container Apps Networking Changes | Azure Updates</title>"]
+        )
+        mock_resp.close.return_value = None
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+                result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # ページタイトル不一致が検出され、修正済みログが出ている
+        self.assertIn("ページタイトル不一致→修正済み", out)
+        # 正しい URL（id=111111）に置換されている
+        self.assertIn("https://azure.microsoft.com/updates?id=111111", result)
+        # 誤った URL（id=999999）は除去されている
+        self.assertNotIn("?id=999999", result)
+
+    def test_page_title_mismatch_warns_when_no_repair_candidate(self):
+        """ページタイトルが不一致だが修正候補がない場合は警告のみ（記事は変えない）。"""
+        import article_generator_shared as ags
+        source_data = [
+            {
+                # source_data タイトルがラベルと高い単語重複を持つため静的チェックをパスする
+                "title": "Foundry Agent Service Infrastructure Update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Infrastructure improvements.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # source_data に "memory" を含む正しい修正候補が存在しないケース
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = "text/html"
+        mock_resp.iter_content.return_value = iter(
+            [b"<title>Azure Container Apps Networking Changes | Azure Updates</title>"]
+        )
+        mock_resp.close.return_value = None
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+                result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 修正候補がないので記事は変わらない
+        self.assertNotIn("修正済み", out)
+        # ページタイトル不一致の警告が出ている
+        self.assertIn("ページタイトル不一致", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
+    def test_page_title_matching_no_false_positive(self):
+        """ページタイトルがラベルと一致する場合は誤検知なし（問題なし）。"""
+        import article_generator_shared as ags
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=111111)\n"
+        )
+        # ページタイトルがラベルと一致するケース
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = "text/html"
+        mock_resp.iter_content.return_value = iter(
+            [b"<title>Memory in Foundry Agent Service | Azure Updates</title>"]
+        )
+        mock_resp.close.return_value = None
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+                result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 正しいリンクなので修正も警告も出ない
+        self.assertNotIn("ページタイトル不一致", out)
+        self.assertNotIn("修正済み", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
+    def test_page_title_http_error_is_soft_failed(self):
+        """HTTP エラー時はソフトフェイルして既存の記事を変えない。"""
+        import article_generator_shared as ags
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=111111)\n"
+        )
+        # 接続エラー → ページタイトルが取得できないためステップ④はスキップ
+        with patch.object(ags.requests, "get", side_effect=ags.requests.ConnectionError("no network")):
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+                result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        # ソフトフェイルなので修正も警告もなし
+        self.assertNotIn("ページタイトル", mock_out.getvalue())
+        self.assertEqual(result, article)
+
+    def test_page_title_url_cached_across_topics(self):
+        """同じ URL を複数トピックで参照する場合、HTTP リクエストは 1 回のみ送信される。"""
+        import article_generator_shared as ags
+        url = "https://azure.microsoft.com/updates?id=111111"
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": url,
+                "description": "Memory feature.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # 同じ URL を2つのトピックで参照
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service A\n\n"
+            "**要約**: ...\n\n"
+            f"**リンク**: [Memory in Foundry Agent Service]({url})\n\n"
+            "### Memory in Foundry Agent Service B\n\n"
+            "**要約**: ...\n\n"
+            f"**リンク**: [Memory in Foundry Agent Service]({url})\n"
+        )
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = "text/html"
+        mock_resp.iter_content.return_value = iter(
+            [b"<title>Memory in Foundry Agent Service | Azure Updates</title>"]
+        )
+        mock_resp.close.return_value = None
+        with patch.object(ags.requests, "get", return_value=mock_resp) as mock_get:
+            with patch('sys.stdout', new_callable=io.StringIO):
+                SourceUrlTracker.verify_link_source_match(article, source_data)
+        # 同じ URL なので HTTP リクエストは 1 回のみ
+        self.assertEqual(mock_get.call_count, 1)
+
+
     """SourceUrlTracker._norm_title() のテスト"""
 
     def test_removes_bracket_prefix(self):

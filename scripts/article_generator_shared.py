@@ -152,6 +152,65 @@ def _validate_url(url: str) -> tuple[bool, str]:
         return False, f"接続エラー ({e.__class__.__name__})"
 
 
+def _fetch_page_title(url: str) -> str:
+    """HTTP GET でリンク先ページのタイトルを取得する。
+
+    og:title メタタグを優先し、なければ <title> タグを使用する。
+    先頭 8 KB のみ読み込むことで大容量ページのダウンロードを避ける。
+    接続エラー・タイムアウト・HTTP エラー等のネットワーク障害時は
+    空文字列を返す（ソフトフェイル）。全セクション（Azure 含む）に
+    対して共通して使用できる汎用実装。
+    """
+    try:
+        resp = requests.get(
+            url,
+            headers={"User-Agent": HTTP_HEADERS["User-Agent"]},
+            timeout=10,
+            allow_redirects=True,
+            stream=True,
+        )
+        if not resp.ok:
+            return ""
+        # Content-Type が HTML でない場合はページタイトルを持たないためスキップ
+        content_type = resp.headers.get("Content-Type", "").lower()
+        if "text/html" not in content_type:
+            resp.close()
+            return ""
+        # <title> と og:title はほぼ先頭にあるため先頭 8 KB のみ取得する
+        content = b""
+        for chunk in resp.iter_content(chunk_size=8192):
+            content += chunk
+            if len(content) >= 8192:
+                break
+        resp.close()
+        html_head = content.decode("utf-8", errors="ignore")
+        # og:title を優先（属性順序に依存しないよう2パターンを検索）
+        m = re.search(
+            r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\'<]+)',
+            html_head, re.IGNORECASE,
+        )
+        if not m:
+            m = re.search(
+                r'<meta[^>]+content=["\']([^"\'<]+)["\'][^>]+property=["\']og:title["\']',
+                html_head, re.IGNORECASE,
+            )
+        if m:
+            import html as html_mod
+            return html_mod.unescape(m.group(1).strip())
+        # og:title がなければ <title> タグを使用
+        m = re.search(r'<title[^>]*>([^<]+)</title>', html_head, re.IGNORECASE)
+        if m:
+            import html as html_mod
+            return html_mod.unescape(m.group(1).strip())
+    except (requests.ConnectionError, requests.Timeout):
+        pass
+    except requests.RequestException:
+        pass
+    except Exception:
+        pass
+    return ""
+
+
 def _search_alternative_url(query: str) -> "str | None | _SearchUnavailableSentinel":
     """Google News RSS で代替記事を検索し、最初の有効な URL を返す。
 
@@ -911,9 +970,9 @@ class SourceUrlTracker:
         各トピックの **リンク** URL をソースデータの title・description と照合し、
         トピック見出しとの単語重複スコアが低い場合（閾値 0.15 未満）に警告をログ出力する。
         さらに全ソースデータから最適な URL（スコア >= 0.3）が見つかれば記事を修正して返す。
-        ネットワーク呼び出しは行わず、フィード取得時の title/description を使用する。
+        Azure・Google News・テックブログ等の全セクションに対して共通して適用する。
 
-        以下の 3 段階のチェックを順に実施する：
+        以下の 4 段階のチェックを順に実施する：
 
         **① ドメイン不一致チェック**（最強シグナル）
         source_data 内の URL ドメイン集合を構築し、記事リンクのドメインがその集合に含まれ
@@ -931,6 +990,15 @@ class SourceUrlTracker:
         **③ 見出しとリンク先の類似スコアチェック**（既存検証）
         日本語見出し語と英語ソース（title + description）の単語重複スコアが 0.15 未満の
         場合に警告を出力し、修正候補があれば URL を置換する。
+
+        **④ HTTP ページタイトルチェック**（最終確認・全セクション対応）
+        実際のリンク先ページを HTTP で取得しページタイトルとラベル・見出しを比較する。
+        静的チェックではフィード取得時のスナップショットのみ参照していたが、
+        このチェックでは実際のリンク先コンテンツを確認するためより信頼性が高い。
+        ラベル/見出しとページタイトルのスコアが 0.3 未満の場合に
+        [ページタイトル不一致→修正済み] で修正、または [ページタイトル不一致] で警告する。
+        同一 URL の結果はキャッシュして重複 HTTP リクエストを避ける。
+        ネットワーク障害時はソフトフェイル（空タイトル → チェックスキップ）。
 
         スコアは len(共通語) / max(len(A語), len(B語)) で算出する
         （簡易重複率。標準 Jaccard 指数とは異なる）。
@@ -993,6 +1061,8 @@ class SourceUrlTracker:
         low_similarity: list[str] = []
         repaired = 0
         result: list[str] = []
+        # URL → ページタイトルのキャッシュ（同じ URL を複数トピックで参照する場合の重複 HTTP を避ける）
+        _page_title_cache: dict[str, str] = {}
 
         for line in lines:
             m_h = re.match(r'^###\s+(.+)', line)
@@ -1148,6 +1218,62 @@ class SourceUrlTracker:
                             f" (score={score:.2f},"
                             f" source='{item.get('title', '')[:40]}')"
                         )
+
+                    # ④ HTTP ページタイトルチェック（最も時間のかかる最終確認）。
+                    # 静的チェック（①〜③）ではソース_data のスナップショットのみ参照していたが、
+                    # ここでは実際のリンク先ページを HTTP で取得してページタイトルとラベルを比較する。
+                    # Azure に限らず全セクション・全ドメインに対して共通して適用されるため、
+                    # 日本ベンダーサイト等への誤リンクも「ページタイトルが全然違う」として検出可能。
+                    # ネットワーク障害時はソフトフェイル（空タイトル → チェックスキップ）。
+                    _PAGE_TITLE_THRESHOLD = 0.3
+                    if url not in _page_title_cache:
+                        _page_title_cache[url] = _fetch_page_title(url)
+                    page_title = _page_title_cache[url]
+                    if page_title:
+                        page_title_words = set(
+                            SourceUrlTracker._norm_title(page_title).split()
+                        )
+                        # ラベル語と見出し語の両方でページタイトルとのスコアを算出し、高い方を採用。
+                        # LLM がラベルをコピーしなかった場合でも見出し語で検出できるようにする。
+                        label_vs_page_score = (
+                            len(norm_label_words & page_title_words)
+                            / max(len(norm_label_words), len(page_title_words), 1)
+                            if norm_label_words and page_title_words
+                            else 0.0
+                        )
+                        heading_vs_page_score = (
+                            len(_hw & page_title_words)
+                            / max(len(_hw), len(page_title_words), 1)
+                            if _hw and page_title_words
+                            else 0.0
+                        )
+                        page_score = max(label_vs_page_score, heading_vs_page_score)
+                        if page_score < _PAGE_TITLE_THRESHOLD:
+                            # ラベル語でベストマッチを探して修正を試みる
+                            repair_words = norm_label_words if norm_label_words else _hw
+                            best_page_url, best_page_score = _best_match(
+                                repair_words, title_url_pairs
+                            )
+                            if (
+                                best_page_score >= _REPAIR_THRESHOLD
+                                and best_page_url
+                                and best_page_url != url
+                            ):
+                                repaired += 1
+                                low_similarity.append(
+                                    f"[ページタイトル不一致→修正済み][{_heading[:50]}]"
+                                    f" {url[:50]} → {best_page_url[:50]}"
+                                    f" (page_title='{page_title[:40]}',"
+                                    f" page_score={page_score:.2f})"
+                                )
+                                return f"{prefix}[{label}]({best_page_url})"
+                            low_similarity.append(
+                                f"[ページタイトル不一致][{_heading[:50]}]"
+                                f" {url[:60]}"
+                                f" (page_title='{page_title[:40]}',"
+                                f" page_score={page_score:.2f})"
+                            )
+
                     return m.group(0)
 
                 line = ref_pattern.sub(_checker, line)

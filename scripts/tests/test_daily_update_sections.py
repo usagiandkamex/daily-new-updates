@@ -2011,13 +2011,14 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
             "started_at": "2026/05/15 19:00",
         }]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("開催日時: 2026/05/15 19:00", result)
+        self.assertIn("**開催日時**: 2026/05/15 19:00", result)
 
     def test_started_at_omitted_when_empty(self):
         """started_at が空の場合、開催日時行は出力されない。"""
         events = [{"title": "イベント", "event_url": "https://connpass.com/event/1/", "started_at": ""}]
         result = du._build_connpass_section_scripted(events)
         self.assertNotIn("開催日時:", result)
+        self.assertNotIn("**開催日時**:", result)
 
     def test_place_shown_when_present(self):
         """place があれば場所が出力される。"""
@@ -2026,7 +2027,7 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
             "place": "東京都渋谷区",
         }]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("場所: 東京都渋谷区", result)
+        self.assertIn("**場所**: 東京都渋谷区", result)
 
     def test_address_used_when_place_empty(self):
         """place が空で address がある場合、address が場所として使われる。"""
@@ -2035,22 +2036,22 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
             "place": "", "address": "東京都新宿区1-1-1",
         }]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("場所: 東京都新宿区1-1-1", result)
+        self.assertIn("**場所**: 東京都新宿区1-1-1", result)
 
     def test_catch_truncated_at_150_chars(self):
         """catch が 150 文字を超える場合、省略記号で切り詰める。"""
         long_catch = "A" * 200
         events = [{"title": "イベント", "event_url": "https://connpass.com/event/1/", "catch": long_catch}]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("概要: " + "A" * 150 + "...", result)
+        self.assertIn("**概要**: " + "A" * 150 + "...", result)
 
     def test_catch_not_truncated_when_short(self):
         """catch が 150 文字以下の場合、省略記号なしでそのまま出力される。"""
         short_catch = "短い概要"
         events = [{"title": "イベント", "event_url": "https://connpass.com/event/1/", "catch": short_catch}]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("概要: 短い概要", result)
-        self.assertNotIn("概要: 短い概要...", result)
+        self.assertIn("**概要**: 短い概要", result)
+        self.assertNotIn("**概要**: 短い概要...", result)
 
     def test_participation_status_with_limit(self):
         """accepted と limit がある場合、参加状況が出力される。"""
@@ -2059,7 +2060,7 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
             "accepted": 15, "limit": 30,
         }]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("参加状況: 15/30名", result)
+        self.assertIn("**参加状況**: 15/30名", result)
 
     def test_participation_status_accepted_only(self):
         """limit が 0 で accepted だけある場合、定員なしで出力される。"""
@@ -2068,7 +2069,7 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
             "accepted": 10, "limit": 0,
         }]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("参加状況: 10名（定員なし）", result)
+        self.assertIn("**参加状況**: 10名（定員なし）", result)
 
     def test_participation_status_omitted_when_zero(self):
         """accepted も limit も 0 の場合、参加状況行は出力されない。"""
@@ -2078,6 +2079,7 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
         }]
         result = du._build_connpass_section_scripted(events)
         self.assertNotIn("参加状況:", result)
+        self.assertNotIn("**参加状況**:", result)
 
     def test_series_shown_when_present(self):
         """series（コミュニティ名）があれば出力される。"""
@@ -2086,7 +2088,7 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
             "series": "JAWS-UG Tokyo",
         }]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("コミュニティ: JAWS-UG Tokyo", result)
+        self.assertIn("**コミュニティ**: JAWS-UG Tokyo", result)
 
     def test_multiple_events_all_listed(self):
         """複数イベントがすべて出力される。"""
@@ -2105,6 +2107,25 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
         events = [{"title": None, "event_url": "https://connpass.com/event/1/"}]
         result = du._build_connpass_section_scripted(events)
         self.assertIn("（タイトルなし）", result)
+
+    def test_fields_separated_by_blank_lines(self):
+        """各フィールド間に空行（二重改行）が入る。"""
+        events = [{
+            "title": "テストイベント",
+            "event_url": "https://connpass.com/event/1/",
+            "series": "JAWS-UG Tokyo",
+            "started_at": "2026/05/15 19:00",
+            "place": "東京都渋谷区",
+            "catch": "テスト概要",
+            "accepted": 10,
+            "limit": 30,
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("**[テストイベント](https://connpass.com/event/1/)**\n\n**コミュニティ**", result)
+        self.assertIn("**コミュニティ**: JAWS-UG Tokyo\n\n**開催日時**", result)
+        self.assertIn("**開催日時**: 2026/05/15 19:00\n\n**場所**", result)
+        self.assertIn("**場所**: 東京都渋谷区\n\n**概要**", result)
+        self.assertIn("**概要**: テスト概要\n\n**参加状況**", result)
 
 
 class TestGenerateCommunitySectionHybrid(unittest.TestCase):
@@ -2246,8 +2267,8 @@ class TestGenerateCommunitySectionHybrid(unittest.TestCase):
         self.assertNotIn("  - 概要:", result)
         self.assertNotIn("  - 参加状況:", result)
         # フィールド内容は含まれる
-        self.assertIn("コミュニティ: JAWS-UG", result)
-        self.assertIn("開催日時: 2026/05/15 19:00", result)
+        self.assertIn("**コミュニティ**: JAWS-UG", result)
+        self.assertIn("**開催日時**: 2026/05/15 19:00", result)
 
     def test_multiple_connpass_events_separated_by_horizontal_rule(self):
         """複数の connpass イベントが「---」で区切られる。"""

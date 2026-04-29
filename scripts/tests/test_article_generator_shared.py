@@ -1120,7 +1120,7 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
         self.assertEqual(result, article)
 
     def test_url_not_in_source_data_is_silently_skipped(self):
-        """source_data に存在しない URL はスキップ（validate_links で別途処理済み）。"""
+        """同ドメインだが source_data に存在しない URL はスキップ（validate_links で別途処理済み）。"""
         source_data = [
             {
                 "title": "Azure Backup for Elastic SAN",
@@ -1129,14 +1129,85 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
                 "source": "Azure",
             },
         ]
+        # 同じ azure.microsoft.com ドメインだが source_data にない ?id= を持つ URL
+        # ドメインは期待範囲内なのでドメイン不一致チェックはスキップされる
         article = self._make_article(
             "Azure Backup for Elastic SAN",
-            "https://example.com/completely-unrelated",
+            "https://azure.microsoft.com/updates?id=UNKNOWN_ID",
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = SourceUrlTracker.verify_link_source_match(article, source_data)
-        # 存在しない URL はスキップし、警告は出ない（validate_links で処理される）
+        # source_data に存在しない URL はスキップし、警告は出ない（validate_links で処理される）
         self.assertNotIn("低スコア", mock_out.getvalue())
+        self.assertEqual(result, article)
+
+    def test_domain_mismatch_repaired_when_better_match_found(self):
+        """リンク先ドメインが source_data と異なる場合（日本ベンダーサイト等）は修正される。
+
+        LLM が誤って日本国内ベンダーサイト等の非公式 URL を付けてしまったケース。
+        source_data には azure.microsoft.com の URL しかないのに、
+        リンクが外部ドメイン（例: jp-vendor.co.jp）を指している場合に修正を検証する。
+        """
+        source_data = [
+            {
+                "title": "Public Preview: Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service is now available.",
+                "source": "Azure Release Communications",
+            },
+            {
+                "title": "Public Preview: Azure Container Apps networking update",
+                "url": "https://azure.microsoft.com/updates?id=222222",
+                "description": "Container Apps networking improvements.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベルは正しい記事タイトルだが、URL が日本ベンダーサイトを指している
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: Foundry Agent Service のメモリ機能が利用可能になりました。\n\n"
+            "**影響**: 開発者にとって長期的なメモリ管理が容易になります。\n\n"
+            "**リンク**: [Public Preview: Memory in Foundry Agent Service]"
+            "(https://jp-vendor.co.jp/azure-updates/memory-foundry)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # ドメイン不一致が検出され、修正済みログが出ている
+        self.assertIn("ドメイン不一致→修正済み", out)
+        # 正しい Azure URL（id=111111）に置換されている
+        self.assertIn("https://azure.microsoft.com/updates?id=111111", result)
+        # ベンダーサイトの URL は除去されている
+        self.assertNotIn("jp-vendor.co.jp", result)
+
+    def test_domain_mismatch_warns_when_no_repair_candidate(self):
+        """リンク先ドメインが source_data と異なるが修正候補がない場合は警告のみ。"""
+        source_data = [
+            {
+                "title": "Azure Kubernetes Service monthly update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "AKS updates.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベルが source_data のどの記事とも一致しない + 外部ドメイン
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://jp-vendor.co.jp/some-page)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 修正候補がないので記事は変わらない
+        self.assertNotIn("修正済み", out)
+        # ドメイン不一致の警告が出ている
+        self.assertIn("ドメイン不一致", out)
+        # 記事は変わらない
         self.assertEqual(result, article)
 
     def test_empty_source_data_returns_article_unchanged(self):

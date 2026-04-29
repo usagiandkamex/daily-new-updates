@@ -913,17 +913,26 @@ class SourceUrlTracker:
         さらに全ソースデータから最適な URL（スコア >= 0.3）が見つかれば記事を修正して返す。
         ネットワーク呼び出しは行わず、フィード取得時の title/description を使用する。
 
-        Azure アップデートのように固有の ?id= パラメータで記事を識別する URL では、
-        誤った ID が使われているケースをこのチェックで検出・修正できる。
-        日本語見出しと英語ソースタイトルの照合では英語産業語（製品名等）が重なる場合のみ
-        スコアが付くため、スコアが低くても必ずしも不一致とは限らない点に注意する。
+        以下の 3 段階のチェックを順に実施する：
 
-        リンクラベルとリンク先ソースタイトルの類似スコアも補助的に検証する
-        （ラベルは LLM がソースタイトルから直接コピーすることが多いため精度が高い）。
-        ラベルスコアが閾値 0.3 未満で、かつラベルと高く一致する別のソース記事が存在する
-        場合は URL の誤りと判断して修正する。
+        **① ドメイン不一致チェック**（最強シグナル）
+        source_data 内の URL ドメイン集合を構築し、記事リンクのドメインがその集合に含まれ
+        ない場合は「ドメイン不一致」と判定する。日本国内ベンダーサイトや非公式サイトへの
+        誤リンクをこのチェックで検出できる。修正候補が見つかれば URL を置換し、
+        [ドメイン不一致→修正済み] をログに記録する。
 
-        スコアは len(共通語) / max(len(見出し語), len(ソース語)) で算出する
+        **② ラベルとリンク先の類似スコアチェック**（補助検証）
+        LLM はラベルにソースタイトルを直接コピーすることが多い性質を活用する。
+        ラベル語とリンク先の title・description それぞれに対してスコアを算出し、
+        高い方を採用する（タイトルに含まれないキーワードが説明文にある場合も正しく評価）。
+        ラベルスコアが閾値 0.3 未満で修正候補がある場合は [ラベル不一致→修正済み] で修正、
+        候補がない場合は [ラベル不一致] として警告のみ出力する。
+
+        **③ 見出しとリンク先の類似スコアチェック**（既存検証）
+        日本語見出し語と英語ソース（title + description）の単語重複スコアが 0.15 未満の
+        場合に警告を出力し、修正候補があれば URL を置換する。
+
+        スコアは len(共通語) / max(len(A語), len(B語)) で算出する
         （簡易重複率。標準 Jaccard 指数とは異なる）。
         タイトル正規化は SourceUrlTracker._norm_title() を使用する。
         """
@@ -938,11 +947,17 @@ class SourceUrlTracker:
         url_to_item: dict[str, dict] = {}
         # 全ソースタイトル → URL ペアリスト（修正用のベストマッチ検索に使用）
         title_url_pairs: list[tuple[str, str]] = []
+        # source_data URL のドメイン集合（想定外ドメインのリンクを検出するため）
+        source_domains: set[str] = set()
         for item in source_data:
             url = item.get("url", "")
             if url:
                 norm = SourceUrlTracker._normalize_url(url)
                 url_to_item[norm] = item
+                try:
+                    source_domains.add(urlparse(url).netloc)
+                except Exception:
+                    pass
             if item.get("title") and item.get("url"):
                 title_url_pairs.append(
                     (SourceUrlTracker._norm_title(item["title"]), item["url"])
@@ -996,8 +1011,45 @@ class SourceUrlTracker:
                     label = m.group(2)
                     url = m.group(3)
 
+                    # ラベル語はドメインチェックや item is None の前に算出する。
+                    # ドメイン不一致時の修正でラベル語を使用するためここで早期に計算する。
+                    norm_label_words = set(SourceUrlTracker._norm_title(label).split())
+
                     norm_url = SourceUrlTracker._normalize_url(url)
                     item = url_to_item.get(norm_url)
+
+                    # ① ドメイン不一致チェック（source_data に存在しないドメインの URL）。
+                    # 日本国内ベンダーサイトや非公式サイトへのリンクを検出するための
+                    # 最強のシグナル。URL が source_data に含まれていない（item is None）か、
+                    # または含まれていてもドメインが source_data 全体と一致しない場合に検出する。
+                    link_domain = urlparse(url).netloc
+                    if source_domains and link_domain not in source_domains:
+                        # ラベル語または見出し語でベストマッチを探して修正を試みる
+                        repair_words = norm_label_words if norm_label_words else _hw
+                        best_domain_url, best_domain_score = _best_match(
+                            repair_words, title_url_pairs
+                        )
+                        if (
+                            best_domain_score >= _REPAIR_THRESHOLD
+                            and best_domain_url
+                            and best_domain_url != url
+                        ):
+                            repaired += 1
+                            low_similarity.append(
+                                f"[ドメイン不一致→修正済み][{_heading[:50]}]"
+                                f" {url[:50]} → {best_domain_url[:50]}"
+                                f" (domain={link_domain},"
+                                f" repair_score={best_domain_score:.2f})"
+                            )
+                            return f"{prefix}[{label}]({best_domain_url})"
+                        low_similarity.append(
+                            f"[ドメイン不一致][{_heading[:50]}]"
+                            f" {url[:60]}"
+                            f" (domain={link_domain})"
+                        )
+                        if item is None:
+                            return m.group(0)
+
                     if item is None:
                         return m.group(0)
 
@@ -1010,18 +1062,33 @@ class SourceUrlTracker:
                     common = _hw & source_words
                     score = len(common) / max(len(_hw), len(source_words), 1)
 
-                    # ラベルとリンク先ソースタイトルの類似スコアチェック（補助検証）。
+                    # ② ラベルとリンク先ソースの類似スコアチェック（補助検証）。
                     # LLM はラベルにソースタイトルを直接コピーすることが多いため、
-                    # ラベルとリンク先タイトルの一致が低い場合は URL の誤りを疑う。
-                    norm_label_words = set(SourceUrlTracker._norm_title(label).split())
+                    # ラベルとリンク先タイトル・説明文の一致が低い場合は URL の誤りを疑う。
+                    # タイトルと説明文の双方に対してスコアを算出し、高い方を採用することで
+                    # タイトルに現れないキーワードが説明文に含まれる場合も正しく評価する。
                     source_title_words = set(
                         SourceUrlTracker._norm_title(item.get("title", "")).split()
                     )
-                    if norm_label_words and source_title_words:
-                        label_common = norm_label_words & source_title_words
-                        label_title_score = len(label_common) / max(
-                            len(norm_label_words), len(source_title_words), 1
-                        )
+                    source_desc_words = set(
+                        SourceUrlTracker._norm_title(item.get("description", "")).split()
+                    )
+                    label_score_vs_title = (
+                        len(norm_label_words & source_title_words)
+                        / max(len(norm_label_words), len(source_title_words), 1)
+                        if norm_label_words and source_title_words
+                        else 0.0
+                    )
+                    label_score_vs_desc = (
+                        len(norm_label_words & source_desc_words)
+                        / max(len(norm_label_words), len(source_desc_words), 1)
+                        if norm_label_words and source_desc_words
+                        else 0.0
+                    )
+                    # タイトルまたは説明文のいずれかで一致すれば正しいリンクと見なす
+                    label_title_score = max(label_score_vs_title, label_score_vs_desc)
+
+                    if norm_label_words and (source_title_words or source_desc_words):
                         if label_title_score < _LABEL_TITLE_THRESHOLD:
                             # ラベル語で全ソースから最適 URL を検索して修正を試みる。
                             # この _best_match 呼び出しはラベル語（英語タイトル由来）を使用するため、

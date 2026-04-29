@@ -996,6 +996,7 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                         event_dict = {
                             "title": event.get("title", "").strip(),
                             "catch": event.get("catch", "").strip(),
+                            "description": event.get("description", "").strip(),
                             "event_url": event_url,
                             "started_at": event_dt.strftime("%Y/%m/%d %H:%M"),
                             "place": event.get("place", "").strip(),
@@ -1038,6 +1039,72 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     return all_events
 
 
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_HTML_ENTITY_MAP = {
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&nbsp;": " ",
+    "&#39;": "'",
+}
+# 注意事項・キャンセルポリシーなど詳細セクションの HTML 見出しパターン
+_EVENT_EXCLUDE_SECTION_HTML_RE = re.compile(
+    r"<h[1-6][^>]*>\s*(?:注意事項|キャンセル|参加条件|持ち物|アクセス"
+    r"|事前準備|禁止事項|免責|プライバシー|個人情報|お問い合わせ)",
+    re.IGNORECASE,
+)
+# 同・マークダウン見出しパターン（HTML 除去後のテキスト用）
+_EVENT_EXCLUDE_SECTION_MD_RE = re.compile(
+    r"(?:^|\n)\s*#{1,3}\s*(?:注意事項|キャンセル|参加条件|持ち物|アクセス"
+    r"|事前準備|禁止事項|免責|プライバシー|個人情報|お問い合わせ)",
+    re.IGNORECASE,
+)
+
+
+def _build_event_summary(catch: str, description: str) -> str:
+    """catch フィールドとイベント説明文（HTML/テキスト）から 2〜3 行分の概要を組み立てる。
+
+    description が指定されている場合は HTML タグを除去し、注意事項・キャンセルポリシー
+    などの詳細セクションを除いた内容を抽出する。catch と合わせて最大 200 文字に制限した
+    概要文字列を返す。catch も description も空の場合は空文字列を返す。
+    """
+    desc_text = ""
+    if description:
+        # 除外セクション（注意事項等）の HTML 見出し以降を切り捨て
+        m = _EVENT_EXCLUDE_SECTION_HTML_RE.search(description)
+        if m:
+            description = description[: m.start()]
+        # HTML タグを空白に置換
+        text = _HTML_TAG_RE.sub(" ", description)
+        # 除外セクション（マークダウン見出し形式）以降を切り捨て
+        m2 = _EVENT_EXCLUDE_SECTION_MD_RE.search(text)
+        if m2:
+            text = text[: m2.start()]
+        # HTML エンティティを変換
+        for entity, char in _HTML_ENTITY_MAP.items():
+            text = text.replace(entity, char)
+        # 連続する空白・改行を 1 スペースにまとめる
+        text = re.sub(r"\s+", " ", text).strip()
+        desc_text = text
+
+    if catch and desc_text:
+        # catch が description テキストの先頭と重複する場合は description だけ使う
+        if desc_text.startswith(catch[:30]):
+            combined = desc_text
+        else:
+            combined = catch + " " + desc_text
+    elif catch:
+        combined = catch
+    else:
+        combined = desc_text
+
+    # 2〜3 行分（目安 200 文字）に制限
+    if len(combined) > 200:
+        combined = combined[:200] + "..."
+    return combined
+
+
 def _build_connpass_section_scripted(events: list[dict]) -> str:
     """connpass イベントリストをスクリプトで直接マークダウン化する（LLM 不使用）。
 
@@ -1056,6 +1123,7 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
         started_at = event.get("started_at", "")
         place = event.get("place", "") or event.get("address", "")
         catch = event.get("catch", "")
+        description = event.get("description", "")
         accepted = event.get("accepted") or 0
         limit = event.get("limit") or 0
         series = event.get("series", "")
@@ -1072,10 +1140,8 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
             block_lines.append(f"**開催日時**: {started_at}")
         if place:
             block_lines.append(f"**場所**: {place}")
-        if catch:
-            summary = catch[:150]
-            if len(catch) > 150:
-                summary += "..."
+        summary = _build_event_summary(catch, description)
+        if summary:
             block_lines.append(f"**概要**: {summary}")
         if limit > 0:
             block_lines.append(f"**参加状況**: {accepted}/{limit}名")

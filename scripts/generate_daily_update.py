@@ -995,13 +995,13 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                             continue
 
                         event_dict = {
-                            "title": event.get("title", "").strip(),
-                            "catch": event.get("catch", "").strip(),
-                            "description": event.get("description", "").strip(),
+                            "title": (event.get("title") or "").strip(),
+                            "catch": (event.get("catch") or "").strip(),
+                            "description": (event.get("description") or "").strip(),
                             "event_url": event_url,
                             "started_at": event_dt.strftime("%Y/%m/%d %H:%M"),
-                            "place": event.get("place", "").strip(),
-                            "address": event.get("address", "").strip(),
+                            "place": (event.get("place") or "").strip(),
+                            "address": (event.get("address") or "").strip(),
                             "accepted": accepted,
                             "limit": limit,
                             "series": series_title,

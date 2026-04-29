@@ -161,6 +161,7 @@ def _fetch_page_title(url: str) -> str:
     空文字列を返す（ソフトフェイル）。全セクション（Azure 含む）に
     対して共通して使用できる汎用実装。
     """
+    resp = None
     try:
         resp = requests.get(
             url,
@@ -169,22 +170,19 @@ def _fetch_page_title(url: str) -> str:
             allow_redirects=True,
             stream=True,
         )
-        try:
-            if not resp.ok:
-                return ""
-            # Content-Type が HTML でない場合はページタイトルを持たないためスキップ
-            content_type = resp.headers.get("Content-Type", "").lower()
-            if "text/html" not in content_type:
-                return ""
-            # <title> と og:title はほぼ先頭にあるため先頭 8 KB のみ取得する
-            content = b""
-            for chunk in resp.iter_content(chunk_size=8192):
-                content += chunk
-                if len(content) >= 8192:
-                    break
-            html_head = content.decode("utf-8", errors="ignore")
-        finally:
-            resp.close()
+        if not resp.ok:
+            return ""
+        # Content-Type が HTML でない場合はページタイトルを持たないためスキップ
+        content_type = resp.headers.get("Content-Type", "").lower()
+        if "text/html" not in content_type:
+            return ""
+        # <title> と og:title はほぼ先頭にあるため先頭 8 KB のみ取得する
+        content = b""
+        for chunk in resp.iter_content(chunk_size=8192):
+            content += chunk
+            if len(content) >= 8192:
+                break
+        html_head = content.decode("utf-8", errors="ignore")
         # og:title を優先（属性順序・等号前後スペースに依存しないよう2パターンを検索）
         m = re.search(
             r'<meta[^>]+property\s*=\s*["\']og:title["\'][^>]+content\s*=\s*["\']([^"\'<]+)',
@@ -209,6 +207,9 @@ def _fetch_page_title(url: str) -> str:
         pass
     except Exception:
         pass
+    finally:
+        if resp is not None:
+            resp.close()
     return ""
 
 

@@ -1047,7 +1047,7 @@ _EXCLUDE_HEADING_KEYWORDS = (
 )
 # マークダウン見出しパターン（プレーンテキスト description 用・h1〜h6 相当）
 _EVENT_EXCLUDE_SECTION_MD_RE = re.compile(
-    r"(?:^|\n)\s*#{1,6}\s*(?:" + "|".join(_EXCLUDE_HEADING_KEYWORDS) + ")",
+    r"(?:^|\n)\s*#{1,6}\s*(?:" + "|".join(re.escape(kw) for kw in _EXCLUDE_HEADING_KEYWORDS) + ")",
     re.IGNORECASE,
 )
 # イベント概要の最大文字数（2〜3 行相当）
@@ -1097,14 +1097,15 @@ class _DescriptionHTMLParser(HTMLParser):
         return " ".join(self._parts)
 
 
-def _build_event_summary(catch: str, description: str) -> str:
+def _build_event_summary(catch: str | None, description: str | None) -> str:
     """イベント説明文（HTML/テキスト）から 2〜3 行分の概要を返す。
 
     description が指定されている場合は HTML を解析して本文のみを抽出し、
     注意事項・キャンセルポリシーなどの除外セクション以降を切り捨てる。
+    HTML エンティティは HTMLParser(convert_charrefs=True) で一段階デコードする。
     抽出結果を最大 _EVENT_SUMMARY_MAX_LENGTH 文字に制限して返す。
     description が空の場合は catch をそのまま返す。
-    catch も description も空の場合は空文字列を返す。
+    catch も description も空（または None）の場合は空文字列を返す。
     """
     catch = catch or ""
     description = description or ""

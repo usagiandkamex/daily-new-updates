@@ -956,8 +956,11 @@ class SourceUrlTracker:
                 url_to_item[norm] = item
                 try:
                     source_domains.add(urlparse(url).netloc)
-                except Exception:
-                    pass
+                except ValueError as e:
+                    print(
+                        f"  ⚠ source_data URL のパース失敗（このURLのドメイン収集をスキップして続行）:"
+                        f" {url!r} ({e})"
+                    )
             if item.get("title") and item.get("url"):
                 title_url_pairs.append(
                     (SourceUrlTracker._norm_title(item["title"]), item["url"])
@@ -1022,9 +1025,19 @@ class SourceUrlTracker:
                     # 日本国内ベンダーサイトや非公式サイトへのリンクを検出するための
                     # 最強のシグナル。URL が source_data に含まれていない（item is None）か、
                     # または含まれていてもドメインが source_data 全体と一致しない場合に検出する。
-                    link_domain = urlparse(url).netloc
-                    if source_domains and link_domain not in source_domains:
-                        # ラベル語または見出し語でベストマッチを探して修正を試みる
+                    try:
+                        link_domain = urlparse(url).netloc
+                    except ValueError as e:
+                        print(
+                            f"  ⚠ 記事リンク URL のパース失敗（ドメインチェックをスキップ）:"
+                            f" {url!r} ({e})"
+                        )
+                        link_domain = ""
+                    # link_domain が空（パース失敗）の場合はドメインチェックをスキップして誤検知を防ぐ
+                    if source_domains and link_domain and link_domain not in source_domains:
+                        # ラベル語を優先し、空の場合は日本語混じりの見出し語をフォールバックに使う。
+                        # 見出し語フォールバックにより、ラベルが空でも英語産業語（製品名等）が
+                        # 重なればベストマッチが機能する。
                         repair_words = norm_label_words if norm_label_words else _hw
                         best_domain_url, best_domain_score = _best_match(
                             repair_words, title_url_pairs

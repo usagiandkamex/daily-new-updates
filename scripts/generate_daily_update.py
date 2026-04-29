@@ -10,6 +10,7 @@ import re
 import sys
 import calendar
 from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
 from urllib.parse import quote_plus
 
 import feedparser
@@ -994,12 +995,13 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
                             continue
 
                         event_dict = {
-                            "title": event.get("title", "").strip(),
-                            "catch": event.get("catch", "").strip(),
+                            "title": (event.get("title") or "").strip(),
+                            "catch": (event.get("catch") or "").strip(),
+                            "description": (event.get("description") or "").strip(),
                             "event_url": event_url,
                             "started_at": event_dt.strftime("%Y/%m/%d %H:%M"),
-                            "place": event.get("place", "").strip(),
-                            "address": event.get("address", "").strip(),
+                            "place": (event.get("place") or "").strip(),
+                            "address": (event.get("address") or "").strip(),
                             "accepted": accepted,
                             "limit": limit,
                             "series": series_title,
@@ -1038,6 +1040,103 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
     return all_events
 
 
+# 除外セクションキーワード（注意事項・キャンセルポリシー等）
+_EXCLUDE_HEADING_KEYWORDS = (
+    "注意事項", "キャンセル", "参加条件", "持ち物", "アクセス",
+    "事前準備", "禁止事項", "免責", "プライバシー", "個人情報", "お問い合わせ",
+)
+# マークダウン見出しパターン（プレーンテキスト description 用・h1〜h6 相当）
+_EVENT_EXCLUDE_SECTION_MD_RE = re.compile(
+    r"(?:^|\n)\s*#{1,6}\s*(?:" + "|".join(re.escape(kw) for kw in _EXCLUDE_HEADING_KEYWORDS) + ")",
+    re.IGNORECASE,
+)
+# イベント概要の最大文字数（2〜3 行相当）
+_EVENT_SUMMARY_MAX_LENGTH = 200
+
+
+class _DescriptionHTMLParser(HTMLParser):
+    """HTML description フィールドから本文テキストを抽出するパーサー。
+
+    見出し（h1〜h6）のテキストはセクション名の混入を防ぐため除外する。
+    _EXCLUDE_HEADING_KEYWORDS に含まれるキーワードを持つ見出し以降は
+    テキストの収集を停止する（注意事項・キャンセルポリシー等）。
+    """
+
+    _HEADING_TAGS = frozenset(["h1", "h2", "h3", "h4", "h5", "h6"])
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._parts: list[str] = []
+        self._in_heading = False
+        self._heading_buf: list[str] = []
+        self._done = False
+
+    def handle_starttag(self, tag: str, attrs: list) -> None:
+        if not self._done and tag in self._HEADING_TAGS:
+            self._in_heading = True
+            self._heading_buf = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._done or tag not in self._HEADING_TAGS or not self._in_heading:
+            return
+        heading_text = "".join(self._heading_buf).strip()
+        self._in_heading = False
+        self._heading_buf = []
+        if any(kw in heading_text for kw in _EXCLUDE_HEADING_KEYWORDS):
+            self._done = True
+
+    def handle_data(self, data: str) -> None:
+        if self._done:
+            return
+        if self._in_heading:
+            self._heading_buf.append(data)
+        else:
+            self._parts.append(data)
+
+    def get_text(self) -> str:
+        return " ".join(self._parts)
+
+
+def _build_event_summary(catch: str | None, description: str | None) -> str:
+    """イベント説明文（HTML/テキスト）から 2〜3 行分の概要を返す。
+
+    description が指定されている場合は HTML を解析して本文のみを抽出し、
+    注意事項・キャンセルポリシーなどの除外セクション以降を切り捨てる。
+    HTML エンティティは HTMLParser(convert_charrefs=True) で一段階デコードする。
+    抽出結果を最大 _EVENT_SUMMARY_MAX_LENGTH 文字に制限して返す。
+    description が空の場合は catch をそのまま返す。
+    catch も description も空（または None）の場合は空文字列を返す。
+    """
+    catch = catch or ""
+    description = description or ""
+    desc_text = ""
+    if description:
+        # HTML パーサーで本文を抽出（見出しは除去し、除外セクション以降は停止）
+        parser = _DescriptionHTMLParser()
+        parser.feed(description)
+        text = parser.get_text()
+        # 除外セクション（マークダウン見出し形式）以降を切り捨て（プレーンテキスト用）
+        m = _EVENT_EXCLUDE_SECTION_MD_RE.search(text)
+        if m:
+            text = text[: m.start()]
+        # 連続する空白・改行を 1 スペースにまとめる
+        text = re.sub(r"\s+", " ", text).strip()
+        desc_text = text
+
+    # description があればその本文を優先し、catch はフォールバックのみに使う
+    if desc_text:
+        combined = desc_text
+    elif catch:
+        combined = catch
+    else:
+        combined = ""
+
+    # 2〜3 行分（_EVENT_SUMMARY_MAX_LENGTH 文字）に制限
+    if len(combined) > _EVENT_SUMMARY_MAX_LENGTH:
+        combined = combined[:_EVENT_SUMMARY_MAX_LENGTH] + "..."
+    return combined
+
+
 def _build_connpass_section_scripted(events: list[dict]) -> str:
     """connpass イベントリストをスクリプトで直接マークダウン化する（LLM 不使用）。
 
@@ -1056,6 +1155,7 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
         started_at = event.get("started_at", "")
         place = event.get("place", "") or event.get("address", "")
         catch = event.get("catch", "")
+        description = event.get("description", "")
         accepted = event.get("accepted") or 0
         limit = event.get("limit") or 0
         series = event.get("series", "")
@@ -1072,10 +1172,8 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
             block_lines.append(f"**開催日時**: {started_at}")
         if place:
             block_lines.append(f"**場所**: {place}")
-        if catch:
-            summary = catch[:150]
-            if len(catch) > 150:
-                summary += "..."
+        summary = _build_event_summary(catch, description)
+        if summary:
             block_lines.append(f"**概要**: {summary}")
         if limit > 0:
             block_lines.append(f"**参加状況**: {accepted}/{limit}名")

@@ -1976,6 +1976,89 @@ class TestSourceUrlTrackerDelegationInDailyUpdate(unittest.TestCase):
         self.assertIn("一致", mock_out.getvalue())
 
 
+class TestBuildEventSummary(unittest.TestCase):
+    """_build_event_summary() のテスト"""
+
+    def test_catch_only_returned_when_no_description(self):
+        """description がない場合、catch をそのまま返す。"""
+        result = du._build_event_summary("短い概要", "")
+        self.assertEqual(result, "短い概要")
+
+    def test_none_inputs_returns_empty_string(self):
+        """catch も description も None の場合、空文字列を返す（TypeError が起きない）。"""
+        result = du._build_event_summary(None, None)
+        self.assertEqual(result, "")
+
+    def test_none_catch_fallback_to_empty(self):
+        """catch が None、description が空の場合、空文字列を返す。"""
+        result = du._build_event_summary(None, "")
+        self.assertEqual(result, "")
+
+    def test_empty_inputs_returns_empty_string(self):
+        """catch も description も空の場合、空文字列を返す。"""
+        result = du._build_event_summary("", "")
+        self.assertEqual(result, "")
+
+    def test_description_html_stripped(self):
+        """description の HTML タグが除去される。"""
+        result = du._build_event_summary("", "<p>テスト内容</p>")
+        self.assertIn("テスト内容", result)
+        self.assertNotIn("<p>", result)
+
+    def test_description_html_entities_decoded(self):
+        """HTML エンティティが変換される。"""
+        result = du._build_event_summary("", "<p>A&amp;B &lt;C&gt;</p>")
+        self.assertIn("A&B <C>", result)
+
+    def test_exclude_section_html_heading_cut(self):
+        """HTML 見出し <h2>注意事項</h2> 以降は切り捨てられる。"""
+        desc = "<p>概要テキスト</p><h2>注意事項</h2><p>キャンセル禁止</p>"
+        result = du._build_event_summary("", desc)
+        self.assertIn("概要テキスト", result)
+        self.assertNotIn("キャンセル禁止", result)
+
+    def test_exclude_section_markdown_heading_cut(self):
+        """マークダウン見出し ## 注意事項 以降は切り捨てられる（HTML 除去後）。"""
+        desc = "概要テキスト\n## 注意事項\nキャンセル禁止"
+        result = du._build_event_summary("", desc)
+        self.assertIn("概要テキスト", result)
+        self.assertNotIn("キャンセル禁止", result)
+
+    def test_exclude_section_markdown_deep_heading_cut(self):
+        """マークダウン見出し #### 注意事項（h4）以降も切り捨てられる。"""
+        desc = "概要テキスト\n#### 注意事項\nキャンセル禁止"
+        result = du._build_event_summary("", desc)
+        self.assertIn("概要テキスト", result)
+        self.assertNotIn("キャンセル禁止", result)
+
+    def test_description_preferred_over_catch(self):
+        """description がある場合、catch は使わず description を返す。"""
+        result = du._build_event_summary("キャッチコピー", "<p>詳細説明文</p>")
+        self.assertNotIn("キャッチコピー", result)
+        self.assertIn("詳細説明文", result)
+
+    def test_exclude_section_nested_html_heading_cut(self):
+        """<h2><span>注意事項</span></h2> のようにネストしたタグがあっても切り捨てられる。"""
+        desc = "<p>概要テキスト</p><h2><span>注意事項</span></h2><p>キャンセル禁止</p>"
+        result = du._build_event_summary("", desc)
+        self.assertIn("概要テキスト", result)
+        self.assertNotIn("キャンセル禁止", result)
+
+    def test_combined_truncated_at_200_chars(self):
+        """結合後のテキストが 200 文字を超える場合、省略記号で切り詰める。"""
+        long_desc = "<p>" + "B" * 250 + "</p>"
+        result = du._build_event_summary("", long_desc)
+        self.assertTrue(result.endswith("..."))
+        self.assertLessEqual(len(result), 203)  # 200 chars + "..."
+
+    def test_timetable_included_when_before_exclude_section(self):
+        """タイムテーブルが注意事項より前にある場合は概要に含まれる。"""
+        desc = "<p>概要</p><h2>タイムテーブル</h2><p>19:00 開始</p><h2>注意事項</h2><p>禁止</p>"
+        result = du._build_event_summary("", desc)
+        self.assertIn("19:00 開始", result)
+        self.assertNotIn("禁止", result)
+
+
 class TestBuildConnpassSectionScripted(unittest.TestCase):
     """_build_connpass_section_scripted() のテスト"""
 
@@ -2038,20 +2121,44 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
         result = du._build_connpass_section_scripted(events)
         self.assertIn("**場所**: 東京都新宿区1-1-1", result)
 
-    def test_catch_truncated_at_150_chars(self):
-        """catch が 150 文字を超える場合、省略記号で切り詰める。"""
-        long_catch = "A" * 200
+    def test_catch_truncated_at_200_chars(self):
+        """catch が 200 文字を超える場合、省略記号で切り詰める。"""
+        long_catch = "A" * 250
         events = [{"title": "イベント", "event_url": "https://connpass.com/event/1/", "catch": long_catch}]
         result = du._build_connpass_section_scripted(events)
-        self.assertIn("**概要**: " + "A" * 150 + "...", result)
+        self.assertIn("**概要**: " + "A" * 200 + "...", result)
 
     def test_catch_not_truncated_when_short(self):
-        """catch が 150 文字以下の場合、省略記号なしでそのまま出力される。"""
+        """catch が 200 文字以下の場合、省略記号なしでそのまま出力される。"""
         short_catch = "短い概要"
         events = [{"title": "イベント", "event_url": "https://connpass.com/event/1/", "catch": short_catch}]
         result = du._build_connpass_section_scripted(events)
         self.assertIn("**概要**: 短い概要", result)
         self.assertNotIn("**概要**: 短い概要...", result)
+
+    def test_description_html_used_as_summary(self):
+        """description フィールドがある場合、HTML を除去して概要に使われる。"""
+        events = [{
+            "title": "イベント",
+            "event_url": "https://connpass.com/event/1/",
+            "catch": "キャッチ",
+            "description": "<p>詳細な説明文</p><h2>注意事項</h2><p>禁止事項</p>",
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("**概要**:", result)
+        self.assertIn("詳細な説明文", result)
+        self.assertNotIn("禁止事項", result)
+
+    def test_summary_shown_when_description_only(self):
+        """catch が空でも description があれば概要が出力される。"""
+        events = [{
+            "title": "イベント",
+            "event_url": "https://connpass.com/event/1/",
+            "catch": "",
+            "description": "<p>イベント詳細</p>",
+        }]
+        result = du._build_connpass_section_scripted(events)
+        self.assertIn("**概要**: イベント詳細", result)
 
     def test_participation_status_with_limit(self):
         """accepted と limit がある場合、参加状況が出力される。"""

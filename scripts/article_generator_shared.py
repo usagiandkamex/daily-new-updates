@@ -184,14 +184,14 @@ def _fetch_page_title(url: str) -> str:
                 break
         resp.close()
         html_head = content.decode("utf-8", errors="ignore")
-        # og:title を優先（属性順序に依存しないよう2パターンを検索）
+        # og:title を優先（属性順序・等号前後スペースに依存しないよう2パターンを検索）
         m = re.search(
-            r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\'<]+)',
+            r'<meta[^>]+property\s*=\s*["\']og:title["\'][^>]+content\s*=\s*["\']([^"\'<]+)',
             html_head, re.IGNORECASE,
         )
         if not m:
             m = re.search(
-                r'<meta[^>]+content=["\']([^"\'<]+)["\'][^>]+property=["\']og:title["\']',
+                r'<meta[^>]+content\s*=\s*["\']([^"\'<]+)["\'][^>]+property\s*=\s*["\']og:title["\']',
                 html_head, re.IGNORECASE,
             )
         if m:

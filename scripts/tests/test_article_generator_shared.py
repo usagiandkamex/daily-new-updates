@@ -1624,6 +1624,7 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
         self.assertEqual(mock_get.call_count, 1)
 
 
+class TestNormTitle(unittest.TestCase):
     """SourceUrlTracker._norm_title() のテスト"""
 
     def test_removes_bracket_prefix(self):

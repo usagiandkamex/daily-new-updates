@@ -2014,16 +2014,16 @@ class TestBuildEventSummary(unittest.TestCase):
         self.assertIn("概要テキスト", result)
         self.assertNotIn("キャンセル禁止", result)
 
-    def test_catch_and_description_combined(self):
-        """catch と description が重複しない場合、両方が結合される。"""
+    def test_description_preferred_over_catch(self):
+        """description がある場合、catch は使わず description を返す。"""
         result = du._build_event_summary("キャッチコピー", "<p>詳細説明文</p>")
-        self.assertIn("キャッチコピー", result)
+        self.assertNotIn("キャッチコピー", result)
         self.assertIn("詳細説明文", result)
 
-    def test_catch_not_duplicated_when_description_starts_with_catch(self):
-        """description が catch の先頭と同じで始まる場合は重複しない。"""
-        result = du._build_event_summary("テスト説明", "<p>テスト説明の詳細内容</p>")
-        self.assertEqual(result.count("テスト説明"), 1)
+    def test_catch_is_fallback_when_no_description(self):
+        """description がない場合は catch をそのまま返す。"""
+        result = du._build_event_summary("キャッチコピー", "")
+        self.assertEqual(result, "キャッチコピー")
 
     def test_combined_truncated_at_200_chars(self):
         """結合後のテキストが 200 文字を超える場合、省略記号で切り詰める。"""

@@ -1060,8 +1060,6 @@ _EVENT_EXCLUDE_SECTION_MD_RE = re.compile(
     r"|事前準備|禁止事項|免責|プライバシー|個人情報|お問い合わせ)",
     re.IGNORECASE,
 )
-# catch とイベント説明テキストの重複判定に使う先頭文字数
-_CATCH_DEDUP_PREFIX_LENGTH = 30
 # イベント概要の最大文字数（2〜3 行相当）
 _EVENT_SUMMARY_MAX_LENGTH = 200
 
@@ -1080,8 +1078,10 @@ def _build_event_summary(catch: str, description: str) -> str:
         m = _EVENT_EXCLUDE_SECTION_HTML_RE.search(description)
         if m:
             description = description[: m.start()]
+        # h1〜h6 見出しタグとその内容を除去（セクション名が本文に混入しないように）
+        text = re.sub(r"<h[1-6][^>]*>.*?</h[1-6]>", " ", description, flags=re.IGNORECASE | re.DOTALL)
         # HTML タグを空白に置換
-        text = _HTML_TAG_RE.sub(" ", description)
+        text = _HTML_TAG_RE.sub(" ", text)
         # 除外セクション（マークダウン見出し形式）以降を切り捨て
         m2 = _EVENT_EXCLUDE_SECTION_MD_RE.search(text)
         if m2:
@@ -1093,16 +1093,13 @@ def _build_event_summary(catch: str, description: str) -> str:
         text = re.sub(r"\s+", " ", text).strip()
         desc_text = text
 
-    if catch and desc_text:
-        # catch が description テキストの先頭と重複する場合は description だけ使う
-        if desc_text.startswith(catch[:_CATCH_DEDUP_PREFIX_LENGTH]):
-            combined = desc_text
-        else:
-            combined = catch + " " + desc_text
+    # description があればその本文を優先し、catch はフォールバックのみに使う
+    if desc_text:
+        combined = desc_text
     elif catch:
         combined = catch
     else:
-        combined = desc_text
+        combined = ""
 
     # 2〜3 行分（_EVENT_SUMMARY_MAX_LENGTH 文字）に制限
     if len(combined) > _EVENT_SUMMARY_MAX_LENGTH:

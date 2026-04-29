@@ -1060,14 +1060,19 @@ _EVENT_EXCLUDE_SECTION_MD_RE = re.compile(
     r"|事前準備|禁止事項|免責|プライバシー|個人情報|お問い合わせ)",
     re.IGNORECASE,
 )
+# catch とイベント説明テキストの重複判定に使う先頭文字数
+_CATCH_DEDUP_PREFIX_LENGTH = 30
+# イベント概要の最大文字数（2〜3 行相当）
+_EVENT_SUMMARY_MAX_LENGTH = 200
 
 
 def _build_event_summary(catch: str, description: str) -> str:
     """catch フィールドとイベント説明文（HTML/テキスト）から 2〜3 行分の概要を組み立てる。
 
     description が指定されている場合は HTML タグを除去し、注意事項・キャンセルポリシー
-    などの詳細セクションを除いた内容を抽出する。catch と合わせて最大 200 文字に制限した
-    概要文字列を返す。catch も description も空の場合は空文字列を返す。
+    などの詳細セクションを除いた内容を抽出する。catch と合わせて最大
+    _EVENT_SUMMARY_MAX_LENGTH 文字に制限した概要文字列を返す。
+    catch も description も空の場合は空文字列を返す。
     """
     desc_text = ""
     if description:
@@ -1090,7 +1095,7 @@ def _build_event_summary(catch: str, description: str) -> str:
 
     if catch and desc_text:
         # catch が description テキストの先頭と重複する場合は description だけ使う
-        if desc_text.startswith(catch[:30]):
+        if desc_text.startswith(catch[:_CATCH_DEDUP_PREFIX_LENGTH]):
             combined = desc_text
         else:
             combined = catch + " " + desc_text
@@ -1099,9 +1104,9 @@ def _build_event_summary(catch: str, description: str) -> str:
     else:
         combined = desc_text
 
-    # 2〜3 行分（目安 200 文字）に制限
-    if len(combined) > 200:
-        combined = combined[:200] + "..."
+    # 2〜3 行分（_EVENT_SUMMARY_MAX_LENGTH 文字）に制限
+    if len(combined) > _EVENT_SUMMARY_MAX_LENGTH:
+        combined = combined[:_EVENT_SUMMARY_MAX_LENGTH] + "..."
     return combined
 
 

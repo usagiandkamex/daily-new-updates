@@ -2018,6 +2018,7 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
         events = [{"title": "イベント", "event_url": "https://connpass.com/event/1/", "started_at": ""}]
         result = du._build_connpass_section_scripted(events)
         self.assertNotIn("開催日時:", result)
+        self.assertNotIn("**開催日時**:", result)
 
     def test_place_shown_when_present(self):
         """place があれば場所が出力される。"""
@@ -2078,6 +2079,7 @@ class TestBuildConnpassSectionScripted(unittest.TestCase):
         }]
         result = du._build_connpass_section_scripted(events)
         self.assertNotIn("参加状況:", result)
+        self.assertNotIn("**参加状況**:", result)
 
     def test_series_shown_when_present(self):
         """series（コミュニティ名）があれば出力される。"""

@@ -583,6 +583,24 @@ class TestFetchPageTitle(unittest.TestCase):
         import article_generator_shared as ags
         self.assertTrue(callable(ags._fetch_page_title))
 
+    def test_unexpected_exception_is_logged_and_returns_empty(self):
+        """HTML パース等の予期しない例外はログ出力し、空文字列を返す（ソフトフェイルは維持）。"""
+        import article_generator_shared as ags
+        # iter_content が予期しない RuntimeError を発生させるケース
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = "text/html"
+        mock_resp.iter_content.side_effect = RuntimeError("unexpected error")
+        mock_resp.close.return_value = None
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+                title = ags._fetch_page_title("https://example.com/page")
+        # 空文字列を返す（ソフトフェイル）
+        self.assertEqual(title, "")
+        # 予期しないエラーがログされている
+        self.assertIn("予期しないエラー", mock_out.getvalue())
+        self.assertIn("RuntimeError", mock_out.getvalue())
+
 
 class TestValidateUrlSoftFail(unittest.TestCase):
     """_validate_url() のソフトフェイル動作テスト"""
@@ -1444,6 +1462,69 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             sc._verify_link_source_match,
             SourceUrlTracker.verify_link_source_match,
         )
+
+    def test_domain_check_is_case_insensitive(self):
+        """source_data URL と記事リンクのドメイン比較は大小文字を区別しない。
+
+        urlparse().netloc は大小文字を保持するが、_normalize_domain で正規化するため
+        "Azure.Microsoft.Com" と "azure.microsoft.com" を同一とみなす。
+        """
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN General Availability",
+                "url": "https://AZURE.MICROSOFT.COM/updates?id=560904",
+                "description": "Azure Backup now supports Elastic SAN...",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # リンクは小文字ドメイン → source_data は大文字ドメイン。正規化後は同一なので誤検知なし。
+        article = self._make_article(
+            "Azure Backup for Elastic SAN General Availability",
+            "https://azure.microsoft.com/updates?id=560904",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # ドメイン不一致の誤検知が発生していないこと
+        self.assertNotIn("ドメイン不一致", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
+    def test_fetch_page_title_disabled_by_env_var(self):
+        """DAILY_NEWS_FETCH_PAGE_TITLE=0 を設定するとステップ④が実行されない。
+
+        _FETCH_PAGE_TITLE_ENABLED=False でパッチすることで環境変数 0 の動作を検証する。
+        """
+        import article_generator_shared as ags
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+            {
+                "title": "Foundry Agent Service Infrastructure Update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Infrastructure improvements for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        # _FETCH_PAGE_TITLE_ENABLED=False でステップ④を無効化
+        with patch.object(ags, '_FETCH_PAGE_TITLE_ENABLED', False):
+            with patch.object(ags, '_fetch_page_title') as mock_fetch:
+                with patch('sys.stdout', new_callable=io.StringIO):
+                    SourceUrlTracker.verify_link_source_match(article, source_data)
+        # ステップ④が無効化されているため _fetch_page_title は呼ばれない
+        mock_fetch.assert_not_called()
 
     def test_page_title_mismatch_repaired_when_better_match_found(self):
         """実際のリンク先ページタイトルがラベルと一致しない場合に修正される。

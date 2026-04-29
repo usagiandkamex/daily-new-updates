@@ -7,6 +7,7 @@ generate_daily_update.py と generate_smallchat.py の両ワークフローで
 """
 
 import json
+import os
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -152,6 +153,25 @@ def _validate_url(url: str) -> tuple[bool, str]:
         return False, f"接続エラー ({e.__class__.__name__})"
 
 
+def _normalize_domain(parsed) -> str:
+    """urlparse 結果のホスト名を小文字化・末尾ドット除去して返す。
+
+    netloc はポート番号を含む場合があり大小文字も保持されるため、
+    hostname（Python が小文字化済み）を優先して使用する。
+    ドメイン集合 source_domains への追加と link_domain の取得の両方で
+    同じ正規化を適用することで、大小文字やポート付きホストによる誤検知を防ぐ。
+    """
+    hostname = parsed.hostname
+    if hostname:
+        return hostname.lower().rstrip(".")
+    return parsed.netloc.lower().rstrip(".")
+
+
+# HTTP ページタイトルフェッチを環境変数で無効化できる（デフォルト有効）。
+# DAILY_NEWS_FETCH_PAGE_TITLE=0 に設定するとステップ④をスキップする。
+_FETCH_PAGE_TITLE_ENABLED = os.environ.get("DAILY_NEWS_FETCH_PAGE_TITLE", "1") != "0"
+
+
 def _fetch_page_title(url: str) -> str:
     """HTTP GET でリンク先ページのタイトルを取得する。
 
@@ -205,8 +225,12 @@ def _fetch_page_title(url: str) -> str:
         pass
     except requests.RequestException:
         pass
-    except Exception:
-        pass
+    except Exception as e:
+        # 想定外のエラー（HTML パース失敗・実装バグ等）をログしてデバッグを支援（ソフトフェイルは維持）
+        print(
+            f"  ⚠ _fetch_page_title: 予期しないエラー"
+            f" ({type(e).__name__}: {e}) url={url!r}"
+        )
     finally:
         if resp is not None:
             resp.close()
@@ -1025,7 +1049,7 @@ class SourceUrlTracker:
                 norm = SourceUrlTracker._normalize_url(url)
                 url_to_item[norm] = item
                 try:
-                    source_domains.add(urlparse(url).netloc)
+                    source_domains.add(_normalize_domain(urlparse(url)))
                 except ValueError as e:
                     print(
                         f"  ⚠ source_data URL のパース失敗（このURLのドメイン収集をスキップして続行）:"
@@ -1098,7 +1122,7 @@ class SourceUrlTracker:
                     # 最強のシグナル。URL が source_data に含まれていない（item is None）か、
                     # または含まれていてもドメインが source_data 全体と一致しない場合に検出する。
                     try:
-                        link_domain = urlparse(url).netloc
+                        link_domain = _normalize_domain(urlparse(url))
                     except ValueError as e:
                         print(
                             f"  ⚠ 記事リンク URL のパース失敗（ドメインチェックをスキップ）:"
@@ -1228,54 +1252,56 @@ class SourceUrlTracker:
                     # 日本ベンダーサイト等への誤リンクも「ページタイトルが全然違う」として検出可能。
                     # ネットワーク障害時はソフトフェイル（空タイトル → チェックスキップ）。
                     # キャッシュキーは正規化済み URL（utm_* 等の異なりを同一視）。
-                    _PAGE_TITLE_THRESHOLD = 0.3
-                    if norm_url not in _page_title_cache:
-                        _page_title_cache[norm_url] = _fetch_page_title(url)
-                    page_title = _page_title_cache[norm_url]
-                    if page_title:
-                        page_title_words = set(
-                            SourceUrlTracker._norm_title(page_title).split()
-                        )
-                        # ラベル語と見出し語の両方でページタイトルとのスコアを算出し、高い方を採用。
-                        # LLM がラベルをコピーしなかった場合でも見出し語で検出できるようにする。
-                        label_vs_page_score = (
-                            len(norm_label_words & page_title_words)
-                            / max(len(norm_label_words), len(page_title_words), 1)
-                            if norm_label_words and page_title_words
-                            else 0.0
-                        )
-                        heading_vs_page_score = (
-                            len(_hw & page_title_words)
-                            / max(len(_hw), len(page_title_words), 1)
-                            if _hw and page_title_words
-                            else 0.0
-                        )
-                        page_score = max(label_vs_page_score, heading_vs_page_score)
-                        if page_score < _PAGE_TITLE_THRESHOLD:
-                            # ラベル語でベストマッチを探して修正を試みる
-                            repair_words = norm_label_words if norm_label_words else _hw
-                            best_page_url, best_page_score = _best_match(
-                                repair_words, title_url_pairs
+                    # DAILY_NEWS_FETCH_PAGE_TITLE=0 で無効化できる。
+                    if _FETCH_PAGE_TITLE_ENABLED:
+                        _PAGE_TITLE_THRESHOLD = 0.3
+                        if norm_url not in _page_title_cache:
+                            _page_title_cache[norm_url] = _fetch_page_title(url)
+                        page_title = _page_title_cache[norm_url]
+                        if page_title:
+                            page_title_words = set(
+                                SourceUrlTracker._norm_title(page_title).split()
                             )
-                            if (
-                                best_page_score >= _REPAIR_THRESHOLD
-                                and best_page_url
-                                and best_page_url != url
-                            ):
-                                repaired += 1
+                            # ラベル語と見出し語の両方でページタイトルとのスコアを算出し、高い方を採用。
+                            # LLM がラベルをコピーしなかった場合でも見出し語で検出できるようにする。
+                            label_vs_page_score = (
+                                len(norm_label_words & page_title_words)
+                                / max(len(norm_label_words), len(page_title_words), 1)
+                                if norm_label_words and page_title_words
+                                else 0.0
+                            )
+                            heading_vs_page_score = (
+                                len(_hw & page_title_words)
+                                / max(len(_hw), len(page_title_words), 1)
+                                if _hw and page_title_words
+                                else 0.0
+                            )
+                            page_score = max(label_vs_page_score, heading_vs_page_score)
+                            if page_score < _PAGE_TITLE_THRESHOLD:
+                                # ラベル語でベストマッチを探して修正を試みる
+                                repair_words = norm_label_words if norm_label_words else _hw
+                                best_page_url, best_page_score = _best_match(
+                                    repair_words, title_url_pairs
+                                )
+                                if (
+                                    best_page_score >= _REPAIR_THRESHOLD
+                                    and best_page_url
+                                    and best_page_url != url
+                                ):
+                                    repaired += 1
+                                    low_similarity.append(
+                                        f"[ページタイトル不一致→修正済み][{_heading[:50]}]"
+                                        f" {url[:50]} → {best_page_url[:50]}"
+                                        f" (page_title='{page_title[:40]}',"
+                                        f" page_score={page_score:.2f})"
+                                    )
+                                    return f"{prefix}[{label}]({best_page_url})"
                                 low_similarity.append(
-                                    f"[ページタイトル不一致→修正済み][{_heading[:50]}]"
-                                    f" {url[:50]} → {best_page_url[:50]}"
+                                    f"[ページタイトル不一致][{_heading[:50]}]"
+                                    f" {url[:60]}"
                                     f" (page_title='{page_title[:40]}',"
                                     f" page_score={page_score:.2f})"
                                 )
-                                return f"{prefix}[{label}]({best_page_url})"
-                            low_similarity.append(
-                                f"[ページタイトル不一致][{_heading[:50]}]"
-                                f" {url[:60]}"
-                                f" (page_title='{page_title[:40]}',"
-                                f" page_score={page_score:.2f})"
-                            )
 
                     return m.group(0)
 

@@ -169,21 +169,22 @@ def _fetch_page_title(url: str) -> str:
             allow_redirects=True,
             stream=True,
         )
-        if not resp.ok:
-            return ""
-        # Content-Type が HTML でない場合はページタイトルを持たないためスキップ
-        content_type = resp.headers.get("Content-Type", "").lower()
-        if "text/html" not in content_type:
+        try:
+            if not resp.ok:
+                return ""
+            # Content-Type が HTML でない場合はページタイトルを持たないためスキップ
+            content_type = resp.headers.get("Content-Type", "").lower()
+            if "text/html" not in content_type:
+                return ""
+            # <title> と og:title はほぼ先頭にあるため先頭 8 KB のみ取得する
+            content = b""
+            for chunk in resp.iter_content(chunk_size=8192):
+                content += chunk
+                if len(content) >= 8192:
+                    break
+            html_head = content.decode("utf-8", errors="ignore")
+        finally:
             resp.close()
-            return ""
-        # <title> と og:title はほぼ先頭にあるため先頭 8 KB のみ取得する
-        content = b""
-        for chunk in resp.iter_content(chunk_size=8192):
-            content += chunk
-            if len(content) >= 8192:
-                break
-        resp.close()
-        html_head = content.decode("utf-8", errors="ignore")
         # og:title を優先（属性順序・等号前後スペースに依存しないよう2パターンを検索）
         m = re.search(
             r'<meta[^>]+property\s*=\s*["\']og:title["\'][^>]+content\s*=\s*["\']([^"\'<]+)',
@@ -1225,10 +1226,11 @@ class SourceUrlTracker:
                     # Azure に限らず全セクション・全ドメインに対して共通して適用されるため、
                     # 日本ベンダーサイト等への誤リンクも「ページタイトルが全然違う」として検出可能。
                     # ネットワーク障害時はソフトフェイル（空タイトル → チェックスキップ）。
+                    # キャッシュキーは正規化済み URL（utm_* 等の異なりを同一視）。
                     _PAGE_TITLE_THRESHOLD = 0.3
-                    if url not in _page_title_cache:
-                        _page_title_cache[url] = _fetch_page_title(url)
-                    page_title = _page_title_cache[url]
+                    if norm_url not in _page_title_cache:
+                        _page_title_cache[norm_url] = _fetch_page_title(url)
+                    page_title = _page_title_cache[norm_url]
                     if page_title:
                         page_title_words = set(
                             SourceUrlTracker._norm_title(page_title).split()

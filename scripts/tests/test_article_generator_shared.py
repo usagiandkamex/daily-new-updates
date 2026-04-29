@@ -1113,6 +1113,23 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
 class TestVerifyLinkSourceMatch(unittest.TestCase):
     """SourceUrlTracker.verify_link_source_match() のテスト"""
 
+    def setUp(self):
+        """ステップ④の HTTP フェッチをデフォルトで無効化する。
+
+        verify_link_source_match() は実際のページをフェッチするステップ④を含むため、
+        CI でのフレーク・遅延を避けるために _fetch_page_title をデフォルトで
+        空文字列（スキップ）を返すようパッチする。
+        ステップ④の動作を検証するテストでは _fetch_page_title を明示的にモックする。
+        """
+        import article_generator_shared as ags
+        self._fetch_page_title_patcher = patch.object(
+            ags, '_fetch_page_title', return_value=""
+        )
+        self._fetch_page_title_patcher.start()
+
+    def tearDown(self):
+        self._fetch_page_title_patcher.stop()
+
     def _make_article(self, heading: str, url: str) -> str:
         return (
             "## 1. Azure アップデート情報\n\n"
@@ -1467,14 +1484,9 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             "(https://azure.microsoft.com/updates?id=999999)\n"
         )
         # ページを実際に取得したら全く異なる内容（Container Apps）が返ってくる想定
-        mock_resp = MagicMock()
-        mock_resp.ok = True
-        mock_resp.headers.get.return_value = "text/html"
-        mock_resp.iter_content.return_value = iter(
-            [b"<title>Azure Container Apps Networking Changes | Azure Updates</title>"]
-        )
-        mock_resp.close.return_value = None
-        with patch.object(ags.requests, "get", return_value=mock_resp):
+        # setUp のデフォルトパッチ（空文字列）を上書きして実際のタイトルを返すようにする
+        with patch.object(ags, '_fetch_page_title',
+                          return_value="Azure Container Apps Networking Changes"):
             with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
                 result = SourceUrlTracker.verify_link_source_match(article, source_data)
         out = mock_out.getvalue()
@@ -1506,14 +1518,8 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             "**リンク**: [Memory in Foundry Agent Service]"
             "(https://azure.microsoft.com/updates?id=999999)\n"
         )
-        mock_resp = MagicMock()
-        mock_resp.ok = True
-        mock_resp.headers.get.return_value = "text/html"
-        mock_resp.iter_content.return_value = iter(
-            [b"<title>Azure Container Apps Networking Changes | Azure Updates</title>"]
-        )
-        mock_resp.close.return_value = None
-        with patch.object(ags.requests, "get", return_value=mock_resp):
+        with patch.object(ags, '_fetch_page_title',
+                          return_value="Azure Container Apps Networking Changes"):
             with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
                 result = SourceUrlTracker.verify_link_source_match(article, source_data)
         out = mock_out.getvalue()
@@ -1544,14 +1550,8 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             "(https://azure.microsoft.com/updates?id=111111)\n"
         )
         # ページタイトルがラベルと一致するケース
-        mock_resp = MagicMock()
-        mock_resp.ok = True
-        mock_resp.headers.get.return_value = "text/html"
-        mock_resp.iter_content.return_value = iter(
-            [b"<title>Memory in Foundry Agent Service | Azure Updates</title>"]
-        )
-        mock_resp.close.return_value = None
-        with patch.object(ags.requests, "get", return_value=mock_resp):
+        with patch.object(ags, '_fetch_page_title',
+                          return_value="Memory in Foundry Agent Service | Azure Updates"):
             with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
                 result = SourceUrlTracker.verify_link_source_match(article, source_data)
         out = mock_out.getvalue()
@@ -1562,8 +1562,11 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
         self.assertEqual(result, article)
 
     def test_page_title_http_error_is_soft_failed(self):
-        """HTTP エラー時はソフトフェイルして既存の記事を変えない。"""
-        import article_generator_shared as ags
+        """HTTP エラー時はソフトフェイルして既存の記事を変えない。
+
+        setUp のデフォルトパッチ（空文字列）を維持することで、
+        ネットワーク障害相当のソフトフェイル動作を検証する。
+        """
         source_data = [
             {
                 "title": "Memory in Foundry Agent Service",
@@ -1580,16 +1583,15 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             "**リンク**: [Memory in Foundry Agent Service]"
             "(https://azure.microsoft.com/updates?id=111111)\n"
         )
-        # 接続エラー → ページタイトルが取得できないためステップ④はスキップ
-        with patch.object(ags.requests, "get", side_effect=ags.requests.ConnectionError("no network")):
-            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
-                result = SourceUrlTracker.verify_link_source_match(article, source_data)
-        # ソフトフェイルなので修正も警告もなし
+        # setUp のデフォルトパッチが空文字列を返す = HTTP エラー相当（ソフトフェイル）
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        # ソフトフェイルなのでページタイトル関連のログは出ない
         self.assertNotIn("ページタイトル", mock_out.getvalue())
         self.assertEqual(result, article)
 
     def test_page_title_url_cached_across_topics(self):
-        """同じ URL を複数トピックで参照する場合、HTTP リクエストは 1 回のみ送信される。"""
+        """同じ URL を複数トピックで参照する場合、_fetch_page_title は 1 回のみ呼ばれる。"""
         import article_generator_shared as ags
         url = "https://azure.microsoft.com/updates?id=111111"
         source_data = [
@@ -1610,18 +1612,12 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             "**要約**: ...\n\n"
             f"**リンク**: [Memory in Foundry Agent Service]({url})\n"
         )
-        mock_resp = MagicMock()
-        mock_resp.ok = True
-        mock_resp.headers.get.return_value = "text/html"
-        mock_resp.iter_content.return_value = iter(
-            [b"<title>Memory in Foundry Agent Service | Azure Updates</title>"]
-        )
-        mock_resp.close.return_value = None
-        with patch.object(ags.requests, "get", return_value=mock_resp) as mock_get:
+        with patch.object(ags, '_fetch_page_title',
+                          return_value="Memory in Foundry Agent Service | Azure Updates") as mock_fetch:
             with patch('sys.stdout', new_callable=io.StringIO):
                 SourceUrlTracker.verify_link_source_match(article, source_data)
-        # 同じ URL なので HTTP リクエストは 1 回のみ
-        self.assertEqual(mock_get.call_count, 1)
+        # 同じ URL なので _fetch_page_title は 1 回のみ呼ばれる
+        self.assertEqual(mock_fetch.call_count, 1)
 
 
 class TestNormTitle(unittest.TestCase):

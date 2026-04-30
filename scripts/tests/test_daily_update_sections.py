@@ -911,25 +911,35 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             f"ページ2 のイベントが結果に含まれていない: titles={sorted(result_titles)[:5]}",
         )
 
-    def _make_rss_entry(self, event_id: int) -> "MagicMock":
+    def _make_rss_entry(self, event_id: int, published_at: str = "2026-05-25 10:00:00") -> "MagicMock":
         """テスト用の RSS エントリ MagicMock を作成する。"""
         import time as time_mod
         data = {
             "link": f"https://connpass.com/event/{event_id}/",
             "title": f"Python 勉強会 {event_id}",
             "summary": "Python エンジニア向けイベント",
-            "published_parsed": time_mod.strptime("2026-05-25 10:00:00", "%Y-%m-%d %H:%M:%S"),
+            "published_parsed": time_mod.strptime(published_at, "%Y-%m-%d %H:%M:%S"),
         }
         entry = MagicMock()
         entry.get.side_effect = lambda k, d=None: data.get(k, d)
         return entry
 
     def test_prev_event_urls_deprioritizes_before_cap_many_new(self):
-        """新規イベントが CONNPASS_MAX_EVENTS 以上ある場合、前日重複は結果から除外される。"""
+        """新規イベントが CONNPASS_MAX_EVENTS 以上ある場合、前日重複は後方に回されて結果から除外される。"""
         max_ev = du.CONNPASS_MAX_EVENTS
 
-        # max_ev+2 件の RSS エントリを用意する（ID 1〜max_ev は新規、ID max_ev+1〜max_ev+2 は前日重複）
-        entries = [self._make_rss_entry(i) for i in range(1, max_ev + 3)]
+        # 前日重複 2 件をあえて先頭側・早い日時に置く。
+        # 後方移動ロジックが無ければ、単純な [:max_ev] の切り詰めでは重複が結果に残ってしまう。
+        duplicate_entries = [
+            self._make_rss_entry(max_ev + 1, "2026-05-24 08:00:00"),
+            self._make_rss_entry(max_ev + 2, "2026-05-24 09:00:00"),
+        ]
+        new_entries = [
+            self._make_rss_entry(i, f"2026-05-25 {10 + (i % 10):02d}:00:00")
+            for i in range(1, max_ev + 1)
+        ]
+        # 重複を先頭に置くことで、並べ替えロジックがなければ [:max_ev] で重複が残る
+        entries = duplicate_entries + new_entries
         prev_event_urls = {
             f"https://connpass.com/event/{max_ev + 1}/",
             f"https://connpass.com/event/{max_ev + 2}/",
@@ -960,11 +970,11 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
         """新規イベントが CONNPASS_MAX_EVENTS 未満の場合、前日重複もリストに含まれる。"""
         max_ev = du.CONNPASS_MAX_EVENTS
 
-        # 新規 2 件 + 前日重複 1 件 = 合計 3 件（max_ev 未満）
+        # 前日重複イベントを先頭（早い日時）に置く。並べ替えロジックで末尾に回るが件数が少ないので残る。
         entries = [
-            self._make_rss_entry(1),
-            self._make_rss_entry(2),
-            self._make_rss_entry(3),
+            self._make_rss_entry(3, "2026-05-24 08:00:00"),  # 前日重複：最も早い日時で先頭に来る
+            self._make_rss_entry(1, "2026-05-25 10:00:00"),
+            self._make_rss_entry(2, "2026-05-25 11:00:00"),
         ]
         prev_event_urls = {"https://connpass.com/event/3/"}
 

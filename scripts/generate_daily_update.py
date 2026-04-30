@@ -1213,7 +1213,7 @@ def _load_previous_day_event_urls(target_date: str, updates_dir: str = "updates"
     try:
         with open(prev_path, encoding="utf-8") as f:
             content = f.read()
-    except OSError:
+    except (OSError, UnicodeError):
         return set()
 
     return set(_MD_LINK_URL_RE.findall(content))

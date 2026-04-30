@@ -508,6 +508,100 @@ class TestSharedFunctionsModule(unittest.TestCase):
         self.assertIn("記事A", prompt)
 
 
+class TestFetchPageTitle(unittest.TestCase):
+    """_fetch_page_title() のテスト"""
+
+    def _make_mock_resp(self, html_bytes: bytes, content_type: str = "text/html; charset=utf-8"):
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = content_type
+        mock_resp.iter_content.return_value = iter([html_bytes])
+        mock_resp.close.return_value = None
+        return mock_resp
+
+    def test_extracts_og_title(self):
+        """og:title メタタグからタイトルを取得する。"""
+        import article_generator_shared as ags
+        html = b'<meta property="og:title" content="Azure Memory Feature Update"/>'
+        with patch.object(ags.requests, "get", return_value=self._make_mock_resp(html)):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=1")
+        self.assertEqual(title, "Azure Memory Feature Update")
+
+    def test_falls_back_to_title_tag(self):
+        """og:title がなければ <title> タグを使用する。"""
+        import article_generator_shared as ags
+        html = b"<html><head><title>Azure Kubernetes Service | Azure</title></head></html>"
+        with patch.object(ags.requests, "get", return_value=self._make_mock_resp(html)):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=2")
+        self.assertEqual(title, "Azure Kubernetes Service | Azure")
+
+    def test_connection_error_returns_empty(self):
+        """接続エラー時は空文字列を返す（ソフトフェイル）。"""
+        import article_generator_shared as ags
+        with patch.object(ags.requests, "get", side_effect=ags.requests.ConnectionError("no network")):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=3")
+        self.assertEqual(title, "")
+
+    def test_timeout_returns_empty(self):
+        """タイムアウト時は空文字列を返す（ソフトフェイル）。"""
+        import article_generator_shared as ags
+        with patch.object(ags.requests, "get", side_effect=ags.requests.Timeout("timed out")):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=4")
+        self.assertEqual(title, "")
+
+    def test_non_html_content_returns_empty(self):
+        """Content-Type が HTML でない場合は空文字列を返す。"""
+        import article_generator_shared as ags
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = "application/json"
+        mock_resp.close.return_value = None
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            title = ags._fetch_page_title("https://api.example.com/data.json")
+        self.assertEqual(title, "")
+        mock_resp.iter_content.assert_not_called()
+
+    def test_http_error_returns_empty(self):
+        """HTTP 4xx/5xx レスポンス時は空文字列を返す。"""
+        import article_generator_shared as ags
+        mock_resp = MagicMock()
+        mock_resp.ok = False
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            title = ags._fetch_page_title("https://example.com/404")
+        self.assertEqual(title, "")
+
+    def test_og_title_alternative_attribute_order(self):
+        """og:title の content と property 属性順序が逆でも取得できる。"""
+        import article_generator_shared as ags
+        html = b'<meta content="Azure Spring Apps Retirement" property="og:title"/>'
+        with patch.object(ags.requests, "get", return_value=self._make_mock_resp(html)):
+            title = ags._fetch_page_title("https://azure.microsoft.com/updates?id=5")
+        self.assertEqual(title, "Azure Spring Apps Retirement")
+
+    def test_fetch_page_title_is_accessible_from_module(self):
+        """_fetch_page_title は article_generator_shared モジュールから参照できる。"""
+        import article_generator_shared as ags
+        self.assertTrue(callable(ags._fetch_page_title))
+
+    def test_unexpected_exception_is_logged_and_returns_empty(self):
+        """HTML パース等の予期しない例外はログ出力し、空文字列を返す（ソフトフェイルは維持）。"""
+        import article_generator_shared as ags
+        # iter_content が予期しない RuntimeError を発生させるケース
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.headers.get.return_value = "text/html"
+        mock_resp.iter_content.side_effect = RuntimeError("unexpected error")
+        mock_resp.close.return_value = None
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+                title = ags._fetch_page_title("https://example.com/page")
+        # 空文字列を返す（ソフトフェイル）
+        self.assertEqual(title, "")
+        # 予期しないエラーがログされている
+        self.assertIn("予期しないエラー", mock_out.getvalue())
+        self.assertIn("RuntimeError", mock_out.getvalue())
+
+
 class TestValidateUrlSoftFail(unittest.TestCase):
     """_validate_url() のソフトフェイル動作テスト"""
 
@@ -1037,6 +1131,23 @@ class TestReplaceUnsourcedReferenceLinks(unittest.TestCase):
 class TestVerifyLinkSourceMatch(unittest.TestCase):
     """SourceUrlTracker.verify_link_source_match() のテスト"""
 
+    def setUp(self):
+        """ステップ④の HTTP フェッチをデフォルトで無効化する。
+
+        verify_link_source_match() は実際のページをフェッチするステップ④を含むため、
+        CI でのフレーク・遅延を避けるために _fetch_page_title をデフォルトで
+        空文字列（スキップ）を返すようパッチする。
+        ステップ④の動作を検証するテストでは _fetch_page_title を明示的にモックする。
+        """
+        import article_generator_shared as ags
+        self._fetch_page_title_patcher = patch.object(
+            ags, '_fetch_page_title', return_value=""
+        )
+        self._fetch_page_title_patcher.start()
+
+    def tearDown(self):
+        self._fetch_page_title_patcher.stop()
+
     def _make_article(self, heading: str, url: str) -> str:
         return (
             "## 1. Azure アップデート情報\n\n"
@@ -1120,7 +1231,7 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
         self.assertEqual(result, article)
 
     def test_url_not_in_source_data_is_silently_skipped(self):
-        """source_data に存在しない URL はスキップ（validate_links で別途処理済み）。"""
+        """同ドメインだが source_data に存在しない URL はスキップ（validate_links で別途処理済み）。"""
         source_data = [
             {
                 "title": "Azure Backup for Elastic SAN",
@@ -1129,14 +1240,85 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
                 "source": "Azure",
             },
         ]
+        # 同じ azure.microsoft.com ドメインだが source_data にない ?id= を持つ URL
+        # ドメインは期待範囲内なのでドメイン不一致チェックはスキップされる
         article = self._make_article(
             "Azure Backup for Elastic SAN",
-            "https://example.com/completely-unrelated",
+            "https://azure.microsoft.com/updates?id=UNKNOWN_ID",
         )
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             result = SourceUrlTracker.verify_link_source_match(article, source_data)
-        # 存在しない URL はスキップし、警告は出ない（validate_links で処理される）
+        # source_data に存在しない URL はスキップし、警告は出ない（validate_links で処理される）
         self.assertNotIn("低スコア", mock_out.getvalue())
+        self.assertEqual(result, article)
+
+    def test_domain_mismatch_repaired_when_better_match_found(self):
+        """リンク先ドメインが source_data と異なる場合（日本ベンダーサイト等）は修正される。
+
+        LLM が誤って日本国内ベンダーサイト等の非公式 URL を付けてしまったケース。
+        source_data には azure.microsoft.com の URL しかないのに、
+        リンクが外部ドメイン（例: jp-vendor.co.jp）を指している場合に修正を検証する。
+        """
+        source_data = [
+            {
+                "title": "Public Preview: Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service is now available.",
+                "source": "Azure Release Communications",
+            },
+            {
+                "title": "Public Preview: Azure Container Apps networking update",
+                "url": "https://azure.microsoft.com/updates?id=222222",
+                "description": "Container Apps networking improvements.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベルは正しい記事タイトルだが、URL が日本ベンダーサイトを指している
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: Foundry Agent Service のメモリ機能が利用可能になりました。\n\n"
+            "**影響**: 開発者にとって長期的なメモリ管理が容易になります。\n\n"
+            "**リンク**: [Public Preview: Memory in Foundry Agent Service]"
+            "(https://jp-vendor.co.jp/azure-updates/memory-foundry)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # ドメイン不一致が検出され、修正済みログが出ている
+        self.assertIn("ドメイン不一致→修正済み", out)
+        # 正しい Azure URL（id=111111）に置換されている
+        self.assertIn("https://azure.microsoft.com/updates?id=111111", result)
+        # ベンダーサイトの URL は除去されている
+        self.assertNotIn("jp-vendor.co.jp", result)
+
+    def test_domain_mismatch_warns_when_no_repair_candidate(self):
+        """リンク先ドメインが source_data と異なるが修正候補がない場合は警告のみ。"""
+        source_data = [
+            {
+                "title": "Azure Kubernetes Service monthly update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "AKS updates.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベルが source_data のどの記事とも一致しない + 外部ドメイン
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://jp-vendor.co.jp/some-page)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 修正候補がないので記事は変わらない
+        self.assertNotIn("修正済み", out)
+        # ドメイン不一致の警告が出ている
+        self.assertIn("ドメイン不一致", out)
+        # 記事は変わらない
         self.assertEqual(result, article)
 
     def test_empty_source_data_returns_article_unchanged(self):
@@ -1167,6 +1349,104 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
         self.assertIn("問題なし", mock_out.getvalue())
         self.assertEqual(result, article)
 
+    def test_label_mismatch_repaired_when_better_match_found(self):
+        """リンクラベルがリンク先ソースタイトルと一致しないが、正しいURLがソースにある場合は修正される。
+
+        LLM がラベルにソースタイトルを使いながら URL を誤って別の記事のものにしたケース。
+        たとえば Azure で「Memory in Foundry Agent Service」の記事を要約したが、
+        別の Azure アップデート記事の URL を誤って付けてしまった場合の修正を検証する。
+        """
+        source_data = [
+            {
+                "title": "Public Preview: Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service is now available.",
+                "source": "Azure Release Communications",
+            },
+            {
+                "title": "Public Preview: Azure Container Apps networking update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Container Apps networking improvements.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベルは正しい記事（Memory in Foundry Agent Service）を指しているが、
+        # URL が誤って Container Apps の記事（id=999999）を指している
+        article = (
+            "## 3. Azure\n\n"
+            "### [In preview] Public Preview: Memory in Foundry Agent Service\n\n"
+            "**要約**: Foundry Agent Service におけるメモリ機能がパブリックプレビューとして利用可能になりました。\n\n"
+            "**影響**: 開発者にとって長期的なメモリ管理が容易になります。\n\n"
+            "**リンク**: [Public Preview: Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # ラベル不一致が検出され、ラベルベースの修正済みログが出ている
+        self.assertIn("ラベル不一致→修正済み", out)
+        # 正しい URL（id=111111）に置換されている
+        self.assertIn("https://azure.microsoft.com/updates?id=111111", result)
+        # 誤った URL（id=999999）は除去されている
+        self.assertNotIn("?id=999999", result)
+
+    def test_label_mismatch_warns_when_no_repair_candidate(self):
+        """ラベルとリンク先が不一致で修正候補もない場合は警告のみ（記事は変えない）。"""
+        source_data = [
+            {
+                "title": "Public Preview: Azure Container Apps networking update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Container Apps networking improvements.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベル「Memory in Foundry Agent Service」は source_data のどの記事とも一致しない
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 修正候補がないので修正はされていない
+        self.assertNotIn("修正済み", out)
+        # ラベル不一致の警告が出ている
+        self.assertIn("ラベル不一致", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
+    def test_label_matching_source_title_no_false_positive(self):
+        """ラベルとリンク先ソースタイトルが一致する場合は誤検知なし（問題なし）。"""
+        source_data = [
+            {
+                "title": "Public Preview: Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Public Preview: Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=111111)\n"
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 正しいリンクなので修正も警告も出ない
+        self.assertNotIn("修正済み", out)
+        self.assertNotIn("低スコア", out)
+        self.assertIn("問題なし", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
     def test_daily_update_delegates_to_source_url_tracker(self):
         """generate_daily_update の _verify_link_source_match は SourceUrlTracker に委譲する。"""
         import generate_daily_update as du
@@ -1182,6 +1462,243 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
             sc._verify_link_source_match,
             SourceUrlTracker.verify_link_source_match,
         )
+
+    def test_domain_check_is_case_insensitive(self):
+        """source_data URL と記事リンクのドメイン比較は大小文字を区別しない。
+
+        urlparse().netloc は大小文字を保持するが、_normalize_domain で正規化するため
+        "Azure.Microsoft.Com" と "azure.microsoft.com" を同一とみなす。
+        """
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN General Availability",
+                "url": "https://AZURE.MICROSOFT.COM/updates?id=560904",
+                "description": "Azure Backup now supports Elastic SAN...",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # リンクは小文字ドメイン → source_data は大文字ドメイン。正規化後は同一なので誤検知なし。
+        article = self._make_article(
+            "Azure Backup for Elastic SAN General Availability",
+            "https://azure.microsoft.com/updates?id=560904",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # ドメイン不一致の誤検知が発生していないこと
+        self.assertNotIn("ドメイン不一致", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
+    def test_fetch_page_title_disabled_by_env_var(self):
+        """DAILY_NEWS_FETCH_PAGE_TITLE=0 を設定するとステップ④が実行されない。
+
+        _FETCH_PAGE_TITLE_ENABLED=False でパッチすることで環境変数 0 の動作を検証する。
+        """
+        import article_generator_shared as ags
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+            {
+                "title": "Foundry Agent Service Infrastructure Update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Infrastructure improvements for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        # _FETCH_PAGE_TITLE_ENABLED=False でステップ④を無効化
+        with patch.object(ags, '_FETCH_PAGE_TITLE_ENABLED', False):
+            with patch.object(ags, '_fetch_page_title') as mock_fetch:
+                with patch('sys.stdout', new_callable=io.StringIO):
+                    SourceUrlTracker.verify_link_source_match(article, source_data)
+        # ステップ④が無効化されているため _fetch_page_title は呼ばれない
+        mock_fetch.assert_not_called()
+
+    def test_page_title_mismatch_repaired_when_better_match_found(self):
+        """実際のリンク先ページタイトルがラベルと一致しない場合に修正される。
+
+        静的チェック（①〜③）をパスするが、HTTP で取得したページタイトルが
+        ラベルと異なる場合に修正される（Azure に限らず全セクション対応）。
+
+        source_data に id=999999 の記事タイトルが "Foundry Agent Service Infrastructure Update"
+        のようにラベルと単語重複が高い場合、静的チェックでは検出できない。
+        しかし実際にページを取得したタイトルが "Azure Container Apps Networking Changes"
+        のようにラベルと全く異なる場合、step ④ で検出・修正できる。
+        """
+        import article_generator_shared as ags
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+            {
+                # source_data タイトルがラベルと高い単語重複を持つため静的チェックをパスする
+                "title": "Foundry Agent Service Infrastructure Update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Infrastructure improvements for Foundry Agent Service.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # ラベルは "Memory in Foundry Agent Service" だが URL は id=999999（別記事）を指している。
+        # source_data タイトル "Foundry Agent Service Infrastructure Update" との重複が 0.6 のため
+        # 静的チェック（label check / heading check）は通過してしまう。
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        # ページを実際に取得したら全く異なる内容（Container Apps）が返ってくる想定
+        # setUp のデフォルトパッチ（空文字列）を上書きして実際のタイトルを返すようにする
+        with patch.object(ags, '_fetch_page_title',
+                          return_value="Azure Container Apps Networking Changes"):
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+                result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # ページタイトル不一致が検出され、修正済みログが出ている
+        self.assertIn("ページタイトル不一致→修正済み", out)
+        # 正しい URL（id=111111）に置換されている
+        self.assertIn("https://azure.microsoft.com/updates?id=111111", result)
+        # 誤った URL（id=999999）は除去されている
+        self.assertNotIn("?id=999999", result)
+
+    def test_page_title_mismatch_warns_when_no_repair_candidate(self):
+        """ページタイトルが不一致だが修正候補がない場合は警告のみ（記事は変えない）。"""
+        import article_generator_shared as ags
+        source_data = [
+            {
+                # source_data タイトルがラベルと高い単語重複を持つため静的チェックをパスする
+                "title": "Foundry Agent Service Infrastructure Update",
+                "url": "https://azure.microsoft.com/updates?id=999999",
+                "description": "Infrastructure improvements.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # source_data に "memory" を含む正しい修正候補が存在しないケース
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=999999)\n"
+        )
+        with patch.object(ags, '_fetch_page_title',
+                          return_value="Azure Container Apps Networking Changes"):
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+                result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 修正候補がないので記事は変わらない
+        self.assertNotIn("修正済み", out)
+        # ページタイトル不一致の警告が出ている
+        self.assertIn("ページタイトル不一致", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
+    def test_page_title_matching_no_false_positive(self):
+        """ページタイトルがラベルと一致する場合は誤検知なし（問題なし）。"""
+        import article_generator_shared as ags
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=111111)\n"
+        )
+        # ページタイトルがラベルと一致するケース
+        with patch.object(ags, '_fetch_page_title',
+                          return_value="Memory in Foundry Agent Service | Azure Updates"):
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+                result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 正しいリンクなので修正も警告も出ない
+        self.assertNotIn("ページタイトル不一致", out)
+        self.assertNotIn("修正済み", out)
+        # 記事は変わらない
+        self.assertEqual(result, article)
+
+    def test_page_title_http_error_is_soft_failed(self):
+        """HTTP エラー時はソフトフェイルして既存の記事を変えない。
+
+        setUp のデフォルトパッチ（空文字列）を維持することで、
+        ネットワーク障害相当のソフトフェイル動作を検証する。
+        """
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": "https://azure.microsoft.com/updates?id=111111",
+                "description": "Memory feature.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service\n\n"
+            "**要約**: ...\n\n"
+            "**影響**: ...\n\n"
+            "**リンク**: [Memory in Foundry Agent Service]"
+            "(https://azure.microsoft.com/updates?id=111111)\n"
+        )
+        # setUp のデフォルトパッチが空文字列を返す = HTTP エラー相当（ソフトフェイル）
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        # ソフトフェイルなのでページタイトル関連のログは出ない
+        self.assertNotIn("ページタイトル", mock_out.getvalue())
+        self.assertEqual(result, article)
+
+    def test_page_title_url_cached_across_topics(self):
+        """同じ URL を複数トピックで参照する場合、_fetch_page_title は 1 回のみ呼ばれる。"""
+        import article_generator_shared as ags
+        url = "https://azure.microsoft.com/updates?id=111111"
+        source_data = [
+            {
+                "title": "Memory in Foundry Agent Service",
+                "url": url,
+                "description": "Memory feature.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # 同じ URL を2つのトピックで参照
+        article = (
+            "## 3. Azure\n\n"
+            "### Memory in Foundry Agent Service A\n\n"
+            "**要約**: ...\n\n"
+            f"**リンク**: [Memory in Foundry Agent Service]({url})\n\n"
+            "### Memory in Foundry Agent Service B\n\n"
+            "**要約**: ...\n\n"
+            f"**リンク**: [Memory in Foundry Agent Service]({url})\n"
+        )
+        with patch.object(ags, '_fetch_page_title',
+                          return_value="Memory in Foundry Agent Service | Azure Updates") as mock_fetch:
+            with patch('sys.stdout', new_callable=io.StringIO):
+                SourceUrlTracker.verify_link_source_match(article, source_data)
+        # 同じ URL なので _fetch_page_title は 1 回のみ呼ばれる
+        self.assertEqual(mock_fetch.call_count, 1)
 
 
 class TestNormTitle(unittest.TestCase):

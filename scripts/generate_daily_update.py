@@ -843,7 +843,10 @@ def _fetch_other_platform_events(
     return events
 
 
-def fetch_connpass_events(target_date: str) -> list[dict]:
+def fetch_connpass_events(
+    target_date: str,
+    prev_event_urls: "set[str] | None" = None,
+) -> list[dict]:
     """connpassから東京・神奈川の近日開催コミュニティイベントを取得する（多段検索）。
 
     API キー不要の多段検索で upcoming IT イベントを発掘する:
@@ -1032,6 +1035,14 @@ def fetch_connpass_events(target_date: str) -> list[dict]:
         if not e.get("started_at") or e["started_at"][:10] >= today_str
     ]
     all_events.sort(key=lambda e: (0, e["started_at"]) if e.get("started_at") else (1, ""))
+
+    # 前日との重複を後方に移動してから件数上限を適用する
+    # こうすることで、新規イベントが十分あれば重複イベントは自然に除外される
+    if prev_event_urls:
+        repeated_count = sum(1 for e in all_events if e.get("event_url") in prev_event_urls)
+        if repeated_count > 0:
+            all_events = _deprioritize_repeated_events(all_events, prev_event_urls)
+            print(f"  ※ 前日と重複する {repeated_count} 件を後方に移動しました")
 
     if len(all_events) > CONNPASS_MAX_EVENTS:
         print(f"  ※ connpass {len(all_events)} 件 → {CONNPASS_MAX_EVENTS} 件に制限")
@@ -1619,17 +1630,9 @@ def main():
     print(f"  → 合計: {len(sns_news)} 件")
 
     print("\n[connpass イベント（東京・神奈川）]")
-    connpass_events = fetch_connpass_events(target_date)
-    print(f"  → 合計: {len(connpass_events)} 件")
-    # 前日との重複を避けてイベントの多様性を高める
     prev_event_urls = _load_previous_day_event_urls(target_date)
-    if prev_event_urls:
-        repeated_count = sum(
-            1 for e in connpass_events if e.get("event_url") in prev_event_urls
-        )
-        if repeated_count > 0:
-            connpass_events = _deprioritize_repeated_events(connpass_events, prev_event_urls)
-            print(f"  ※ 前日と重複する {repeated_count} 件を後方に移動しました")
+    connpass_events = fetch_connpass_events(target_date, prev_event_urls)
+    print(f"  → 合計: {len(connpass_events)} 件")
 
     print("\n[コミュニティイベント参加レポート]")
     event_reports = _limit_articles(fetch_category("event_reports", since), "event_reports")

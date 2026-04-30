@@ -911,6 +911,100 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             f"ページ2 のイベントが結果に含まれていない: titles={sorted(result_titles)[:5]}",
         )
 
+    def _make_rss_entry(self, event_id: int, published_at: str = "2026-05-25 10:00:00") -> "MagicMock":
+        """テスト用の RSS エントリ MagicMock を作成する。"""
+        import time as time_mod
+        data = {
+            "link": f"https://connpass.com/event/{event_id}/",
+            "title": f"Python 勉強会 {event_id}",
+            "summary": "Python エンジニア向けイベント",
+            "published_parsed": time_mod.strptime(published_at, "%Y-%m-%d %H:%M:%S"),
+        }
+        entry = MagicMock()
+        entry.get.side_effect = lambda k, d=None: data.get(k, d)
+        return entry
+
+    def test_prev_event_urls_deprioritizes_before_cap_many_new(self):
+        """新規イベントが CONNPASS_MAX_EVENTS 以上ある場合、前日重複は後方に回されて結果から除外される。"""
+        max_ev = du.CONNPASS_MAX_EVENTS
+
+        # 前日重複 2 件をあえて先頭側・早い日時に置く。
+        # 後方移動ロジックが無ければ、単純な [:max_ev] の切り詰めでは重複が結果に残ってしまう。
+        duplicate_entries = [
+            self._make_rss_entry(max_ev + 1, "2026-05-24 08:00:00"),
+            self._make_rss_entry(max_ev + 2, "2026-05-24 09:00:00"),
+        ]
+        new_entries = [
+            self._make_rss_entry(i, f"2026-05-25 {10 + (i % 10):02d}:00:00")
+            for i in range(1, max_ev + 1)
+        ]
+        # 重複を先頭に置くことで、並べ替えロジックがなければ [:max_ev] で重複が残る
+        entries = duplicate_entries + new_entries
+        prev_event_urls = {
+            f"https://connpass.com/event/{max_ev + 1}/",
+            f"https://connpass.com/event/{max_ev + 2}/",
+        }
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=entries)
+            result = du.fetch_connpass_events("20260520", prev_event_urls)
+
+        # 結果は最大 max_ev 件以内
+        self.assertLessEqual(len(result), max_ev)
+        # 前日重複 URL は結果に含まれない（新規が十分あるため後方に回って除外される）
+        result_urls = {e["event_url"] for e in result}
+        for url in prev_event_urls:
+            self.assertNotIn(url, result_urls, f"前日重複 {url} が除外されていない")
+
+    def test_prev_event_urls_keeps_repeated_when_few_new(self):
+        """新規イベントが CONNPASS_MAX_EVENTS 未満の場合、前日重複もリストに含まれる。"""
+        max_ev = du.CONNPASS_MAX_EVENTS
+
+        # 前日重複イベントを先頭（早い日時）に置く。並べ替えロジックで末尾に回るが件数が少ないので残る。
+        entries = [
+            self._make_rss_entry(3, "2026-05-24 08:00:00"),  # 前日重複：最も早い日時で先頭に来る
+            self._make_rss_entry(1, "2026-05-25 10:00:00"),
+            self._make_rss_entry(2, "2026-05-25 11:00:00"),
+        ]
+        prev_event_urls = {"https://connpass.com/event/3/"}
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=entries)
+            result = du.fetch_connpass_events("20260520", prev_event_urls)
+
+        result_urls = {e["event_url"] for e in result}
+        # 前日重複イベントもリストに残る（新規が max_ev に満たないため）
+        self.assertIn("https://connpass.com/event/3/", result_urls,
+                      "新規イベントが少ない場合は前日重複もリストに残るべき")
+        # 新規イベントが前日重複より前に来る
+        new_indices = [i for i, e in enumerate(result)
+                       if e["event_url"] not in prev_event_urls]
+        dup_indices = [i for i, e in enumerate(result)
+                       if e["event_url"] in prev_event_urls]
+        if new_indices and dup_indices:
+            self.assertLess(max(new_indices), min(dup_indices),
+                            "新規イベントは前日重複より前に並ぶべき")
+
 
 class TestFetchOtherPlatformEvents(unittest.TestCase):
     """_fetch_other_platform_events() のテスト"""
@@ -2469,6 +2563,155 @@ class TestFetchFeedMaxAgeDaysDailyUpdate(unittest.TestCase):
     def test_max_article_age_days_constant_is_30(self):
         """MAX_ARTICLE_AGE_DAYS は 30 日に設定されている。"""
         self.assertEqual(du.MAX_ARTICLE_AGE_DAYS, 30)
+
+
+class TestLoadPreviousDayEventUrls(unittest.TestCase):
+    """_load_previous_day_event_urls() のテスト"""
+
+    def setUp(self):
+        import tempfile
+        self.tmp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
+    def _write_md(self, date_str: str, content: str) -> None:
+        path = os.path.join(self.tmp_dir, f"{date_str}.md")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+    def test_returns_empty_set_when_file_missing(self):
+        """前日のファイルが存在しない場合は空集合を返す。"""
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertEqual(result, set())
+
+    def test_extracts_urls_from_markdown_links(self):
+        """マークダウンリンク形式の URL を正しく抽出する。"""
+        self._write_md("20260430", (
+            "**[Python 勉強会](https://connpass.com/event/111/)**\n\n"
+            "**[AI ハンズオン](https://connpass.com/event/222/)**\n"
+        ))
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertIn("https://connpass.com/event/111/", result)
+        self.assertIn("https://connpass.com/event/222/", result)
+
+    def test_returns_empty_set_when_no_links(self):
+        """リンクが含まれない場合は空集合を返す。"""
+        self._write_md("20260430", "本文のみ、リンクなし")
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertEqual(result, set())
+
+    def test_date_previous_day_calculation(self):
+        """前日の日付ファイルを正しく参照する（月をまたぐ場合も含む）。"""
+        # 5/1 → 前日は 4/30
+        self._write_md("20260430", "[title](https://connpass.com/event/100/)")
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertIn("https://connpass.com/event/100/", result)
+        # 当日ファイルは参照しない
+        self._write_md("20260501", "[title](https://connpass.com/event/999/)")
+        result2 = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertNotIn("https://connpass.com/event/999/", result2)
+
+    def test_month_boundary_previous_day(self):
+        """月初（例: 5/1 → 前日は 4/30）のファイル名が正しく解決される。"""
+        self._write_md("20260430", "[ev](https://connpass.com/event/50/)")
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertIn("https://connpass.com/event/50/", result)
+
+    def test_excludes_non_connpass_urls(self):
+        """connpass のイベント URL は抽出し、それ以外の URL はフィルタされて返されない。"""
+        self._write_md("20260430", (
+            "[connpass ev](https://connpass.com/event/111/)\n"
+            "[subdomain connpass ev](https://foo.connpass.com/event/123/)\n"
+            "[azure](https://azure.microsoft.com/updates/)\n"
+            "[github](https://github.com/org/repo)\n"
+        ))
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertIn("https://connpass.com/event/111/", result)
+        self.assertIn("https://foo.connpass.com/event/123/", result)
+        self.assertNotIn("https://azure.microsoft.com/updates/", result)
+        self.assertNotIn("https://github.com/org/repo", result)
+
+class TestDeprioritizeRepeatedEvents(unittest.TestCase):
+    """_deprioritize_repeated_events() のテスト"""
+
+    def _make_event(self, event_id: int, started_at: str = "") -> dict:
+        return {
+            "title": f"イベント {event_id}",
+            "event_url": f"https://connpass.com/event/{event_id}/",
+            "started_at": started_at,
+        }
+
+    def test_repeated_events_moved_to_end(self):
+        """前日にあった URL を持つイベントはリストの末尾に移動する。"""
+        events = [
+            self._make_event(1),
+            self._make_event(2),
+            self._make_event(3),
+        ]
+        prev_urls = {"https://connpass.com/event/2/"}
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        self.assertEqual(result[0]["event_url"], "https://connpass.com/event/1/")
+        self.assertEqual(result[1]["event_url"], "https://connpass.com/event/3/")
+        self.assertEqual(result[2]["event_url"], "https://connpass.com/event/2/")
+
+    def test_no_repeated_events_order_unchanged(self):
+        """前日に重複がない場合は元の順序を維持する。"""
+        events = [self._make_event(i) for i in range(1, 4)]
+        prev_urls = {"https://connpass.com/event/99/"}
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        for i, e in enumerate(result):
+            self.assertEqual(e["event_url"], events[i]["event_url"])
+
+    def test_all_repeated_events_order_maintained(self):
+        """すべて重複している場合は元の順序を維持する。"""
+        events = [self._make_event(i) for i in range(1, 4)]
+        prev_urls = {e["event_url"] for e in events}
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        for i, e in enumerate(result):
+            self.assertEqual(e["event_url"], events[i]["event_url"])
+
+    def test_empty_events_returns_empty(self):
+        """空リストに対して空リストを返す。"""
+        result = du._deprioritize_repeated_events([], {"https://connpass.com/event/1/"})
+        self.assertEqual(result, [])
+
+    def test_empty_prev_urls_order_unchanged(self):
+        """prev_event_urls が空集合の場合は元の順序を維持する。"""
+        events = [self._make_event(i) for i in range(1, 4)]
+        result = du._deprioritize_repeated_events(events, set())
+        for i, e in enumerate(result):
+            self.assertEqual(e["event_url"], events[i]["event_url"])
+
+    def test_total_event_count_unchanged(self):
+        """リスト内のイベント総数は変化しない。"""
+        events = [self._make_event(i) for i in range(1, 6)]
+        prev_urls = {
+            "https://connpass.com/event/1/",
+            "https://connpass.com/event/3/",
+        }
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        self.assertEqual(len(result), len(events))
+
+    def test_new_events_precede_repeated_events(self):
+        """新規イベントは常に重複イベントより前に来る。"""
+        events = [
+            self._make_event(10, "2026/05/01 10:00"),
+            self._make_event(20, "2026/05/02 10:00"),  # 重複
+            self._make_event(30, "2026/05/03 10:00"),
+            self._make_event(40, "2026/05/04 10:00"),  # 重複
+        ]
+        prev_urls = {
+            "https://connpass.com/event/20/",
+            "https://connpass.com/event/40/",
+        }
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        new_part = [e for e in result if e["event_url"] not in prev_urls]
+        repeated_part = [e for e in result if e["event_url"] in prev_urls]
+        # 新規イベントは先頭から連続して並ぶ
+        self.assertEqual(result[: len(new_part)], new_part)
+        self.assertEqual(result[len(new_part) :], repeated_part)
 
 
 if __name__ == "__main__":

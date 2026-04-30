@@ -1197,10 +1197,11 @@ _MD_LINK_URL_RE = re.compile(rf'\[{_LINK_LABEL_RE}\]\((https?://[^)]+)\)')
 
 
 def _load_previous_day_event_urls(target_date: str, updates_dir: str = "updates") -> set[str]:
-    """前日の記事ファイルに含まれるリンク URL をすべて返す。
+    """前日の記事ファイルに含まれる connpass イベント URL を返す。
 
     前日の記事ファイルが存在しない場合や読み込みに失敗した場合は空集合を返す。
-    マークダウンのリンク形式 [text](url) からすべての URL を抽出する。
+    マークダウンのリンク形式 [text](url) から URL を抽出し、
+    connpass.com/event/ に一致するイベント URL のみを返す。
     """
     target_dt = datetime.strptime(target_date, "%Y%m%d")
     prev_dt = target_dt - timedelta(days=1)
@@ -1216,7 +1217,8 @@ def _load_previous_day_event_urls(target_date: str, updates_dir: str = "updates"
     except (OSError, UnicodeError):
         return set()
 
-    return set(_MD_LINK_URL_RE.findall(content))
+    all_urls = set(_MD_LINK_URL_RE.findall(content))
+    return {u for u in all_urls if "connpass.com/event/" in u}
 
 
 def _deprioritize_repeated_events(

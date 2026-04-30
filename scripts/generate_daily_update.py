@@ -418,6 +418,7 @@ _CONNPASS_COMMUNITY_SEED_KEYWORDS = [
     "GCPUG",
     "CloudNative",
     "Azure User Group",
+    "JAUG",
     # DevOps・SRE・プラットフォーム
     "SRE",
     "DevOps",
@@ -1218,7 +1219,7 @@ def _load_previous_day_event_urls(target_date: str, updates_dir: str = "updates"
         return set()
 
     all_urls = set(_MD_LINK_URL_RE.findall(content))
-    return {u for u in all_urls if u.startswith("https://connpass.com/event/")}
+    return {u for u in all_urls if re.match(r"https://(?:[^./]+\.)?connpass\.com/event/", u)}
 
 
 def _deprioritize_repeated_events(

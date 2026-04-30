@@ -2620,14 +2620,16 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
         self.assertIn("https://connpass.com/event/50/", result)
 
     def test_excludes_non_connpass_urls(self):
-        """connpass.com/event/ 以外の URL はフィルタされて返されない。"""
+        """connpass のイベント URL は抽出し、それ以外の URL はフィルタされて返されない。"""
         self._write_md("20260430", (
             "[connpass ev](https://connpass.com/event/111/)\n"
+            "[subdomain connpass ev](https://foo.connpass.com/event/123/)\n"
             "[azure](https://azure.microsoft.com/updates/)\n"
             "[github](https://github.com/org/repo)\n"
         ))
         result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
         self.assertIn("https://connpass.com/event/111/", result)
+        self.assertIn("https://foo.connpass.com/event/123/", result)
         self.assertNotIn("https://azure.microsoft.com/updates/", result)
         self.assertNotIn("https://github.com/org/repo", result)
 

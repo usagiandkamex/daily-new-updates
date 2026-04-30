@@ -1185,6 +1185,47 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
     return "### 📅 申し込み受付中のイベント\n\n" + "\n\n---\n\n".join(blocks)
 
 
+# マークダウンリンク [text](url) から URL を抽出するパターン
+_MD_LINK_URL_RE = re.compile(rf'\[{_LINK_LABEL_RE}\]\((https?://[^)]+)\)')
+
+
+def _load_previous_day_event_urls(target_date: str, updates_dir: str = "updates") -> set[str]:
+    """前日の記事ファイルに含まれるリンク URL をすべて返す。
+
+    前日の記事ファイルが存在しない場合や読み込みに失敗した場合は空集合を返す。
+    マークダウンのリンク形式 [text](url) からすべての URL を抽出する。
+    """
+    target_dt = datetime.strptime(target_date, "%Y%m%d")
+    prev_dt = target_dt - timedelta(days=1)
+    prev_date_str = prev_dt.strftime("%Y%m%d")
+    prev_path = os.path.join(updates_dir, f"{prev_date_str}.md")
+
+    if not os.path.exists(prev_path):
+        return set()
+
+    try:
+        with open(prev_path, encoding="utf-8") as f:
+            content = f.read()
+    except OSError:
+        return set()
+
+    return set(_MD_LINK_URL_RE.findall(content))
+
+
+def _deprioritize_repeated_events(
+    events: list[dict], prev_event_urls: set[str]
+) -> list[dict]:
+    """前日と重複するイベントをリストの末尾に移動する。
+
+    events リスト内のイベントを、前日の記事に含まれていないイベント（優先）と
+    含まれていたイベント（後回し）に分けて結合して返す。
+    各グループ内では元のソート順（started_at 昇順）を維持する。
+    """
+    new_events = [e for e in events if e.get("event_url") not in prev_event_urls]
+    repeated_events = [e for e in events if e.get("event_url") in prev_event_urls]
+    return new_events + repeated_events
+
+
 # カテゴリ別の記事数上限（プロンプトサイズ制御用）
 MAX_ARTICLES = {
     "azure": 20,
@@ -1580,6 +1621,15 @@ def main():
     print("\n[connpass イベント（東京・神奈川）]")
     connpass_events = fetch_connpass_events(target_date)
     print(f"  → 合計: {len(connpass_events)} 件")
+    # 前日との重複を避けてイベントの多様性を高める
+    prev_event_urls = _load_previous_day_event_urls(target_date)
+    if prev_event_urls:
+        repeated_count = sum(
+            1 for e in connpass_events if e.get("event_url") in prev_event_urls
+        )
+        if repeated_count > 0:
+            connpass_events = _deprioritize_repeated_events(connpass_events, prev_event_urls)
+            print(f"  ※ 前日と重複する {repeated_count} 件を後方に移動しました")
 
     print("\n[コミュニティイベント参加レポート]")
     event_reports = _limit_articles(fetch_category("event_reports", since), "event_reports")

@@ -2471,5 +2471,141 @@ class TestFetchFeedMaxAgeDaysDailyUpdate(unittest.TestCase):
         self.assertEqual(du.MAX_ARTICLE_AGE_DAYS, 30)
 
 
+class TestLoadPreviousDayEventUrls(unittest.TestCase):
+    """_load_previous_day_event_urls() のテスト"""
+
+    def setUp(self):
+        import tempfile
+        self.tmp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
+    def _write_md(self, date_str: str, content: str) -> None:
+        path = os.path.join(self.tmp_dir, f"{date_str}.md")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+    def test_returns_empty_set_when_file_missing(self):
+        """前日のファイルが存在しない場合は空集合を返す。"""
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertEqual(result, set())
+
+    def test_extracts_urls_from_markdown_links(self):
+        """マークダウンリンク形式の URL を正しく抽出する。"""
+        self._write_md("20260430", (
+            "**[Python 勉強会](https://connpass.com/event/111/)**\n\n"
+            "**[AI ハンズオン](https://connpass.com/event/222/)**\n"
+        ))
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertIn("https://connpass.com/event/111/", result)
+        self.assertIn("https://connpass.com/event/222/", result)
+
+    def test_returns_empty_set_when_no_links(self):
+        """リンクが含まれない場合は空集合を返す。"""
+        self._write_md("20260430", "本文のみ、リンクなし")
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertEqual(result, set())
+
+    def test_date_previous_day_calculation(self):
+        """前日の日付ファイルを正しく参照する（月をまたぐ場合も含む）。"""
+        # 5/1 → 前日は 4/30
+        self._write_md("20260430", "[title](https://connpass.com/event/100/)")
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertIn("https://connpass.com/event/100/", result)
+        # 当日ファイルは参照しない
+        self._write_md("20260501", "[title](https://connpass.com/event/999/)")
+        result2 = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertNotIn("https://connpass.com/event/999/", result2)
+
+    def test_month_boundary_previous_day(self):
+        """月初（例: 5/1 → 前日は 4/30）のファイル名が正しく解決される。"""
+        self._write_md("20260430", "[ev](https://connpass.com/event/50/)")
+        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        self.assertIn("https://connpass.com/event/50/", result)
+
+
+class TestDeprioritizeRepeatedEvents(unittest.TestCase):
+    """_deprioritize_repeated_events() のテスト"""
+
+    def _make_event(self, event_id: int, started_at: str = "") -> dict:
+        return {
+            "title": f"イベント {event_id}",
+            "event_url": f"https://connpass.com/event/{event_id}/",
+            "started_at": started_at,
+        }
+
+    def test_repeated_events_moved_to_end(self):
+        """前日にあった URL を持つイベントはリストの末尾に移動する。"""
+        events = [
+            self._make_event(1),
+            self._make_event(2),
+            self._make_event(3),
+        ]
+        prev_urls = {"https://connpass.com/event/2/"}
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        self.assertEqual(result[0]["event_url"], "https://connpass.com/event/1/")
+        self.assertEqual(result[1]["event_url"], "https://connpass.com/event/3/")
+        self.assertEqual(result[2]["event_url"], "https://connpass.com/event/2/")
+
+    def test_no_repeated_events_order_unchanged(self):
+        """前日に重複がない場合は元の順序を維持する。"""
+        events = [self._make_event(i) for i in range(1, 4)]
+        prev_urls = {"https://connpass.com/event/99/"}
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        for i, e in enumerate(result):
+            self.assertEqual(e["event_url"], events[i]["event_url"])
+
+    def test_all_repeated_events_order_maintained(self):
+        """すべて重複している場合は元の順序を維持する。"""
+        events = [self._make_event(i) for i in range(1, 4)]
+        prev_urls = {e["event_url"] for e in events}
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        for i, e in enumerate(result):
+            self.assertEqual(e["event_url"], events[i]["event_url"])
+
+    def test_empty_events_returns_empty(self):
+        """空リストに対して空リストを返す。"""
+        result = du._deprioritize_repeated_events([], {"https://connpass.com/event/1/"})
+        self.assertEqual(result, [])
+
+    def test_empty_prev_urls_order_unchanged(self):
+        """prev_event_urls が空集合の場合は元の順序を維持する。"""
+        events = [self._make_event(i) for i in range(1, 4)]
+        result = du._deprioritize_repeated_events(events, set())
+        for i, e in enumerate(result):
+            self.assertEqual(e["event_url"], events[i]["event_url"])
+
+    def test_total_event_count_unchanged(self):
+        """リスト内のイベント総数は変化しない。"""
+        events = [self._make_event(i) for i in range(1, 6)]
+        prev_urls = {
+            "https://connpass.com/event/1/",
+            "https://connpass.com/event/3/",
+        }
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        self.assertEqual(len(result), len(events))
+
+    def test_new_events_precede_repeated_events(self):
+        """新規イベントは常に重複イベントより前に来る。"""
+        events = [
+            self._make_event(10, "2026/05/01 10:00"),
+            self._make_event(20, "2026/05/02 10:00"),  # 重複
+            self._make_event(30, "2026/05/03 10:00"),
+            self._make_event(40, "2026/05/04 10:00"),  # 重複
+        ]
+        prev_urls = {
+            "https://connpass.com/event/20/",
+            "https://connpass.com/event/40/",
+        }
+        result = du._deprioritize_repeated_events(events, prev_urls)
+        new_part = [e for e in result if e["event_url"] not in prev_urls]
+        repeated_part = [e for e in result if e["event_url"] in prev_urls]
+        # 新規イベントは先頭から連続して並ぶ
+        self.assertEqual(result[: len(new_part)], new_part)
+        self.assertEqual(result[len(new_part) :], repeated_part)
+
+
 if __name__ == "__main__":
     unittest.main()

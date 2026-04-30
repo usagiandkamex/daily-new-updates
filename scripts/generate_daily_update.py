@@ -678,10 +678,6 @@ def _fetch_connpass_events_rss(target_date: str) -> list[dict]:
         except Exception as e:
             print(f"    connpass RSS (オンライン {ym}): 取得失敗 ({e})")
 
-    if len(events) > CONNPASS_MAX_EVENTS:
-        print(f"  ※ connpass RSS {len(events)} 件 → {CONNPASS_MAX_EVENTS} 件に制限")
-        events = events[:CONNPASS_MAX_EVENTS]
-
     return events
 
 
@@ -845,7 +841,7 @@ def _fetch_other_platform_events(
 
 def fetch_connpass_events(
     target_date: str,
-    prev_event_urls: "set[str] | None" = None,
+    prev_event_urls: set[str] | None = None,
 ) -> list[dict]:
     """connpassから東京・神奈川の近日開催コミュニティイベントを取得する（多段検索）。
 

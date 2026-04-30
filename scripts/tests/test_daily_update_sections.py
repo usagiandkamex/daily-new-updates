@@ -911,6 +911,90 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             f"ページ2 のイベントが結果に含まれていない: titles={sorted(result_titles)[:5]}",
         )
 
+    def _make_rss_entry(self, event_id: int, started_at: str = "2026/05/25 10:00") -> "MagicMock":
+        """テスト用の RSS エントリ MagicMock を作成する。"""
+        import time as time_mod
+        data = {
+            "link": f"https://connpass.com/event/{event_id}/",
+            "title": f"Python 勉強会 {event_id}",
+            "summary": "Python エンジニア向けイベント",
+            "published_parsed": time_mod.strptime("2026-05-25 10:00:00", "%Y-%m-%d %H:%M:%S"),
+        }
+        entry = MagicMock()
+        entry.get.side_effect = lambda k, d=None: data.get(k, d)
+        return entry
+
+    def test_prev_event_urls_deprioritizes_before_cap_many_new(self):
+        """新規イベントが CONNPASS_MAX_EVENTS 以上ある場合、前日重複は結果から除外される。"""
+        max_ev = du.CONNPASS_MAX_EVENTS
+
+        # max_ev+2 件の RSS エントリを用意する（ID 1〜max_ev は新規、ID max_ev+1〜max_ev+2 は前日重複）
+        entries = [self._make_rss_entry(i) for i in range(1, max_ev + 3)]
+        prev_event_urls = {
+            f"https://connpass.com/event/{max_ev + 1}/",
+            f"https://connpass.com/event/{max_ev + 2}/",
+        }
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=entries)
+            result = du.fetch_connpass_events("20260520", prev_event_urls)
+
+        # 結果は最大 max_ev 件以内
+        self.assertLessEqual(len(result), max_ev)
+        # 前日重複 URL は結果に含まれない（新規が十分あるため後方に回って除外される）
+        result_urls = {e["event_url"] for e in result}
+        for url in prev_event_urls:
+            self.assertNotIn(url, result_urls, f"前日重複 {url} が除外されていない")
+
+    def test_prev_event_urls_keeps_repeated_when_few_new(self):
+        """新規イベントが CONNPASS_MAX_EVENTS 未満の場合、前日重複もリストに含まれる。"""
+        max_ev = du.CONNPASS_MAX_EVENTS
+
+        # 新規 2 件 + 前日重複 1 件 = 合計 3 件（max_ev 未満）
+        entries = [
+            self._make_rss_entry(1),
+            self._make_rss_entry(2),
+            self._make_rss_entry(3),
+        ]
+        prev_event_urls = {"https://connpass.com/event/3/"}
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=entries)
+            result = du.fetch_connpass_events("20260520", prev_event_urls)
+
+        result_urls = {e["event_url"] for e in result}
+        # 前日重複イベントもリストに残る（新規が max_ev に満たないため）
+        self.assertIn("https://connpass.com/event/3/", result_urls,
+                      "新規イベントが少ない場合は前日重複もリストに残るべき")
+        # 新規イベントが前日重複より前に来る
+        new_indices = [i for i, e in enumerate(result)
+                       if e["event_url"] not in prev_event_urls]
+        dup_indices = [i for i, e in enumerate(result)
+                       if e["event_url"] in prev_event_urls]
+        if new_indices and dup_indices:
+            self.assertLess(max(new_indices), min(dup_indices),
+                            "新規イベントは前日重複より前に並ぶべき")
+
 
 class TestFetchOtherPlatformEvents(unittest.TestCase):
     """_fetch_other_platform_events() のテスト"""

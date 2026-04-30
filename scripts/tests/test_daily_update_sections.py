@@ -911,7 +911,7 @@ class TestConnpassEventFetchConfig(unittest.TestCase):
             f"ページ2 のイベントが結果に含まれていない: titles={sorted(result_titles)[:5]}",
         )
 
-    def _make_rss_entry(self, event_id: int, started_at: str = "2026/05/25 10:00") -> "MagicMock":
+    def _make_rss_entry(self, event_id: int) -> "MagicMock":
         """テスト用の RSS エントリ MagicMock を作成する。"""
         import time as time_mod
         data = {

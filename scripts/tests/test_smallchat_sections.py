@@ -797,6 +797,31 @@ class TestFetchFeedDateFilter(unittest.TestCase):
         """MAX_ARTICLE_AGE_DAYS は 30 日に設定されている。"""
         self.assertEqual(sc.MAX_ARTICLE_AGE_DAYS, 30)
 
+    def test_azure_update_url_converted_to_ja_jp(self):
+        """generate_smallchat._fetch_feed は Azure アップデート URL を ja-jp 形式に変換する。
+
+        Azure Release Communications RSS フィードが提供する URL はロケールなし
+        （/updates?id=NNNN）だが、_fetch_feed 経由で取得した記事の url は
+        /ja-jp/updates?id=NNNN 形式に変換されることを確認する。
+        """
+        since = datetime.now(timezone.utc) - timedelta(hours=1)
+        fresh = datetime.now(timezone.utc) - timedelta(minutes=30)
+        entries = [
+            {
+                "title": "Azure Backup GA",
+                "link": "https://azure.microsoft.com/updates?id=560904",
+                "summary": "Azure Backup now supports...",
+                "published_parsed": self._time_tuple(fresh),
+                "updated_parsed": None,
+            }
+        ]
+        result = self._run(entries, since)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(
+            result[0]["url"],
+            "https://azure.microsoft.com/ja-jp/updates?id=560904",
+        )
+
 
 class TestVerifyContentSmallchat(unittest.TestCase):
     """verify_content() の検証プロセスのテスト"""

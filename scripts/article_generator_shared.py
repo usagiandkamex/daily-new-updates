@@ -84,6 +84,12 @@ class _SearchUnavailableSentinel:
 
 _SEARCH_UNAVAILABLE = _SearchUnavailableSentinel()
 
+# Azure アップデートページのロケールプレフィックス検出用正規表現。
+# /ja-jp/updates や /en-us/updates のようなロケール付きパスから
+# ロケール部分（/xx-xx）のみを検出する（/updates 以降のパスは保持する）。
+# _to_azure_ja_url() と SourceUrlTracker._normalize_url() の両方で共用する。
+_AZURE_UPDATES_LOCALE_RE = re.compile(r'^/[a-z]{2}-[a-z]{2}(?=/updates(?:/|$))', re.IGNORECASE)
+
 
 def _resolve_google_news_url(url: str) -> str:
     """Google News RSS のリダイレクト URL を実際の記事 URL に解決する。"""
@@ -96,6 +102,31 @@ def _resolve_google_news_url(url: str) -> str:
     except Exception as e:
         print(f"    URL 解決失敗 ({url}): {e}")
     return url
+
+
+def _to_azure_ja_url(url: str) -> str:
+    """Azure アップデートの URL を日本語ロケール付き（/ja-jp/updates）形式に変換する。
+
+    Azure Release Communications RSS フィードが提供する URL は
+    ロケールなし（/updates?id=NNNN）または英語ロケール（/en-us/updates?id=NNNN）だが、
+    日本語ユーザーに適した /ja-jp/updates?id=NNNN 形式に変換して提供する。
+    非 Azure URL、または /updates 以外のパス（/blog/ 等）はそのまま返す。
+    """
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower().rstrip(".")
+    if hostname != "azure.microsoft.com":
+        return url
+    # /updates または /{locale}/updates パスをロケール付きに変換
+    # ロケールプレフィックスのみを除去し、/updates 以降のパスはすべて保持する
+    m = _AZURE_UPDATES_LOCALE_RE.match(parsed.path)
+    if m:
+        path_without_locale = parsed.path[m.end():]
+    elif re.match(r'^/updates(?:/|$)', parsed.path, re.IGNORECASE):
+        path_without_locale = parsed.path
+    else:
+        return url
+    new_path = "/ja-jp" + path_without_locale
+    return urlunparse((parsed.scheme, parsed.netloc, new_path, parsed.params, parsed.query, parsed.fragment))
 
 
 # --- リンク検証 ---------------------------------------------------------------
@@ -586,6 +617,7 @@ def _fetch_feed(
             continue
 
         article_url = _resolve_google_news_url(entry.get("link", ""))
+        article_url = _to_azure_ja_url(article_url)
         articles.append(
             {
                 "title": entry.get("title", "").strip(),
@@ -791,19 +823,35 @@ class SourceUrlTracker:
         URL のバリエーション（utm 追跡付き等）を同一視しつつ、?id= などで区別される
         異なる記事は別の URL として扱う（例: Azure アップデートの ?id=NNNN）。
         パラメータはキー昇順でソートし、比較時の順序差異を吸収する。
+
+        Azure アップデートの URL（azure.microsoft.com/{locale}/updates?id=...）は
+        ロケールプレフィックスを除去して /updates?id=... に正規化する。
+        RSS フィードが提供する URL はロケールなし（/updates?id=...）のため、
+        LLM がロケール付き URL（例: /ja-jp/updates?id=...）を生成した場合でも
+        クエリパラメータ id= で同一記事として識別できるようにする。
         """
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             return url
+        # Azure アップデートページのロケールプレフィックスを除去する
+        # 例: https://azure.microsoft.com/ja-jp/updates?id=NNNN
+        #   → https://azure.microsoft.com/updates?id=NNNN
+        # /updates 以降のパスは保持する
+        path = parsed.path
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+        if hostname == "azure.microsoft.com":
+            m = _AZURE_UPDATES_LOCALE_RE.match(path)
+            if m:
+                path = path[m.end():]
         if not parsed.query:
-            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+            return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
         # トラッキングパラメータを除去し、コンテンツ識別パラメータは保持する
         params = parse_qs(parsed.query, keep_blank_values=True)
         filtered = {k: v for k, v in params.items() if not _TRACKING_PARAM_RE.match(k)}
         if filtered:
             new_query = urlencode(sorted(filtered.items()), doseq=True)
-            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", new_query, ""))
-        return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+            return urlunparse((parsed.scheme, parsed.netloc, path, "", new_query, ""))
+        return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
 
     @staticmethod
     def _norm_title(t: str) -> str:

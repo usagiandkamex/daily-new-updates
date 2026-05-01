@@ -197,7 +197,13 @@ class TestSourceUrlTrackerCollect(unittest.TestCase):
         self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
         self.assertIn("https://azure.microsoft.com/updates?id=560987", result)
 
-class TestSourceUrlTrackerLog(unittest.TestCase):
+    def test_azure_update_sub_path_locale_strip_preserves_sub_path(self):
+        """/ja-jp/updates/foo のように /updates 配下のサブパスがあってもロケールのみ除去される。"""
+        data = [{"url": "https://azure.microsoft.com/ja-jp/updates/foo/bar?id=123"}]
+        result = SourceUrlTracker.collect_source_urls(data)
+        self.assertIn("https://azure.microsoft.com/updates/foo/bar?id=123", result)
+
+
     """SourceUrlTracker.log_unsourced_reference_links() のテスト"""
 
     def _make_article(self, url: str) -> str:
@@ -628,8 +634,17 @@ class TestToAzureJaUrl(unittest.TestCase):
         self.assertIn("utm_source=rss", result)
         self.assertIn("ja-jp", result)
 
+    def test_sub_path_after_updates_preserved(self):
+        """/updates 配下のサブパスは変換後も保持される。"""
+        result = self._conv("https://azure.microsoft.com/en-us/updates/foo/bar?id=123")
+        self.assertEqual(result, "https://azure.microsoft.com/ja-jp/updates/foo/bar?id=123")
 
-class TestFetchPageTitle(unittest.TestCase):
+    def test_fragment_preserved(self):
+        """URL フラグメント（# 以降）は変換後も保持される。"""
+        result = self._conv("https://azure.microsoft.com/updates?id=560904#section1")
+        self.assertEqual(result, "https://azure.microsoft.com/ja-jp/updates?id=560904#section1")
+
+
     """_fetch_page_title() のテスト"""
 
     def _make_mock_resp(self, html_bytes: bytes, content_type: str = "text/html; charset=utf-8"):
@@ -1431,9 +1446,8 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
         out = mock_out.getvalue()
         # 修正済みログが出ている
         self.assertIn("修正済み", out)
-        # 正しい URL（id=560904）に置換され、ロケールは元の形式を保つ
-        # （replace_unsourced_reference_links は元の URL を直接返すため、
-        # ロケールなし正規化済み URL となる）
+        # verify_link_source_match は source_data 側の URL をそのまま返すため、
+        # このテストの source_data は /updates（ロケールなし）なので正規化済み URL になる
         self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
         # 誤った id は除去されている
         self.assertNotIn("?id=999999", result)

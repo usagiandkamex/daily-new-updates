@@ -111,11 +111,16 @@ def _to_azure_ja_url(url: str) -> str:
     if hostname != "azure.microsoft.com":
         return url
     # /updates または /{locale}/updates パスをロケール付きに変換
-    m = re.match(r'^(?:/[a-z]{2}-[a-z]{2})?(/updates(?:/|$))', parsed.path, re.IGNORECASE)
-    if not m:
+    # ロケールプレフィックスのみを除去し、/updates 以降のパスはすべて保持する
+    m = re.match(r'^/[a-z]{2}-[a-z]{2}(?=/updates(?:/|$))', parsed.path, re.IGNORECASE)
+    if m:
+        path_without_locale = parsed.path[m.end():]
+    elif re.match(r'^/updates(?:/|$)', parsed.path, re.IGNORECASE):
+        path_without_locale = parsed.path
+    else:
         return url
-    new_path = "/ja-jp" + m.group(1)
-    return urlunparse((parsed.scheme, parsed.netloc, new_path, "", parsed.query, ""))
+    new_path = "/ja-jp" + path_without_locale
+    return urlunparse((parsed.scheme, parsed.netloc, new_path, parsed.params, parsed.query, parsed.fragment))
 
 
 # --- リンク検証 ---------------------------------------------------------------
@@ -825,12 +830,13 @@ class SourceUrlTracker:
         # Azure アップデートページのロケールプレフィックスを除去する
         # 例: https://azure.microsoft.com/ja-jp/updates?id=NNNN
         #   → https://azure.microsoft.com/updates?id=NNNN
+        # /updates 以降のパスは保持する
         path = parsed.path
         hostname = (parsed.hostname or "").lower().rstrip(".")
         if hostname == "azure.microsoft.com":
-            m = re.match(r'^/[a-z]{2}-[a-z]{2}(/updates(?:/|$))', path, re.IGNORECASE)
+            m = re.match(r'^/[a-z]{2}-[a-z]{2}(?=/updates(?:/|$))', path, re.IGNORECASE)
             if m:
-                path = m.group(1)
+                path = path[m.end():]
         if not parsed.query:
             return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
         # トラッキングパラメータを除去し、コンテンツ識別パラメータは保持する

@@ -84,6 +84,12 @@ class _SearchUnavailableSentinel:
 
 _SEARCH_UNAVAILABLE = _SearchUnavailableSentinel()
 
+# Azure アップデートページのロケールプレフィックス検出用正規表現。
+# /ja-jp/updates や /en-us/updates のようなロケール付きパスから
+# ロケール部分（/xx-xx）のみを検出する（/updates 以降のパスは保持する）。
+# _to_azure_ja_url() と SourceUrlTracker._normalize_url() の両方で共用する。
+_AZURE_UPDATES_LOCALE_RE = re.compile(r'^/[a-z]{2}-[a-z]{2}(?=/updates(?:/|$))', re.IGNORECASE)
+
 
 def _resolve_google_news_url(url: str) -> str:
     """Google News RSS のリダイレクト URL を実際の記事 URL に解決する。"""
@@ -112,7 +118,7 @@ def _to_azure_ja_url(url: str) -> str:
         return url
     # /updates または /{locale}/updates パスをロケール付きに変換
     # ロケールプレフィックスのみを除去し、/updates 以降のパスはすべて保持する
-    m = re.match(r'^/[a-z]{2}-[a-z]{2}(?=/updates(?:/|$))', parsed.path, re.IGNORECASE)
+    m = _AZURE_UPDATES_LOCALE_RE.match(parsed.path)
     if m:
         path_without_locale = parsed.path[m.end():]
     elif re.match(r'^/updates(?:/|$)', parsed.path, re.IGNORECASE):
@@ -834,7 +840,7 @@ class SourceUrlTracker:
         path = parsed.path
         hostname = (parsed.hostname or "").lower().rstrip(".")
         if hostname == "azure.microsoft.com":
-            m = re.match(r'^/[a-z]{2}-[a-z]{2}(?=/updates(?:/|$))', path, re.IGNORECASE)
+            m = _AZURE_UPDATES_LOCALE_RE.match(path)
             if m:
                 path = path[m.end():]
         if not parsed.query:

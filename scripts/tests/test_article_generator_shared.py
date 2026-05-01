@@ -517,7 +517,6 @@ class TestSharedFunctionsModule(unittest.TestCase):
         （/updates?id=NNNN）だが、_fetch_feed 経由で取得した記事の url フィールドは
         /ja-jp/updates?id=NNNN 形式に変換されることを確認する。
         """
-        import feedparser
         from datetime import datetime, timezone
         import article_generator_shared as ags
 

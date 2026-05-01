@@ -204,6 +204,7 @@ class TestSourceUrlTrackerCollect(unittest.TestCase):
         self.assertIn("https://azure.microsoft.com/updates/foo/bar?id=123", result)
 
 
+class TestSourceUrlTrackerLog(unittest.TestCase):
     """SourceUrlTracker.log_unsourced_reference_links() のテスト"""
 
     def _make_article(self, url: str) -> str:
@@ -645,6 +646,7 @@ class TestToAzureJaUrl(unittest.TestCase):
         self.assertEqual(result, "https://azure.microsoft.com/ja-jp/updates?id=560904#section1")
 
 
+class TestFetchPageTitle(unittest.TestCase):
     """_fetch_page_title() のテスト"""
 
     def _make_mock_resp(self, html_bytes: bytes, content_type: str = "text/html; charset=utf-8"):

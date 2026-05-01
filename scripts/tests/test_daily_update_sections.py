@@ -1523,7 +1523,6 @@ class TestFetchFeedDateFilterDailyUpdate(unittest.TestCase):
         （/updates?id=NNNN）だが、_fetch_feed 経由で取得した記事の url は
         /ja-jp/updates?id=NNNN 形式に変換されることを確認する。
         """
-        from datetime import datetime, timedelta, timezone
         since = datetime.now(timezone.utc) - timedelta(hours=1)
         fresh = datetime.now(timezone.utc) - timedelta(minutes=30)
         entries = [{
@@ -1541,6 +1540,7 @@ class TestFetchFeedDateFilterDailyUpdate(unittest.TestCase):
         )
 
 
+class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):
     """validate_links() の孤立した --- セパレータ除去テスト"""
 
     def _make_article_with_invalid_link(self, url: str = "https://bad.example.com") -> str:

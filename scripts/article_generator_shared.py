@@ -98,6 +98,26 @@ def _resolve_google_news_url(url: str) -> str:
     return url
 
 
+def _to_azure_ja_url(url: str) -> str:
+    """Azure アップデートの URL を日本語ロケール付き（/ja-jp/updates）形式に変換する。
+
+    Azure Release Communications RSS フィードが提供する URL は
+    ロケールなし（/updates?id=NNNN）または英語ロケール（/en-us/updates?id=NNNN）だが、
+    日本語ユーザーに適した /ja-jp/updates?id=NNNN 形式に変換して提供する。
+    非 Azure URL、または /updates 以外のパス（/blog/ 等）はそのまま返す。
+    """
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower().rstrip(".")
+    if hostname != "azure.microsoft.com":
+        return url
+    # /updates または /{locale}/updates パスをロケール付きに変換
+    m = re.match(r'^(?:/[a-z]{2}-[a-z]{2})?(/updates(?:/|$))', parsed.path, re.IGNORECASE)
+    if not m:
+        return url
+    new_path = "/ja-jp" + m.group(1)
+    return urlunparse((parsed.scheme, parsed.netloc, new_path, "", parsed.query, ""))
+
+
 # --- リンク検証 ---------------------------------------------------------------
 
 
@@ -586,6 +606,7 @@ def _fetch_feed(
             continue
 
         article_url = _resolve_google_news_url(entry.get("link", ""))
+        article_url = _to_azure_ja_url(article_url)
         articles.append(
             {
                 "title": entry.get("title", "").strip(),

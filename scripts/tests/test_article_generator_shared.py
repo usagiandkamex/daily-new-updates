@@ -503,6 +503,45 @@ class TestSharedFunctionsModule(unittest.TestCase):
         self.assertEqual(len(set(urls)), len(urls), "重複 URL が含まれている")
         self.assertEqual(len(result), 1)
 
+    def test_fetch_feed_converts_azure_update_url_to_ja_jp(self):
+        """_fetch_feed は Azure アップデート URL を ja-jp ロケール形式に変換する。
+
+        Azure Release Communications RSS フィードが提供する URL はロケールなし
+        （/updates?id=NNNN）だが、_fetch_feed 経由で取得した記事の url フィールドは
+        /ja-jp/updates?id=NNNN 形式に変換されることを確認する。
+        """
+        import feedparser
+        from datetime import datetime, timezone
+        import article_generator_shared as ags
+
+        pub_time = (2026, 5, 1, 12, 0, 0, 0, 1, 0)
+        mock_entry = MagicMock()
+        mock_entry.published_parsed = pub_time
+        mock_entry.updated_parsed = None
+        mock_entry.get.side_effect = lambda k, d="": {
+            "link": "https://azure.microsoft.com/updates?id=560904",
+            "title": "Azure Backup GA",
+            "summary": "Azure Backup now supports...",
+        }.get(k, d)
+
+        mock_feed = MagicMock()
+        mock_feed.entries = [mock_entry]
+
+        since = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        mock_resp = MagicMock()
+        mock_resp.content = b""
+
+        with patch.object(ags.requests, "get", return_value=mock_resp):
+            with patch.object(ags.feedparser, "parse", return_value=mock_feed):
+                articles = ags._fetch_feed("https://fake-rss-feed.example.com/azure", since)
+
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(
+            articles[0]["url"],
+            "https://azure.microsoft.com/ja-jp/updates?id=560904",
+        )
+
+
     def test_generate_section_empty_list_returns_no_info(self):
         """generate_section は空データの場合 LLM を呼ばずに「ありません」を返す。"""
         from article_generator_shared import generate_section
@@ -544,6 +583,50 @@ class TestSharedFunctionsModule(unittest.TestCase):
         prompt = _build_section_prompt(section, data)
         self.assertIn("記事データ", prompt)
         self.assertIn("記事A", prompt)
+
+
+class TestToAzureJaUrl(unittest.TestCase):
+    """_to_azure_ja_url() のテスト"""
+
+    def _conv(self, url: str) -> str:
+        import article_generator_shared as ags
+        return ags._to_azure_ja_url(url)
+
+    def test_no_locale_url_gets_ja_jp_prefix(self):
+        """ロケールなし Azure アップデート URL に /ja-jp/ が付与される。"""
+        result = self._conv("https://azure.microsoft.com/updates?id=560904")
+        self.assertEqual(result, "https://azure.microsoft.com/ja-jp/updates?id=560904")
+
+    def test_en_us_locale_url_converted_to_ja_jp(self):
+        """英語ロケール付き URL は /ja-jp/ に変換される。"""
+        result = self._conv("https://azure.microsoft.com/en-us/updates?id=560904")
+        self.assertEqual(result, "https://azure.microsoft.com/ja-jp/updates?id=560904")
+
+    def test_ja_jp_locale_url_unchanged(self):
+        """すでに /ja-jp/ 付きの URL はそのまま返される。"""
+        url = "https://azure.microsoft.com/ja-jp/updates?id=560904"
+        self.assertEqual(self._conv(url), url)
+
+    def test_non_updates_path_unchanged(self):
+        """Azure の /updates 以外のパス（/blog/ 等）は変換しない。"""
+        url = "https://azure.microsoft.com/en-us/blog/some-post"
+        self.assertEqual(self._conv(url), url)
+
+    def test_non_azure_domain_unchanged(self):
+        """azure.microsoft.com 以外のドメイン URL はそのまま返す。"""
+        url = "https://example.com/updates?id=123"
+        self.assertEqual(self._conv(url), url)
+
+    def test_query_params_preserved(self):
+        """id= クエリパラメータは変換後も保持される。"""
+        result = self._conv("https://azure.microsoft.com/updates?id=560904")
+        self.assertIn("id=560904", result)
+
+    def test_utm_preserved_until_normalize(self):
+        """utm_* パラメータは _to_azure_ja_url では除去しない（正規化は _normalize_url が担う）。"""
+        result = self._conv("https://azure.microsoft.com/updates?id=560904&utm_source=rss")
+        self.assertIn("utm_source=rss", result)
+        self.assertIn("ja-jp", result)
 
 
 class TestFetchPageTitle(unittest.TestCase):
@@ -1352,6 +1435,42 @@ class TestVerifyLinkSourceMatch(unittest.TestCase):
         # （replace_unsourced_reference_links は元の URL を直接返すため、
         # ロケールなし正規化済み URL となる）
         self.assertIn("https://azure.microsoft.com/updates?id=560904", result)
+        # 誤った id は除去されている
+        self.assertNotIn("?id=999999", result)
+
+    def test_ja_jp_source_url_repair_outputs_ja_jp_url(self):
+        """source_data が ja-jp 形式（_fetch_feed 経由の実態）のとき、修正後も ja-jp URL になる。
+
+        _fetch_feed は _to_azure_ja_url により Azure アップデート URL を
+        /ja-jp/updates?id=NNNN に変換して source_data に格納する。
+        LLM が誤った URL を生成した場合、修正後の URL も ja-jp 形式になることを保証する。
+        """
+        source_data = [
+            {
+                "title": "Azure Backup for Elastic SAN General Availability",
+                "url": "https://azure.microsoft.com/ja-jp/updates?id=560904",
+                "description": "Azure Backup now supports Elastic SAN.",
+                "source": "Azure Release Communications",
+            },
+            {
+                "title": "Azure Kubernetes Service monthly updates",
+                "url": "https://azure.microsoft.com/ja-jp/updates?id=999999",
+                "description": "AKS updates.",
+                "source": "Azure Release Communications",
+            },
+        ]
+        # 記事は AKS の id（999999）を誤って使っているが、見出しは Elastic SAN
+        article = self._make_article(
+            "Azure Backup for Elastic SAN General Availability",
+            "https://azure.microsoft.com/ja-jp/updates?id=999999",
+        )
+        with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
+            result = SourceUrlTracker.verify_link_source_match(article, source_data)
+        out = mock_out.getvalue()
+        # 修正済みログが出ている
+        self.assertIn("修正済み", out)
+        # 正しい ja-jp 形式の URL（id=560904）に置換される
+        self.assertIn("https://azure.microsoft.com/ja-jp/updates?id=560904", result)
         # 誤った id は除去されている
         self.assertNotIn("?id=999999", result)
 

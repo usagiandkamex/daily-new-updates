@@ -791,19 +791,34 @@ class SourceUrlTracker:
         URL のバリエーション（utm 追跡付き等）を同一視しつつ、?id= などで区別される
         異なる記事は別の URL として扱う（例: Azure アップデートの ?id=NNNN）。
         パラメータはキー昇順でソートし、比較時の順序差異を吸収する。
+
+        Azure アップデートの URL（azure.microsoft.com/{locale}/updates?id=...）は
+        ロケールプレフィックスを除去して /updates?id=... に正規化する。
+        RSS フィードが提供する URL はロケールなし（/updates?id=...）のため、
+        LLM がロケール付き URL（例: /ja-jp/updates?id=...）を生成した場合でも
+        クエリパラメータ id= で同一記事として識別できるようにする。
         """
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             return url
+        # Azure アップデートページのロケールプレフィックスを除去する
+        # 例: https://azure.microsoft.com/ja-jp/updates?id=NNNN
+        #   → https://azure.microsoft.com/updates?id=NNNN
+        path = parsed.path
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+        if hostname == "azure.microsoft.com":
+            m = re.match(r'^/[a-z]{2}-[a-z]{2}(/updates(?:/|$))', path, re.IGNORECASE)
+            if m:
+                path = m.group(1)
         if not parsed.query:
-            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+            return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
         # トラッキングパラメータを除去し、コンテンツ識別パラメータは保持する
         params = parse_qs(parsed.query, keep_blank_values=True)
         filtered = {k: v for k, v in params.items() if not _TRACKING_PARAM_RE.match(k)}
         if filtered:
             new_query = urlencode(sorted(filtered.items()), doseq=True)
-            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", new_query, ""))
-        return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+            return urlunparse((parsed.scheme, parsed.netloc, path, "", new_query, ""))
+        return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
 
     @staticmethod
     def _norm_title(t: str) -> str:

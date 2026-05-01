@@ -1516,8 +1516,31 @@ class TestFetchFeedDateFilterDailyUpdate(unittest.TestCase):
         """EXTENDED_LOOKBACK_DAYS は 30 日（直近 1 か月）に設定されている。"""
         self.assertEqual(du.EXTENDED_LOOKBACK_DAYS, 30)
 
+    def test_azure_update_url_converted_to_ja_jp(self):
+        """generate_daily_update._fetch_feed は Azure アップデート URL を ja-jp 形式に変換する。
 
-class TestValidateLinksOrphanedSeparatorsDailyUpdate(unittest.TestCase):
+        Azure Release Communications RSS フィードが提供する URL はロケールなし
+        （/updates?id=NNNN）だが、_fetch_feed 経由で取得した記事の url は
+        /ja-jp/updates?id=NNNN 形式に変換されることを確認する。
+        """
+        from datetime import datetime, timedelta, timezone
+        since = datetime.now(timezone.utc) - timedelta(hours=1)
+        fresh = datetime.now(timezone.utc) - timedelta(minutes=30)
+        entries = [{
+            "title": "Azure Backup GA",
+            "link": "https://azure.microsoft.com/updates?id=560904",
+            "summary": "Azure Backup now supports...",
+            "published_parsed": self._time_tuple(fresh),
+            "updated_parsed": None,
+        }]
+        result = self._run(entries, since)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(
+            result[0]["url"],
+            "https://azure.microsoft.com/ja-jp/updates?id=560904",
+        )
+
+
     """validate_links() の孤立した --- セパレータ除去テスト"""
 
     def _make_article_with_invalid_link(self, url: str = "https://bad.example.com") -> str:

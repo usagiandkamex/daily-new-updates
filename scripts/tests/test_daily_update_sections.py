@@ -2589,7 +2589,7 @@ class TestFetchFeedMaxAgeDaysDailyUpdate(unittest.TestCase):
 
 
 class TestLoadPreviousDayEventUrls(unittest.TestCase):
-    """_load_previous_day_event_urls() のテスト"""
+    """_load_recent_event_urls() のテスト"""
 
     def setUp(self):
         import tempfile
@@ -2606,7 +2606,7 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
 
     def test_returns_empty_set_when_file_missing(self):
         """前日のファイルが存在しない場合は空集合を返す。"""
-        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertEqual(result, set())
 
     def test_extracts_urls_from_markdown_links(self):
@@ -2615,31 +2615,31 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
             "**[Python 勉強会](https://connpass.com/event/111/)**\n\n"
             "**[AI ハンズオン](https://connpass.com/event/222/)**\n"
         ))
-        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertIn("https://connpass.com/event/111/", result)
         self.assertIn("https://connpass.com/event/222/", result)
 
     def test_returns_empty_set_when_no_links(self):
         """リンクが含まれない場合は空集合を返す。"""
         self._write_md("20260430", "本文のみ、リンクなし")
-        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertEqual(result, set())
 
     def test_date_previous_day_calculation(self):
         """前日の日付ファイルを正しく参照する（月をまたぐ場合も含む）。"""
         # 5/1 → 前日は 4/30
         self._write_md("20260430", "[title](https://connpass.com/event/100/)")
-        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertIn("https://connpass.com/event/100/", result)
         # 当日ファイルは参照しない
         self._write_md("20260501", "[title](https://connpass.com/event/999/)")
-        result2 = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result2 = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertNotIn("https://connpass.com/event/999/", result2)
 
     def test_month_boundary_previous_day(self):
         """月初（例: 5/1 → 前日は 4/30）のファイル名が正しく解決される。"""
         self._write_md("20260430", "[ev](https://connpass.com/event/50/)")
-        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertIn("https://connpass.com/event/50/", result)
 
     def test_excludes_non_connpass_urls(self):
@@ -2650,7 +2650,7 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
             "[azure](https://azure.microsoft.com/updates/)\n"
             "[github](https://github.com/org/repo)\n"
         ))
-        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertIn("https://connpass.com/event/111/", result)
         self.assertIn("https://foo.connpass.com/event/123/", result)
         self.assertNotIn("https://azure.microsoft.com/updates/", result)
@@ -2661,7 +2661,7 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
         self._write_md("20260430", "[ev1](https://connpass.com/event/1/)")
         self._write_md("20260429", "[ev2](https://connpass.com/event/2/)")
         self._write_md("20260428", "[ev3](https://connpass.com/event/3/)")
-        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertIn("https://connpass.com/event/1/", result)
         self.assertIn("https://connpass.com/event/2/", result)
         self.assertIn("https://connpass.com/event/3/", result)
@@ -2670,7 +2670,7 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
         """5日前の URL は含まれるが、6日前の URL は含まれない。"""
         self._write_md("20260426", "[ev5](https://connpass.com/event/5/)")   # 5日前
         self._write_md("20260425", "[ev6](https://connpass.com/event/6/)")   # 6日前
-        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertIn("https://connpass.com/event/5/", result,
                       "5日前の URL は含まれるべき")
         self.assertNotIn("https://connpass.com/event/6/", result,
@@ -2681,7 +2681,7 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
         # 20260430 (1日前) と 20260428 (3日前) のみ作成し、他は欠落
         self._write_md("20260430", "[ev1](https://connpass.com/event/10/)")
         self._write_md("20260428", "[ev3](https://connpass.com/event/30/)")
-        result = du._load_previous_day_event_urls("20260501", self.tmp_dir)
+        result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertIn("https://connpass.com/event/10/", result)
         self.assertIn("https://connpass.com/event/30/", result)
 
@@ -2691,11 +2691,11 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
         self._write_md("20260429", "[ev2](https://connpass.com/event/2/)")  # 2日前
         self._write_md("20260428", "[ev3](https://connpass.com/event/3/)")  # 3日前
         # days=1 → 1日前のみ
-        result1 = du._load_previous_day_event_urls("20260501", self.tmp_dir, days=1)
+        result1 = du._load_recent_event_urls("20260501", self.tmp_dir, days=1)
         self.assertIn("https://connpass.com/event/1/", result1)
         self.assertNotIn("https://connpass.com/event/2/", result1)
         # days=2 → 1〜2日前
-        result2 = du._load_previous_day_event_urls("20260501", self.tmp_dir, days=2)
+        result2 = du._load_recent_event_urls("20260501", self.tmp_dir, days=2)
         self.assertIn("https://connpass.com/event/1/", result2)
         self.assertIn("https://connpass.com/event/2/", result2)
         self.assertNotIn("https://connpass.com/event/3/", result2)

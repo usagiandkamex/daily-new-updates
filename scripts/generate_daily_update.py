@@ -1033,13 +1033,13 @@ def fetch_connpass_events(
     ]
     all_events.sort(key=lambda e: (0, e["started_at"]) if e.get("started_at") else (1, ""))
 
-    # 前日との重複を後方に移動してから件数上限を適用する
+    # 直近5日間との重複を後方に移動してから件数上限を適用する
     # こうすることで、新規イベントが十分あれば重複イベントは自然に除外される
     if prev_event_urls:
         repeated_count = sum(1 for e in all_events if e.get("event_url") in prev_event_urls)
         if repeated_count > 0:
             all_events = _deprioritize_repeated_events(all_events, prev_event_urls)
-            print(f"  ※ 前日と重複する {repeated_count} 件を後方に移動しました")
+            print(f"  ※ 直近5日間と重複する {repeated_count} 件を後方に移動しました")
 
     if len(all_events) > CONNPASS_MAX_EVENTS:
         print(f"  ※ connpass {len(all_events)} 件 → {CONNPASS_MAX_EVENTS} 件に制限")
@@ -1197,37 +1197,45 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
 _MD_LINK_URL_RE = re.compile(rf'\[{_LINK_LABEL_RE}\]\((https?://[^)]+)\)')
 
 
-def _load_previous_day_event_urls(target_date: str, updates_dir: str = "updates") -> set[str]:
-    """前日の記事ファイルに含まれる connpass イベント URL を返す。
+def _load_previous_day_event_urls(
+    target_date: str, updates_dir: str = "updates", days: int = 5
+) -> set[str]:
+    """直近 N 日間の記事ファイルに含まれる connpass イベント URL を返す。
 
-    前日の記事ファイルが存在しない場合や読み込みに失敗した場合は空集合を返す。
+    直近 N 日間の記事ファイルが存在しない場合や読み込みに失敗した場合は空集合を返す。
     マークダウンのリンク形式 [text](url) から URL を抽出し、
     connpass.com/event/ に一致するイベント URL のみを返す。
+    複数日分の URL を合算して返すことで、直近の更新と重複するイベントを
+    幅広く後方移動できるようになる。
     """
     target_dt = datetime.strptime(target_date, "%Y%m%d")
-    prev_dt = target_dt - timedelta(days=1)
-    prev_date_str = prev_dt.strftime("%Y%m%d")
-    prev_path = os.path.join(updates_dir, f"{prev_date_str}.md")
+    all_urls: set[str] = set()
+    for i in range(1, days + 1):
+        past_dt = target_dt - timedelta(days=i)
+        past_date_str = past_dt.strftime("%Y%m%d")
+        past_path = os.path.join(updates_dir, f"{past_date_str}.md")
 
-    if not os.path.exists(prev_path):
-        return set()
+        if not os.path.exists(past_path):
+            continue
 
-    try:
-        with open(prev_path, encoding="utf-8") as f:
-            content = f.read()
-    except (OSError, UnicodeError):
-        return set()
+        try:
+            with open(past_path, encoding="utf-8") as f:
+                content = f.read()
+        except (OSError, UnicodeError):
+            continue
 
-    all_urls = set(_MD_LINK_URL_RE.findall(content))
-    return {u for u in all_urls if re.match(r"https://(?:[^./]+\.)?connpass\.com/event/", u)}
+        urls = set(_MD_LINK_URL_RE.findall(content))
+        all_urls |= {u for u in urls if re.match(r"https://(?:[^./]+\.)?connpass\.com/event/", u)}
+
+    return all_urls
 
 
 def _deprioritize_repeated_events(
     events: list[dict], prev_event_urls: set[str]
 ) -> list[dict]:
-    """前日と重複するイベントをリストの末尾に移動する。
+    """直近5日間と重複するイベントをリストの末尾に移動する。
 
-    events リスト内のイベントを、前日の記事に含まれていないイベント（優先）と
+    events リスト内のイベントを、直近5日間の記事に含まれていないイベント（優先）と
     含まれていたイベント（後回し）に分けて結合して返す。
     各グループ内では元のソート順（started_at 昇順）を維持する。
     """

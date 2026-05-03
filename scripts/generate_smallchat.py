@@ -66,11 +66,17 @@ FEEDS = {
         {"name": "Google News AI Business", "url": "https://news.google.com/rss/search?q=artificial+intelligence+business&hl=en&gl=US&ceid=US:en"},
     ],
     # --- Azure ---
-    # Azure 関連情報は Microsoft 公式ソースのみを使用する。
-    # 他ベンダーや非公式ニュース（Google News・Reddit・Qiita 等）は意図的に除外している。
+    # Microsoft 公式ソースに加え、SNS・コミュニティ・ブログ等の情報も収集する。
     "azure": [
         {"name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/"},
         {"name": "Azure Release Communications", "url": "https://www.microsoft.com/releasecommunications/api/v2/azure/rss"},
+        {"name": "Reddit Azure", "url": "https://www.reddit.com/r/AZURE/.rss"},
+        {"name": "はてなブックマーク Azure", "url": "https://b.hatena.ne.jp/search/tag?q=Azure&mode=rss"},
+        {"name": "Qiita Azure", "url": "https://qiita.com/tags/azure/feed"},
+        {"name": "Zenn Azure", "url": "https://zenn.dev/topics/azure/feed"},
+        {"name": "Google News Azure EN", "url": "https://news.google.com/rss/search?q=Microsoft+Azure+cloud&hl=en&gl=US&ceid=US:en"},
+        {"name": "Google News Azure JP", "url": "https://news.google.com/rss/search?q=Microsoft+Azure+%E6%97%A5%E6%9C%AC+%E6%9C%80%E6%96%B0&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Hacker News Azure", "url": "https://hnrss.org/best?q=Azure"},
     ],
     # --- セキュリティ ---
     "security": [
@@ -445,11 +451,10 @@ SECTION_DEFINITIONS = [
     {
         "key": "azure",
         "header": "## 3. Azure",
-        "official_only": True,
         "system": (
             "あなたは Microsoft Azure の専門テクニカルライターです。"
-            "提供された Azure ニュースはすべて Microsoft 公式ソース（Azure Release Communications および Azure Blog）から取得しています。"
-            "公式情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
+            "提供された Azure ニュースは、Microsoft 公式ソースのほか、Reddit・はてなブックマーク・Qiita・Zenn 等の SNS やコミュニティブログからも収集しています。"
+            "これらの情報を元に、IT エンジニア向けのカジュアルな記事セクションを作成してください。"
         ),
         "instruction": (
             "以下の Azure 関連ニュースから5〜6件程度（最大6件）のトピックを選定し、マークダウン形式で出力してください。\n"

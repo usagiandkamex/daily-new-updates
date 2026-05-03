@@ -107,6 +107,29 @@ def extract_excerpt(content: str) -> str:
     return ""
 
 
+def extract_body(content: str) -> str:
+    """Return condensed text for full-text search: all H3 topic titles + all 要約 texts."""
+    parts: list[str] = []
+
+    # All H3 topic titles
+    for heading in re.findall(r"^### (.+)$", content, re.MULTILINE):
+        parts.append(heading.strip())
+
+    # All 要約 content — Pattern A: **要約**: text on the same line (daily update style)
+    for m in re.finditer(
+        r"\*\*要約\*\*[：:]\s*(.+?)(?=\n\n|\n\*\*|\Z)", content, re.DOTALL
+    ):
+        parts.append(re.sub(r"\s+", " ", m.group(1)).strip())
+
+    # All 要約 content — Pattern B: **要約** \n text on next line (smallchat style)
+    for m in re.finditer(
+        r"\*\*要約\*\*\s*\n+\s*(.+?)(?=\n\n|\n\*\*|\Z)", content, re.DOTALL
+    ):
+        parts.append(re.sub(r"\s+", " ", m.group(1)).strip())
+
+    return " ".join(parts)
+
+
 def _date_parts(date_str: str) -> tuple[str, str, str]:
     return date_str[:4], date_str[4:6], date_str[6:8]
 
@@ -128,6 +151,7 @@ def parse_daily_update(filepath: Path) -> dict:
         "github_url": f"{REPO_URL}/blob/main/updates/{filepath.name}",
         "tags": extract_tags(content),
         "excerpt": extract_excerpt(content),
+        "body": extract_body(content),
         "content": content,
     }
 
@@ -153,6 +177,7 @@ def parse_smallchat(filepath: Path) -> dict:
         "github_url": f"{REPO_URL}/blob/main/smallchat/{filepath.name}",
         "tags": extract_tags(content),
         "excerpt": extract_excerpt(content),
+        "body": extract_body(content),
         "content": content,
     }
 

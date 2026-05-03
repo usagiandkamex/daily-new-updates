@@ -139,7 +139,8 @@
         const haystack =
           (u.title || "").toLowerCase() +
           " " + (u.excerpt || "").toLowerCase() +
-          " " + (u.tags || []).join(" ").toLowerCase();
+          " " + (u.tags || []).join(" ").toLowerCase() +
+          " " + (u.body || "").toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;

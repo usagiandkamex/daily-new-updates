@@ -2752,7 +2752,7 @@ class TestDeprioritizeRepeatedEvents(unittest.TestCase):
         self.assertEqual(result, [])
 
     def test_empty_prev_urls_order_unchanged(self):
-        """prev_event_urls が空集合の場合は元の順序を維持する。"""
+        """既出 URL セットが空集合の場合は元の順序を維持する。"""
         events = [self._make_event(i) for i in range(1, 4)]
         result = du._deprioritize_repeated_events(events, set())
         for i, e in enumerate(result):

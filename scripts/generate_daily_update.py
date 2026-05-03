@@ -1196,19 +1196,22 @@ def _build_connpass_section_scripted(events: list[dict]) -> str:
 # マークダウンリンク [text](url) から URL を抽出するパターン
 _MD_LINK_URL_RE = re.compile(rf'\[{_LINK_LABEL_RE}\]\((https?://[^)]+)\)')
 
+# connpass イベント URL（サブドメインあり/なし両対応）のマッチパターン
+_CONNPASS_EVENT_URL_RE = re.compile(r"https://(?:[^./]+\.)?connpass\.com/event/")
+
 
 def _load_recent_event_urls(
     target_date: str, updates_dir: str = "updates", days: int = 5
 ) -> set[str]:
-    """直近 days 日間の記事ファイルに含まれる connpass イベント URL を返す。
+    """直近 days 日間（当日を除く）の記事ファイルに含まれる connpass イベント URL を返す。
 
-    各日の記事ファイルが存在しない場合や読み込みに失敗した場合はその日をスキップし、
-    読み込めた日分の URL を集約して返す。すべての対象ファイルが存在しないか読み込めない
-    場合は空集合を返す。
+    target_date の前日から days 日分を遡り、各日の記事ファイルに含まれる
+    connpass イベント URL を集約して返す。当日（target_date）のファイルは対象外。
+    各日のファイルが存在しない場合や読み込みに失敗した場合はその日をスキップし、
+    読み込めた日分の URL を合算して返す。すべての対象ファイルが存在しないか
+    読み込めない場合は空集合を返す。
     マークダウンのリンク形式 [text](url) から URL を抽出し、
-    connpass.com/event/ に一致するイベント URL のみを返す。
-    複数日分の URL を合算して返すことで、直近の更新と重複するイベントを
-    幅広く後方移動できるようになる。
+    connpass.com/event/ に一致するイベント URL のみを返す（サブドメインあり/なし両対応）。
 
     Args:
         days: 遡る日数。1 以上の整数を指定すること。0 以下の場合は ValueError。
@@ -1232,22 +1235,22 @@ def _load_recent_event_urls(
             continue
 
         urls = set(_MD_LINK_URL_RE.findall(content))
-        all_urls |= {u for u in urls if re.match(r"https://(?:[^./]+\.)?connpass\.com/event/", u)}
+        all_urls |= {u for u in urls if _CONNPASS_EVENT_URL_RE.match(u)}
 
     return all_urls
 
 
 def _deprioritize_repeated_events(
-    events: list[dict], prev_event_urls: set[str]
+    events: list[dict], known_event_urls: set[str]
 ) -> list[dict]:
     """既出イベントをリストの末尾に移動する。
 
-    events リスト内のイベントを、prev_event_urls に含まれていないイベント（優先）と
+    events リスト内のイベントを、known_event_urls に含まれていないイベント（優先）と
     含まれていたイベント（後回し）に分けて結合して返す。
     各グループ内では元のソート順（started_at 昇順）を維持する。
     """
-    new_events = [e for e in events if e.get("event_url") not in prev_event_urls]
-    repeated_events = [e for e in events if e.get("event_url") in prev_event_urls]
+    new_events = [e for e in events if e.get("event_url") not in known_event_urls]
+    repeated_events = [e for e in events if e.get("event_url") in known_event_urls]
     return new_events + repeated_events
 
 

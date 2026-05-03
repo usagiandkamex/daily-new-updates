@@ -2588,7 +2588,7 @@ class TestFetchFeedMaxAgeDaysDailyUpdate(unittest.TestCase):
         self.assertEqual(du.MAX_ARTICLE_AGE_DAYS, 30)
 
 
-class TestLoadPreviousDayEventUrls(unittest.TestCase):
+class TestLoadRecentEventUrls(unittest.TestCase):
     """_load_recent_event_urls() のテスト"""
 
     def setUp(self):
@@ -2605,7 +2605,7 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
             f.write(content)
 
     def test_returns_empty_set_when_file_missing(self):
-        """前日のファイルが存在しない場合は空集合を返す。"""
+        """直近 days 日間のすべてのファイルが存在しない場合は空集合を返す。"""
         result = du._load_recent_event_urls("20260501", self.tmp_dir)
         self.assertEqual(result, set())
 
@@ -2699,6 +2699,13 @@ class TestLoadPreviousDayEventUrls(unittest.TestCase):
         self.assertIn("https://connpass.com/event/1/", result2)
         self.assertIn("https://connpass.com/event/2/", result2)
         self.assertNotIn("https://connpass.com/event/3/", result2)
+
+    def test_raises_value_error_for_invalid_days(self):
+        """days が 0 以下の場合は ValueError を送出する。"""
+        with self.assertRaises(ValueError):
+            du._load_recent_event_urls("20260501", self.tmp_dir, days=0)
+        with self.assertRaises(ValueError):
+            du._load_recent_event_urls("20260501", self.tmp_dir, days=-1)
 
 class TestDeprioritizeRepeatedEvents(unittest.TestCase):
     """_deprioritize_repeated_events() のテスト"""

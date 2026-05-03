@@ -842,7 +842,7 @@ def _fetch_other_platform_events(
 
 def fetch_connpass_events(
     target_date: str,
-    prev_event_urls: set[str] | None = None,
+    recent_event_urls: set[str] | None = None,
 ) -> list[dict]:
     """connpassから東京・神奈川の近日開催コミュニティイベントを取得する（多段検索）。
 
@@ -1035,10 +1035,10 @@ def fetch_connpass_events(
 
     # 直近N日間との重複を後方に移動してから件数上限を適用する
     # こうすることで、新規イベントが十分あれば重複イベントは自然に除外される
-    if prev_event_urls:
-        repeated_count = sum(1 for e in all_events if e.get("event_url") in prev_event_urls)
+    if recent_event_urls:
+        repeated_count = sum(1 for e in all_events if e.get("event_url") in recent_event_urls)
         if repeated_count > 0:
-            all_events = _deprioritize_repeated_events(all_events, prev_event_urls)
+            all_events = _deprioritize_repeated_events(all_events, recent_event_urls)
             print(f"  ※ 既出イベント {repeated_count} 件を後方に移動しました")
 
     if len(all_events) > CONNPASS_MAX_EVENTS:
@@ -1209,7 +1209,12 @@ def _load_recent_event_urls(
     connpass.com/event/ に一致するイベント URL のみを返す。
     複数日分の URL を合算して返すことで、直近の更新と重複するイベントを
     幅広く後方移動できるようになる。
+
+    Args:
+        days: 遡る日数。1 以上の整数を指定すること。0 以下の場合は ValueError。
     """
+    if days < 1:
+        raise ValueError(f"days must be >= 1, got {days}")
     target_dt = datetime.strptime(target_date, "%Y%m%d")
     all_urls: set[str] = set()
     for i in range(1, days + 1):
@@ -1639,8 +1644,8 @@ def main():
     print(f"  → 合計: {len(sns_news)} 件")
 
     print("\n[connpass イベント（東京・神奈川）]")
-    prev_event_urls = _load_recent_event_urls(target_date)
-    connpass_events = fetch_connpass_events(target_date, prev_event_urls)
+    recent_event_urls = _load_recent_event_urls(target_date)
+    connpass_events = fetch_connpass_events(target_date, recent_event_urls)
     print(f"  → 合計: {len(connpass_events)} 件")
 
     print("\n[コミュニティイベント参加レポート]")

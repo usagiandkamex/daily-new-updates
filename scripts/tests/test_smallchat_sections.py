@@ -583,11 +583,17 @@ class TestRegenerateEmptySections(unittest.TestCase):
         self.assertNotIn("新トピック", result)
 
     def test_official_only_section_skips_general_news_fallback(self):
-        """official_only=True のセクション（Azure 等）は汎用ニュースへのフォールバックを行わない。"""
-        azure_def = next(s for s in sc.SECTION_DEFINITIONS if s["key"] == "azure")
-        header = azure_def["header"]
-        article = f"{header}\n\n"
-        original_items = [{"url": "https://old.azure.example.com", "title": "既存"}]
+        """official_only=True のセクションは汎用ニュースへのフォールバックを行わない。"""
+        official_only_def = {
+            "key": "test_official",
+            "header": "## テスト（公式限定）",
+            "official_only": True,
+            "system": "テスト用",
+            "instruction": "テスト",
+            "data_label": "テスト関連",
+        }
+        article = f"{official_only_def['header']}\n\n"
+        original_items = [{"url": "https://old.example.com", "title": "既存"}]
 
         with (
             patch.object(sc, "fetch_category", return_value=original_items),
@@ -595,8 +601,8 @@ class TestRegenerateEmptySections(unittest.TestCase):
         ):
             result = sc._regenerate_empty_sections(
                 article,
-                [azure_def],
-                {"azure": original_items},
+                [official_only_def],
+                {"test_official": original_items},
                 object(),
                 self._make_llm_clients(),
             )

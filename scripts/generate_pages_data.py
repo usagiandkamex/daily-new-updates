@@ -111,9 +111,31 @@ def extract_excerpt(content: str) -> str:
     return ""
 
 
+def _extract_connpass_event_fields(content: str) -> list[str]:
+    """Return searchable text from connpass event entries (title, date, venue, overview)."""
+    parts: list[str] = []
+    # Event titles: **[Title](url)**
+    for m in re.findall(
+        r"^\*\*\[([^\]]+)\]\(https?://[^)]+\)\*\*$", content, re.MULTILINE
+    ):
+        parts.append(m.strip())
+    # Event fields: **開催日時** / **場所** / **概要**
+    for m in re.finditer(
+        r"^\*\*(?:開催日時|場所|概要)\*\*[：:]\s*(.+)$", content, re.MULTILINE
+    ):
+        parts.append(re.sub(r"\s+", " ", m.group(1)).strip())
+    return parts
+
+
 def extract_body(content: str) -> str:
-    """Return the full article content for full-text search."""
-    return content
+    """Return condensed text for full-text search: H3 headings, 要約 blocks, and connpass event fields."""
+    parts: list[str] = []
+    # All H3 topic titles
+    for heading in re.findall(r"^### (.+)$", content, re.MULTILINE):
+        parts.append(heading.strip())
+    parts.extend(_extract_youyaku_blocks(content))
+    parts.extend(_extract_connpass_event_fields(content))
+    return " ".join(parts)
 
 
 def _build_search_text(entry: dict) -> str:

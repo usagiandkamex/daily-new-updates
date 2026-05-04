@@ -76,10 +76,12 @@ class TestExtractBody(unittest.TestCase):
         body = extract_body(_SAMPLE_UPDATE)
         self.assertIn("TypeScriptを学ぶハンズオン勉強会です", body)
 
-    def test_full_content_returned(self):
-        """extract_body は記事の全文を返す。"""
+    def test_body_is_condensed(self):
+        """extract_body はマークダウン記法（区切り線・参加状況等）を除いた凝縮テキストを返す。"""
         body = extract_body(_SAMPLE_UPDATE)
-        self.assertEqual(body, _SAMPLE_UPDATE)
+        self.assertNotEqual(body, _SAMPLE_UPDATE)
+        self.assertNotIn("---", body)
+        self.assertNotIn("参加状況", body)
 
 
 class TestBuildSearchText(unittest.TestCase):

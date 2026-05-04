@@ -111,13 +111,35 @@ def extract_excerpt(content: str) -> str:
     return ""
 
 
+def _extract_connpass_event_fields(content: str) -> list[str]:
+    """Return searchable text from connpass event entries (title, date, venue, overview)."""
+    parts: list[str] = []
+    # Event titles: **[Title](connpass-url)** — greedy .+ so titles containing ] are captured fully
+    for m in re.findall(
+        r"^\*\*\[(.+)\]\(https?://(?:[^./]+\.)?connpass\.com/[^)]+\)\*\*$",
+        content,
+        re.MULTILINE,
+    ):
+        parts.append(m.strip())
+    # Event fields: **開催日時** / **場所** / **概要** — strip URLs before indexing
+    for m in re.finditer(
+        r"^\*\*(?:開催日時|場所|概要)\*\*[：:]\s*(.+)$", content, re.MULTILINE
+    ):
+        value = re.sub(r"https?://\S+", "", m.group(1))
+        value = re.sub(r"\s+", " ", value).strip()
+        if value:
+            parts.append(value)
+    return parts
+
+
 def extract_body(content: str) -> str:
-    """Return condensed text for full-text search: all H3 topic titles + all 要約 texts."""
+    """Return condensed text for full-text search: H3 headings, 要約 blocks, and connpass event fields."""
     parts: list[str] = []
     # All H3 topic titles
     for heading in re.findall(r"^### (.+)$", content, re.MULTILINE):
         parts.append(heading.strip())
     parts.extend(_extract_youyaku_blocks(content))
+    parts.extend(_extract_connpass_event_fields(content))
     return " ".join(parts)
 
 

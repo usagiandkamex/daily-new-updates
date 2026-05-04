@@ -49,7 +49,14 @@ _SAMPLE_UPDATE = """\
 
 **場所**: Shimadzu Tokyo Innovation Plaza
 
+**概要**: アーカイブはこちら https://youtube.com/example 参加者歓迎！
+
 **参加状況**: 28/100名
+
+---
+
+**[外部サイトリンク](https://example.com/other/)**
+
 """
 
 
@@ -90,6 +97,17 @@ class TestExtractBody(unittest.TestCase):
         """タイトルに角括弧を含む connpass イベントが完全に抽出される（例: [第７回] ...）。"""
         body = extract_body(_SAMPLE_UPDATE)
         self.assertIn("[第７回] AIロボット駆動科学研究会", body)
+
+    def test_non_connpass_bold_link_excluded(self):
+        """connpass 以外のドメインの bold リンクはタイトルとして抽出されない。"""
+        body = extract_body(_SAMPLE_UPDATE)
+        self.assertNotIn("外部サイトリンク", body)
+
+    def test_event_summary_url_stripped(self):
+        """概要フィールドの値に含まれる URL は search_text から除外される。"""
+        body = extract_body(_SAMPLE_UPDATE)
+        self.assertNotIn("https://youtube.com/example", body)
+        self.assertIn("参加者歓迎", body)
 
     def test_body_is_condensed(self):
         """extract_body はマークダウン記法（区切り線・参加状況等）を除いた凝縮テキストを返す。"""

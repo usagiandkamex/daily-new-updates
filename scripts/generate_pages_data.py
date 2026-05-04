@@ -86,25 +86,48 @@ def extract_tags(content: str) -> list[str]:
     return sorted(tags)
 
 
+def _extract_youyaku_blocks(content: str) -> list[str]:
+    """Return all 要約 text blocks from content (whitespace-normalised)."""
+    parts: list[str] = []
+    # Pattern A: **要約**: text on the same line (daily update style)
+    for m in re.finditer(
+        r"\*\*要約\*\*[：:]\s*(.+?)(?=\n\n|\n\*\*|\Z)", content, re.DOTALL
+    ):
+        parts.append(re.sub(r"\s+", " ", m.group(1)).strip())
+    # Pattern B: **要約** \n text on next line (smallchat style)
+    for m in re.finditer(
+        r"\*\*要約\*\*\s*\n+\s*(.+?)(?=\n\n|\n\*\*|\Z)", content, re.DOTALL
+    ):
+        parts.append(re.sub(r"\s+", " ", m.group(1)).strip())
+    return parts
+
+
 def extract_excerpt(content: str) -> str:
     """Return a short excerpt taken from the first topic summary (要約)."""
-    # Pattern A: **要約**: text on the same line (daily update style)
-    m = re.search(
-        r"\*\*要約\*\*[：:]\s*(.+?)(?=\n\n|\n\*\*|\Z)",
-        content,
-        re.DOTALL,
-    )
-    if not m:
-        # Pattern B: **要約**  \n text on next line (smallchat style)
-        m = re.search(
-            r"\*\*要約\*\*\s*\n+\s*(.+?)(?=\n\n|\n\*\*|\Z)",
-            content,
-            re.DOTALL,
-        )
-    if m:
-        text = re.sub(r"\s+", " ", m.group(1)).strip()
+    blocks = _extract_youyaku_blocks(content)
+    if blocks:
+        text = blocks[0]
         return text[:120] + ("…" if len(text) > 120 else "")
     return ""
+
+
+def extract_body(content: str) -> str:
+    """Return condensed text for full-text search: all H3 topic titles + all 要約 texts."""
+    parts: list[str] = []
+    # All H3 topic titles
+    for heading in re.findall(r"^### (.+)$", content, re.MULTILINE):
+        parts.append(heading.strip())
+    parts.extend(_extract_youyaku_blocks(content))
+    return " ".join(parts)
+
+
+def _build_search_text(entry: dict) -> str:
+    """Pre-compute a single lowercased search string for fast client-side lookup."""
+    title = entry.get("title") or ""
+    excerpt = entry.get("excerpt") or ""
+    tags = " ".join(entry.get("tags") or [])
+    body = entry.get("body") or ""
+    return f"{title} {excerpt} {tags} {body}".lower()
 
 
 def _date_parts(date_str: str) -> tuple[str, str, str]:
@@ -128,6 +151,7 @@ def parse_daily_update(filepath: Path) -> dict:
         "github_url": f"{REPO_URL}/blob/main/updates/{filepath.name}",
         "tags": extract_tags(content),
         "excerpt": extract_excerpt(content),
+        "body": extract_body(content),
         "content": content,
     }
 
@@ -153,6 +177,7 @@ def parse_smallchat(filepath: Path) -> dict:
         "github_url": f"{REPO_URL}/blob/main/smallchat/{filepath.name}",
         "tags": extract_tags(content),
         "excerpt": extract_excerpt(content),
+        "body": extract_body(content),
         "content": content,
     }
 
@@ -199,8 +224,15 @@ def main() -> None:
             json.dumps(entry, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
-    # Strip content from entries before writing the index data.json
-    index_updates = [{k: v for k, v in u.items() if k != "content"} for u in updates]
+    # Strip large fields from entries before writing the index data.json.
+    # 'content' and 'body' are kept only in per-article JSON.
+    # Instead, add a pre-lowercased 'search_text' for fast client-side search.
+    _article_only = {"content", "body"}
+    index_updates = []
+    for u in updates:
+        idx = {k: v for k, v in u.items() if k not in _article_only}
+        idx["search_text"] = _build_search_text(u)
+        index_updates.append(idx)
 
     data = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

@@ -136,11 +136,7 @@
       if (dateFrom && u.date < dateFrom) return false;
       if (dateTo   && u.date > dateTo)   return false;
       if (q) {
-        const haystack =
-          (u.title || "").toLowerCase() +
-          " " + (u.excerpt || "").toLowerCase() +
-          " " + (u.tags || []).join(" ").toLowerCase();
-        if (!haystack.includes(q)) return false;
+        if (!(u.search_text || "").includes(q)) return false;
       }
       return true;
     });

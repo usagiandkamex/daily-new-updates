@@ -112,13 +112,8 @@ def extract_excerpt(content: str) -> str:
 
 
 def extract_body(content: str) -> str:
-    """Return condensed text for full-text search: all H3 topic titles + all 要約 texts."""
-    parts: list[str] = []
-    # All H3 topic titles
-    for heading in re.findall(r"^### (.+)$", content, re.MULTILINE):
-        parts.append(heading.strip())
-    parts.extend(_extract_youyaku_blocks(content))
-    return " ".join(parts)
+    """Return the full article content for full-text search."""
+    return content
 
 
 def _build_search_text(entry: dict) -> str:

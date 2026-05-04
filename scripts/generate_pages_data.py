@@ -114,9 +114,9 @@ def extract_excerpt(content: str) -> str:
 def _extract_connpass_event_fields(content: str) -> list[str]:
     """Return searchable text from connpass event entries (title, date, venue, overview)."""
     parts: list[str] = []
-    # Event titles: **[Title](url)**
+    # Event titles: **[Title](url)** — use greedy .+ so titles containing ] are captured fully
     for m in re.findall(
-        r"^\*\*\[([^\]]+)\]\(https?://[^)]+\)\*\*$", content, re.MULTILINE
+        r"^\*\*\[(.+)\]\(https?://[^)]+\)\*\*$", content, re.MULTILINE
     ):
         parts.append(m.strip())
     # Event fields: **開催日時** / **場所** / **概要**

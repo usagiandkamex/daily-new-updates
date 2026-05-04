@@ -40,6 +40,16 @@ _SAMPLE_UPDATE = """\
 **概要**: TypeScriptを学ぶハンズオン勉強会です。初心者歓迎！
 
 **参加状況**: 5/20名
+
+---
+
+**[[第７回] AIロボット駆動科学研究会](https://ai-robot-science.connpass.com/event/388928/)**
+
+**開催日時**: 2026/05/11 13:30
+
+**場所**: Shimadzu Tokyo Innovation Plaza
+
+**参加状況**: 28/100名
 """
 
 
@@ -75,6 +85,11 @@ class TestExtractBody(unittest.TestCase):
         """connpassイベントの概要がボディに含まれる。"""
         body = extract_body(_SAMPLE_UPDATE)
         self.assertIn("TypeScriptを学ぶハンズオン勉強会です", body)
+
+    def test_includes_event_title_with_brackets(self):
+        """タイトルに角括弧を含む connpass イベントが完全に抽出される（例: [第７回] ...）。"""
+        body = extract_body(_SAMPLE_UPDATE)
+        self.assertIn("[第７回] AIロボット駆動科学研究会", body)
 
     def test_body_is_condensed(self):
         """extract_body はマークダウン記法（区切り線・参加状況等）を除いた凝縮テキストを返す。"""

@@ -2788,5 +2788,337 @@ class TestDeprioritizeRepeatedEvents(unittest.TestCase):
         self.assertEqual(result[len(new_part) :], repeated_part)
 
 
+class TestConnpassPageParser(unittest.TestCase):
+    """_ConnpassPageParser のテスト"""
+
+    def _parse(self, html: str) -> str:
+        parser = du._ConnpassPageParser()
+        parser.feed(html)
+        return parser.get_text()
+
+    def test_extracts_text_from_target_div(self):
+        """event_description_content クラスの div 内テキストを抽出する。"""
+        html = '<div class="event_description_content"><p>イベントの概要です。</p></div>'
+        result = self._parse(html)
+        self.assertIn("イベントの概要です。", result)
+
+    def test_ignores_text_outside_target_div(self):
+        """ターゲット div 外のテキストは収集しない。"""
+        html = '<p>外部テキスト</p><div class="event_description_content"><p>内部テキスト</p></div>'
+        result = self._parse(html)
+        self.assertNotIn("外部テキスト", result)
+        self.assertIn("内部テキスト", result)
+
+    def test_returns_empty_when_class_not_found(self):
+        """event_description_content クラスが見つからない場合は空文字列を返す。"""
+        html = '<div class="other_class"><p>テキスト</p></div>'
+        result = self._parse(html)
+        self.assertEqual(result, "")
+
+    def test_heading_text_not_in_output(self):
+        """見出しテキストは出力に含まれない（セクション名の混入を防ぐ）。"""
+        html = '<div class="event_description_content"><h2>タイムテーブル</h2><p>内容</p></div>'
+        result = self._parse(html)
+        self.assertNotIn("タイムテーブル", result)
+        self.assertIn("内容", result)
+
+    def test_stops_at_exclude_heading(self):
+        """除外キーワードを含む見出し以降はテキスト収集を停止する。"""
+        html = (
+            '<div class="event_description_content">'
+            '<p>概要テキスト</p>'
+            '<h2>注意事項</h2>'
+            '<p>キャンセル禁止</p>'
+            '</div>'
+        )
+        result = self._parse(html)
+        self.assertIn("概要テキスト", result)
+        self.assertNotIn("注意事項", result)
+        self.assertNotIn("キャンセル禁止", result)
+
+    def test_nested_div_handled_correctly(self):
+        """ネストした div が含まれても正しく処理される。"""
+        html = (
+            '<div class="event_description_content">'
+            '<p>概要テキスト</p>'
+            '<div class="inner"><p>詳細</p></div>'
+            '<p>続き</p>'
+            '</div>'
+        )
+        result = self._parse(html)
+        self.assertIn("概要テキスト", result)
+        self.assertIn("詳細", result)
+        self.assertIn("続き", result)
+
+    def test_text_after_target_div_is_ignored(self):
+        """ターゲット div の終了後のテキストは収集しない。"""
+        html = (
+            '<div class="event_description_content"><p>内部</p></div>'
+            '<p>外部後続テキスト</p>'
+        )
+        result = self._parse(html)
+        self.assertIn("内部", result)
+        self.assertNotIn("外部後続テキスト", result)
+
+    def test_html_entities_decoded(self):
+        """HTML エンティティはデコードされる。"""
+        html = '<div class="event_description_content"><p>A&amp;B</p></div>'
+        result = self._parse(html)
+        self.assertIn("A&B", result)
+
+    def test_all_exclude_keywords_stop_collection(self):
+        """すべての除外キーワード見出しでテキスト収集が停止する。"""
+        for kw in ("注意事項", "キャンセル", "参加条件"):
+            with self.subTest(keyword=kw):
+                html = (
+                    f'<div class="event_description_content">'
+                    f'<p>概要テキスト</p>'
+                    f'<h2>{kw}</h2>'
+                    f'<p>除外テキスト</p>'
+                    f'</div>'
+                )
+                result = self._parse(html)
+                self.assertIn("概要テキスト", result)
+                self.assertNotIn("除外テキスト", result)
+
+    def test_non_exclude_heading_text_not_in_output(self):
+        """除外キーワードでない見出し（タイムテーブル等）もテキストに含まれない。"""
+        html = (
+            '<div class="event_description_content">'
+            '<p>概要</p>'
+            '<h2>タイムテーブル</h2>'
+            '<p>19:00 開始</p>'
+            '</div>'
+        )
+        result = self._parse(html)
+        self.assertIn("概要", result)
+        self.assertIn("19:00 開始", result)
+        self.assertNotIn("タイムテーブル", result)
+
+    def test_none_class_attribute_does_not_raise(self):
+        """class 属性が None の場合（malformed HTML）でもエラーを出さない。"""
+        parser = du._ConnpassPageParser()
+        # <div class> は class 属性を None 値として持つことがある
+        parser.handle_starttag("div", [("class", None)])
+        result = parser.get_text()
+        self.assertEqual(result, "")
+
+
+class TestFetchConnpassEventDescription(unittest.TestCase):
+    """_fetch_connpass_event_description() のテスト"""
+
+    def test_returns_description_text_on_success(self):
+        """ページ取得成功時は説明文テキストを返す。"""
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.text = (
+            '<html><body>'
+            '<div class="event_description_content">'
+            '<p>AIエージェント開発を学ぶ勉強会です。</p>'
+            '</div>'
+            '</body></html>'
+        )
+        with patch("requests.get", return_value=mock_resp):
+            result = du._fetch_connpass_event_description(
+                "https://connpass.com/event/12345/"
+            )
+        self.assertIn("AIエージェント開発を学ぶ勉強会です。", result)
+
+    def test_returns_empty_on_http_error(self):
+        """HTTP エラー時は空文字列を返す（例外を伝播しない）。"""
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = Exception("404 Not Found")
+        with patch("requests.get", return_value=mock_resp):
+            result = du._fetch_connpass_event_description(
+                "https://connpass.com/event/99999/"
+            )
+        self.assertEqual(result, "")
+
+    def test_returns_empty_on_network_error(self):
+        """ネットワークエラー時は空文字列を返す。"""
+        with patch("requests.get", side_effect=Exception("Connection refused")):
+            result = du._fetch_connpass_event_description(
+                "https://connpass.com/event/12345/"
+            )
+        self.assertEqual(result, "")
+
+    def test_returns_empty_when_description_class_not_found(self):
+        """event_description_content が見つからない場合は空文字列を返す。"""
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.text = "<html><body><p>説明なし</p></body></html>"
+        with patch("requests.get", return_value=mock_resp):
+            result = du._fetch_connpass_event_description(
+                "https://connpass.com/event/12345/"
+            )
+        self.assertEqual(result, "")
+
+    def test_uses_http_headers(self):
+        """HTTP_HEADERS を使ってリクエストを送信する。"""
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.text = '<div class="event_description_content"><p>内容</p></div>'
+        captured = {}
+
+        def fake_get(url, headers=None, timeout=None):
+            captured["headers"] = headers
+            return mock_resp
+
+        with patch("requests.get", side_effect=fake_get):
+            du._fetch_connpass_event_description("https://connpass.com/event/1/")
+        self.assertEqual(captured.get("headers"), du.HTTP_HEADERS)
+
+
+class TestEnrichConnpassDescriptions(unittest.TestCase):
+    """_enrich_connpass_descriptions() のテスト"""
+
+    def test_enriches_connpass_events_without_description(self):
+        """description が空の connpass イベントに説明文を補完する。"""
+        events = [
+            {
+                "title": "Python 勉強会",
+                "event_url": "https://connpass.com/event/100/",
+                "description": "",
+                "catch": "Python学習",
+            }
+        ]
+        with patch.object(
+            du, "_fetch_connpass_event_description", return_value="全文の説明テキストです。"
+        ):
+            du._enrich_connpass_descriptions(events)
+        self.assertEqual(events[0]["description"], "全文の説明テキストです。")
+
+    def test_skips_events_with_existing_description(self):
+        """description が既に設定されているイベントはスキップする。"""
+        events = [
+            {
+                "title": "Azure勉強会",
+                "event_url": "https://connpass.com/event/200/",
+                "description": "<p>既存の説明</p>",
+                "catch": "",
+            }
+        ]
+        fetch_mock = MagicMock(return_value="新しい説明")
+        with patch.object(du, "_fetch_connpass_event_description", fetch_mock):
+            du._enrich_connpass_descriptions(events)
+        fetch_mock.assert_not_called()
+        self.assertEqual(events[0]["description"], "<p>既存の説明</p>")
+
+    def test_skips_non_connpass_events(self):
+        """connpass.com ドメイン以外の URL はスキップする。"""
+        events = [
+            {
+                "title": "Doorkeeper イベント",
+                "event_url": "https://doorkeeper.jp/events/12345",
+                "description": "",
+                "catch": "",
+            }
+        ]
+        fetch_mock = MagicMock(return_value="テキスト")
+        with patch.object(du, "_fetch_connpass_event_description", fetch_mock):
+            du._enrich_connpass_descriptions(events)
+        fetch_mock.assert_not_called()
+
+    def test_does_not_overwrite_if_fetch_returns_empty(self):
+        """取得失敗（空文字列）の場合は description を更新しない。"""
+        events = [
+            {
+                "title": "テストイベント",
+                "event_url": "https://connpass.com/event/300/",
+                "description": "",
+                "catch": "キャッチ",
+            }
+        ]
+        with patch.object(du, "_fetch_connpass_event_description", return_value=""):
+            du._enrich_connpass_descriptions(events)
+        self.assertEqual(events[0]["description"], "")
+
+    def test_does_not_overwrite_if_fetch_returns_whitespace_only(self):
+        """取得結果が空白文字のみの場合は description を更新しない。"""
+        events = [
+            {
+                "title": "テストイベント",
+                "event_url": "https://connpass.com/event/300/",
+                "description": "",
+                "catch": "キャッチ",
+            }
+        ]
+        with patch.object(du, "_fetch_connpass_event_description", return_value="  \n  \t  "):
+            du._enrich_connpass_descriptions(events)
+        self.assertEqual(events[0]["description"], "")
+
+    def test_skips_url_with_connpass_in_query_param(self):
+        """connpass.com がクエリパラメータやパスに含まれる非 connpass ドメインはスキップする。"""
+        events = [
+            {
+                "title": "リダイレクトイベント",
+                "event_url": "https://redirect.example.com/go?url=https://connpass.com/event/999/",
+                "description": "",
+                "catch": "",
+            }
+        ]
+        fetch_mock = MagicMock(return_value="テキスト")
+        with patch.object(du, "_fetch_connpass_event_description", fetch_mock):
+            du._enrich_connpass_descriptions(events)
+        fetch_mock.assert_not_called()
+
+    def test_handles_empty_event_list(self):
+        """空のイベントリストでもエラーなく処理する。"""
+        du._enrich_connpass_descriptions([])
+
+    def test_enriches_only_connpass_with_subdomain(self):
+        """サブドメイン付き connpass URL も対象になる。"""
+        events = [
+            {
+                "title": "コミュニティイベント",
+                "event_url": "https://jaws-ug.connpass.com/event/400/",
+                "description": "",
+                "catch": "",
+            }
+        ]
+        with patch.object(
+            du, "_fetch_connpass_event_description", return_value="詳細テキスト"
+        ):
+            du._enrich_connpass_descriptions(events)
+        self.assertEqual(events[0]["description"], "詳細テキスト")
+
+    def test_skips_lookalike_domain(self):
+        """evilconnpass.com のような類似ドメインはスキップする。"""
+        events = [
+            {
+                "title": "類似ドメインイベント",
+                "event_url": "https://evilconnpass.com/event/1/",
+                "description": "",
+                "catch": "",
+            }
+        ]
+        fetch_mock = MagicMock(return_value="テキスト")
+        with patch.object(du, "_fetch_connpass_event_description", fetch_mock):
+            du._enrich_connpass_descriptions(events)
+        fetch_mock.assert_not_called()
+
+
+class TestFetchConnpassEventsEnrichment(unittest.TestCase):
+    """fetch_connpass_events() が _enrich_connpass_descriptions を呼ぶことを確認するテスト"""
+
+    def test_enrich_called_after_limiting(self):
+        """fetch_connpass_events() が最終リスト確定後に _enrich_connpass_descriptions を呼ぶ。"""
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("requests.get") as mock_get,
+            patch.object(du, "feedparser") as mock_fp,
+            patch.object(du, "_enrich_connpass_descriptions") as mock_enrich,
+        ):
+            mock_resp = MagicMock()
+            mock_resp.raise_for_status.return_value = None
+            mock_resp.content = b""
+            mock_get.return_value = mock_resp
+            mock_fp.parse.return_value = MagicMock(entries=[])
+
+            du.fetch_connpass_events("20260501")
+
+        mock_enrich.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()

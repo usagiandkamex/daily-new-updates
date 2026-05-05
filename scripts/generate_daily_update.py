@@ -11,7 +11,7 @@ import sys
 import calendar
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 import feedparser
 import requests
@@ -1046,6 +1046,9 @@ def fetch_connpass_events(
         print(f"  ※ connpass {len(all_events)} 件 → {CONNPASS_MAX_EVENTS} 件に制限")
         all_events = all_events[:CONNPASS_MAX_EVENTS]
 
+    # description が未設定の connpass イベントはページから説明文を補完する
+    _enrich_connpass_descriptions(all_events)
+
     return all_events
 
 
@@ -1104,6 +1107,126 @@ class _DescriptionHTMLParser(HTMLParser):
 
     def get_text(self) -> str:
         return " ".join(self._parts)
+
+
+class _ConnpassPageParser(HTMLParser):
+    """connpass イベントページから説明文テキストを抽出するパーサー。
+
+    <div class="event_description_content"> 内のテキストを収集する。
+    _DescriptionHTMLParser と同様に、h1〜h6 見出しテキストは出力せず、
+    _EXCLUDE_HEADING_KEYWORDS を含む見出し以降はテキスト収集を停止する。
+    """
+
+    _TARGET_CLASSES = frozenset(["event_description_content"])
+    _HEADING_TAGS = frozenset(["h1", "h2", "h3", "h4", "h5", "h6"])
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._in_target: bool = False
+        self._target_tag: str = ""
+        self._depth: int = 0
+        self._in_heading: str = ""
+        self._heading_buf: list[str] = []
+        self._done: bool = False
+        self._parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list) -> None:
+        if not self._in_target:
+            attr_dict = dict(attrs)
+            classes = set((attr_dict.get("class") or "").split())
+            if classes & self._TARGET_CLASSES:
+                self._in_target = True
+                self._target_tag = tag
+                self._depth = 0
+        elif not self._done:
+            if tag == self._target_tag:
+                self._depth += 1
+            elif tag in self._HEADING_TAGS and not self._in_heading:
+                self._in_heading = tag
+                self._heading_buf = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if not self._in_target:
+            return
+        if tag == self._target_tag:
+            if self._depth == 0:
+                self._in_target = False
+            else:
+                self._depth -= 1
+        elif not self._done and self._in_heading and tag == self._in_heading:
+            heading_text = "".join(self._heading_buf).strip()
+            self._in_heading = ""
+            self._heading_buf = []
+            if any(kw in heading_text for kw in _EXCLUDE_HEADING_KEYWORDS):
+                self._done = True
+
+    def handle_data(self, data: str) -> None:
+        if not self._in_target or self._done:
+            return
+        if self._in_heading:
+            self._heading_buf.append(data)
+        else:
+            self._parts.append(data)
+
+    def get_text(self) -> str:
+        return " ".join(self._parts)
+
+
+def _fetch_connpass_event_description(event_url: str) -> str:
+    """connpass イベントページから説明文テキストを取得して返す。
+
+    ページ内の event_description_content クラス要素からテキストを抽出する。
+    取得に失敗した場合（ネットワーク障害・HTML 構造の変化等）は空文字列を返す。
+    """
+    resp = None
+    try:
+        resp = requests.get(event_url, headers=HTTP_HEADERS, timeout=15)
+        resp.raise_for_status()
+        parser = _ConnpassPageParser()
+        parser.feed(resp.text)
+        return parser.get_text()
+    except requests.RequestException:
+        return ""
+    except Exception as exc:
+        print(f"  connpass: 説明文取得で予期しないエラー ({event_url}): {type(exc).__name__}")
+        return ""
+    finally:
+        if resp is not None:
+            resp.close()
+
+
+def _is_connpass_host(hostname: str | None) -> bool:
+    """ホスト名が connpass.com またはそのサブドメインか判定する。
+
+    urlparse(...).hostname（小文字正規化済み・ポート除去済み）を渡して使う。
+    evilconnpass.com のような類似ドメインは除外する。
+    """
+    if not hostname:
+        return False
+    return hostname == "connpass.com" or hostname.endswith(".connpass.com")
+
+
+def _enrich_connpass_descriptions(events: list[dict]) -> None:
+    """connpass イベントで description が空のものについてページから説明文を補完する。
+
+    event_url が connpass.com ドメインで description が未設定のイベントのみを対象とする。
+    取得したテキストを description フィールドに設定することで、
+    _build_event_summary() がより充実した概要を生成できるようにする。
+    """
+    to_enrich = [
+        e for e in events
+        if (
+            _is_connpass_host(urlparse(e.get("event_url", "")).hostname)
+            and not e.get("description")
+        )
+    ]
+    if not to_enrich:
+        return
+    print(f"  connpass: 説明文取得 ({len(to_enrich)} 件)")
+    for event in to_enrich:
+        desc = _fetch_connpass_event_description(event["event_url"]).strip()
+        if desc:
+            event["description"] = desc
 
 
 def _build_event_summary(catch: str | None, description: str | None) -> str:

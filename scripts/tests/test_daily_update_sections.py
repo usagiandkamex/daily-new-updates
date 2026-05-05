@@ -2895,6 +2895,14 @@ class TestConnpassPageParser(unittest.TestCase):
         self.assertIn("19:00 開始", result)
         self.assertNotIn("タイムテーブル", result)
 
+    def test_none_class_attribute_does_not_raise(self):
+        """class 属性が None の場合（malformed HTML）でもエラーを出さない。"""
+        parser = du._ConnpassPageParser()
+        # <div class> は class 属性を None 値として持つことがある
+        parser.handle_starttag("div", [("class", None)])
+        result = parser.get_text()
+        self.assertEqual(result, "")
+
 
 class TestFetchConnpassEventDescription(unittest.TestCase):
     """_fetch_connpass_event_description() のテスト"""
@@ -3073,6 +3081,21 @@ class TestEnrichConnpassDescriptions(unittest.TestCase):
         ):
             du._enrich_connpass_descriptions(events)
         self.assertEqual(events[0]["description"], "詳細テキスト")
+
+    def test_skips_lookalike_domain(self):
+        """evilconnpass.com のような類似ドメインはスキップする。"""
+        events = [
+            {
+                "title": "類似ドメインイベント",
+                "event_url": "https://evilconnpass.com/event/1/",
+                "description": "",
+                "catch": "",
+            }
+        ]
+        fetch_mock = MagicMock(return_value="テキスト")
+        with patch.object(du, "_fetch_connpass_event_description", fetch_mock):
+            du._enrich_connpass_descriptions(events)
+        fetch_mock.assert_not_called()
 
 
 class TestFetchConnpassEventsEnrichment(unittest.TestCase):

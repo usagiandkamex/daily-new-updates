@@ -1133,7 +1133,7 @@ class _ConnpassPageParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list) -> None:
         if not self._in_target:
             attr_dict = dict(attrs)
-            classes = set(attr_dict.get("class", "").split())
+            classes = set((attr_dict.get("class") or "").split())
             if classes & self._TARGET_CLASSES:
                 self._in_target = True
                 self._target_tag = tag
@@ -1188,6 +1188,15 @@ def _fetch_connpass_event_description(event_url: str) -> str:
         return ""
 
 
+def _is_connpass_host(host: str) -> bool:
+    """ホスト文字列が connpass.com またはそのサブドメインか判定する。
+
+    ポートを除去してから比較し、evilconnpass.com のような類似ドメインは除外する。
+    """
+    host = host.lower().split(":")[0]
+    return host == "connpass.com" or host.endswith(".connpass.com")
+
+
 def _enrich_connpass_descriptions(events: list[dict]) -> None:
     """connpass イベントで description が空のものについてページから説明文を補完する。
 
@@ -1198,7 +1207,7 @@ def _enrich_connpass_descriptions(events: list[dict]) -> None:
     to_enrich = [
         e for e in events
         if (
-            urlparse(e.get("event_url", "")).netloc.endswith("connpass.com")
+            _is_connpass_host(urlparse(e.get("event_url", "")).netloc)
             and not e.get("description")
         )
     ]

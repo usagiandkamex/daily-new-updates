@@ -1197,8 +1197,10 @@ def _enrich_connpass_descriptions(events: list[dict]) -> None:
     """
     to_enrich = [
         e for e in events
-        if _CONNPASS_EVENT_URL_RE.search(e.get("event_url", ""))
-        and not e.get("description")
+        if (
+            _CONNPASS_EVENT_URL_RE.search(e.get("event_url", ""))
+            and not e.get("description")
+        )
     ]
     if not to_enrich:
         return

@@ -3025,6 +3025,35 @@ class TestEnrichConnpassDescriptions(unittest.TestCase):
             du._enrich_connpass_descriptions(events)
         self.assertEqual(events[0]["description"], "")
 
+    def test_does_not_overwrite_if_fetch_returns_whitespace_only(self):
+        """取得結果が空白文字のみの場合は description を更新しない。"""
+        events = [
+            {
+                "title": "テストイベント",
+                "event_url": "https://connpass.com/event/300/",
+                "description": "",
+                "catch": "キャッチ",
+            }
+        ]
+        with patch.object(du, "_fetch_connpass_event_description", return_value="  \n  \t  "):
+            du._enrich_connpass_descriptions(events)
+        self.assertEqual(events[0]["description"], "")
+
+    def test_skips_url_with_connpass_in_query_param(self):
+        """connpass.com がクエリパラメータやパスに含まれる非 connpass ドメインはスキップする。"""
+        events = [
+            {
+                "title": "リダイレクトイベント",
+                "event_url": "https://redirect.example.com/go?url=https://connpass.com/event/999/",
+                "description": "",
+                "catch": "",
+            }
+        ]
+        fetch_mock = MagicMock(return_value="テキスト")
+        with patch.object(du, "_fetch_connpass_event_description", fetch_mock):
+            du._enrich_connpass_descriptions(events)
+        fetch_mock.assert_not_called()
+
     def test_handles_empty_event_list(self):
         """空のイベントリストでもエラーなく処理する。"""
         du._enrich_connpass_descriptions([])

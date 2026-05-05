@@ -11,7 +11,7 @@ import sys
 import calendar
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 import feedparser
 import requests
@@ -1198,7 +1198,7 @@ def _enrich_connpass_descriptions(events: list[dict]) -> None:
     to_enrich = [
         e for e in events
         if (
-            _CONNPASS_EVENT_URL_RE.search(e.get("event_url", ""))
+            urlparse(e.get("event_url", "")).netloc.endswith("connpass.com")
             and not e.get("description")
         )
     ]
@@ -1206,7 +1206,7 @@ def _enrich_connpass_descriptions(events: list[dict]) -> None:
         return
     print(f"  connpass: 説明文取得 ({len(to_enrich)} 件)")
     for event in to_enrich:
-        desc = _fetch_connpass_event_description(event["event_url"])
+        desc = _fetch_connpass_event_description(event["event_url"]).strip()
         if desc:
             event["description"] = desc
 

@@ -1178,23 +1178,32 @@ def _fetch_connpass_event_description(event_url: str) -> str:
     ページ内の event_description_content クラス要素からテキストを抽出する。
     取得に失敗した場合（ネットワーク障害・HTML 構造の変化等）は空文字列を返す。
     """
+    resp = None
     try:
         resp = requests.get(event_url, headers=HTTP_HEADERS, timeout=15)
         resp.raise_for_status()
         parser = _ConnpassPageParser()
         parser.feed(resp.text)
         return parser.get_text()
-    except Exception:
+    except requests.RequestException:
         return ""
+    except Exception as exc:
+        print(f"  connpass: 説明文取得で予期しないエラー ({event_url}): {type(exc).__name__}")
+        return ""
+    finally:
+        if resp is not None:
+            resp.close()
 
 
-def _is_connpass_host(host: str) -> bool:
-    """ホスト文字列が connpass.com またはそのサブドメインか判定する。
+def _is_connpass_host(hostname: str | None) -> bool:
+    """ホスト名が connpass.com またはそのサブドメインか判定する。
 
-    ポートを除去してから比較し、evilconnpass.com のような類似ドメインは除外する。
+    urlparse(...).hostname（小文字正規化済み・ポート除去済み）を渡して使う。
+    evilconnpass.com のような類似ドメインは除外する。
     """
-    host = host.lower().split(":")[0]
-    return host == "connpass.com" or host.endswith(".connpass.com")
+    if not hostname:
+        return False
+    return hostname == "connpass.com" or hostname.endswith(".connpass.com")
 
 
 def _enrich_connpass_descriptions(events: list[dict]) -> None:
@@ -1207,7 +1216,7 @@ def _enrich_connpass_descriptions(events: list[dict]) -> None:
     to_enrich = [
         e for e in events
         if (
-            _is_connpass_host(urlparse(e.get("event_url", "")).netloc)
+            _is_connpass_host(urlparse(e.get("event_url", "")).hostname)
             and not e.get("description")
         )
     ]

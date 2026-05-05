@@ -1169,7 +1169,7 @@ class _ConnpassPageParser(HTMLParser):
             self._parts.append(data)
 
     def get_text(self) -> str:
-        return "".join(self._parts)
+        return " ".join(self._parts)
 
 
 def _fetch_connpass_event_description(event_url: str) -> str:

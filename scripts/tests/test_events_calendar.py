@@ -604,10 +604,13 @@ class TestFetchEvents(unittest.TestCase):
             events = fetch_events(today)
 
         self.assertEqual(len(events), 3)
-        self.assertEqual(captured_requests[0]["args"][0], "https://connpass.com/api/v2/events/")
-        self.assertEqual(captured_requests[0]["kwargs"]["headers"]["X-API-Key"], "test-key")
-        self.assertEqual(captured_requests[0]["kwargs"]["params"]["count"], 100)
-        self.assertEqual(captured_requests[0]["kwargs"]["params"]["order"], 2)
+        first_request = captured_requests[0]
+        self.assertEqual(first_request["args"][0], "https://connpass.com/api/v2/events/")
+        self.assertIn("headers", first_request["kwargs"])
+        self.assertIn("params", first_request["kwargs"])
+        self.assertEqual(first_request["kwargs"]["headers"].get("X-API-Key"), "test-key")
+        self.assertEqual(first_request["kwargs"]["params"].get("count"), 100)
+        self.assertEqual(first_request["kwargs"]["params"].get("order"), 2)
         feedparser_parse.assert_not_called()
 
 

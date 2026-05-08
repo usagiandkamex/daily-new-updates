@@ -462,6 +462,9 @@ def fetch_events(today: datetime) -> list[dict]:
     for pref, pref_id in _PREFECTURE_IDS.items():
         for ym in months:
             if use_api:
+                # v2 API には RSS の pref_id 相当パラメータが無いため、
+                # keyword に都道府県名を指定して近似的に抽出する。
+                # 地名の言及ベースのため誤検出/取りこぼしがあり得る（best effort）。
                 collected, ok = _fetch_api_events(
                     params={"keyword": pref, "ym": ym},
                     place=pref,
@@ -486,6 +489,9 @@ def fetch_events(today: datetime) -> list[dict]:
     # --- オンラインイベント検索 ---
     for ym in months:
         if use_api:
+            # v2 API には RSS の online=1 相当パラメータが無いため、
+            # keyword="オンライン" を用いてオンライン系イベントを補完する。
+            # 表現ゆれ（リモート/Web開催等）により取りこぼし/誤検出の可能性がある。
             collected, ok = _fetch_api_events(
                 params={"keyword": "オンライン", "ym": ym},
                 place="オンライン",

@@ -10,6 +10,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -26,6 +27,10 @@ import requests
 # ---------------------------------------------------------------------------
 
 CONNPASS_RSS_URL = "https://connpass.com/search/"
+CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
+CONNPASS_API_FETCH_COUNT = 100
+CONNPASS_API_MAX_PAGES = 10
+CONNPASS_API_EARLY_STOP_BUFFER = 100
 
 HTTP_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; daily-new-updates-bot/1.0)",
@@ -377,6 +382,18 @@ def _parse_started_at(entry) -> str:
         return ""
 
 
+def _parse_started_at_api(started_at: str) -> str:
+    """connpass v2 API の started_at を JST 文字列（YYYY/MM/DD HH:MM）に変換する。"""
+    if not started_at:
+        return ""
+    try:
+        # connpass v2 API は ISO8601（例: 2026-05-20T10:00:00+09:00 / ...Z）を返す。
+        dt = datetime.fromisoformat(started_at.replace("Z", "+00:00")).astimezone(JST)
+        return dt.strftime("%Y/%m/%d %H:%M")
+    except (TypeError, ValueError):
+        return ""
+
+
 # ---------------------------------------------------------------------------
 # イベント取得
 # ---------------------------------------------------------------------------
@@ -539,15 +556,163 @@ def fetch_vendor_news_events(today: datetime) -> list[dict]:
     return events
 
 
+def _fetch_api_events(
+    params: dict,
+    place: str,
+    today_str: str,
+    seen_urls: set[str],
+    label: str,
+    api_key: str,
+) -> tuple[list[dict], bool]:
+    """connpass v2 API を呼び出してイベントリストを返す（APIキー利用）。
+
+    v2 API の ``count``（最大100）+ ``start``（1-indexed）でページングし、
+    ``CONNPASS_API_MAX_PAGES`` の上限内で順次取得する。
+    戻り値は ``(収集したイベント, 成功フラグ)``。
+    """
+    collected: list[dict] = []
+    connpass_headers = {
+        **HTTP_HEADERS,
+        "Accept": "application/json",
+        "X-API-Key": api_key,
+    }
+    start = 1
+    fetched_any_page = False
+    for page_num in range(1, CONNPASS_API_MAX_PAGES + 1):
+        try:
+            resp = requests.get(
+                CONNPASS_API_URL,
+                params={
+                    **params,
+                    "count": CONNPASS_API_FETCH_COUNT,
+                    "start": start,
+                    "order": 2,
+                },
+                headers=connpass_headers,
+                timeout=30,
+                allow_redirects=False,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            if not fetched_any_page:
+                print(f"  connpass API ({label}): 取得失敗 ({e})")
+                return collected, False
+            print(f"  connpass API ({label} p{page_num}): 追加取得失敗 ({e})")
+            break
+
+        if not isinstance(data, dict):
+            if not fetched_any_page:
+                print(
+                    f"  connpass API ({label}): 応答形式が不正 "
+                    f"({type(data).__name__})"
+                )
+                return collected, False
+            print(
+                f"  connpass API ({label} p{page_num}): 追加取得の応答形式が不正 "
+                f"({type(data).__name__})"
+            )
+            break
+
+        events_raw = data.get("events")
+        if events_raw is None:
+            events = []
+        elif not isinstance(events_raw, list):
+            if not fetched_any_page:
+                print(
+                    f"  connpass API ({label}): events の形式が不正 "
+                    f"({type(events_raw).__name__})"
+                )
+                return collected, False
+            print(
+                f"  connpass API ({label} p{page_num}): 追加取得の events 形式が不正 "
+                f"({type(events_raw).__name__})"
+            )
+            break
+        else:
+            events = events_raw
+
+        fetched_any_page = True
+        has_returned = "results_returned" in data
+        has_available = "results_available" in data
+        returned_raw = data.get("results_returned")
+        available_raw = data.get("results_available")
+        returned = returned_raw if type(returned_raw) is int else len(events)
+        available = available_raw if type(available_raw) is int else 0
+        if has_returned and type(returned_raw) is not int:
+            print(
+                f"  警告: connpass API ({label}): results_returned の形式が不正 "
+                f"({type(returned_raw).__name__})"
+            )
+        if has_available and type(available_raw) is not int:
+            print(
+                f"  警告: connpass API ({label}): results_available の形式が不正 "
+                f"({type(available_raw).__name__})"
+            )
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+            url_raw = event.get("url") or event.get("event_url", "")
+            if not isinstance(url_raw, str):
+                continue
+            url = url_raw.strip()
+            if not url or url in seen_urls:
+                continue
+            if not _is_connpass_event_url(url):
+                continue
+            title_raw = event.get("title")
+            catch_raw = event.get("catch")
+            title = title_raw.strip() if isinstance(title_raw, str) else ""
+            desc = catch_raw.strip() if isinstance(catch_raw, str) else ""
+            if not _is_it_event(title, desc):
+                continue
+            started_at = _parse_started_at_api(event.get("started_at", ""))
+            if not started_at:
+                continue
+            if started_at[:10] < today_str:
+                continue
+            seen_urls.add(url)
+            collected.append({
+                "title": title,
+                "event_url": url,
+                "started_at": started_at,
+                "place": place,
+                "catch": desc[:200],
+            })
+
+        # seen_urls は全検索条件で共有しており、最終的な events.json の件数上限
+        # （MAX_CALENDAR_EVENTS）付近まで到達したら全体の取得コストを抑えるため
+        # この検索条件の追加ページ取得を早期終了する。
+        if len(seen_urls) >= MAX_CALENDAR_EVENTS + CONNPASS_API_EARLY_STOP_BUFFER:
+            print(
+                f"  connpass API ({label}): 取得件数が上限付近のため追加ページ取得を終了 "
+                f"({len(seen_urls)} 件)"
+            )
+            break
+
+        next_start = start + returned
+        if (
+            (available > 0 and next_start > available)
+            or returned < CONNPASS_API_FETCH_COUNT
+        ):
+            break
+        start = next_start
+
+    print(f"  connpass API ({label}): {len(collected)} 件取得")
+    return collected, True
+
+
 def fetch_events(today: datetime) -> list[dict]:
-    """今日以降のイベントを connpass RSS から取得し、ベンダーイベント情報を追加する。
+    """今日以降のイベントを connpass から取得する。
 
-    関東（東京都・神奈川県）の pref_id 検索とオンライン（online=1）検索の
-    2 系統で connpass イベントを取得し、さらに大手ベンダー・大規模カンファレンスの
-    最新ニュースを Google News RSS から取得して合わせて返す。
-    重複を排除して日時昇順に返す。
+    CONNPASS_API_KEY が設定されている場合は v2 API（X-API-Key）を優先し、
+    未設定時は既存 RSS 検索を使用する。
+    関東（東京都・神奈川県）とオンラインの 2 系統で取得し、重複を排除して
+    日時昇順に返す。
+    なお v2 API では pref_id/online 相当の構造化パラメータが無いため、
+    keyword ベースの絞り込みは best effort（誤検出・取りこぼしあり）となる。
 
-    全 connpass RSS 取得が失敗した場合は :class:`RuntimeError` を送出する
+    全リクエスト失敗時は :class:`RuntimeError` を送出する
     （docs/events.json を空で上書きしないため）。
     """
     today_str = today.strftime("%Y/%m/%d")
@@ -557,40 +722,91 @@ def fetch_events(today: datetime) -> list[dict]:
     seen_urls: set[str] = set()
     attempts = 0
     failures = 0
+    api_key = os.environ.get("CONNPASS_API_KEY", "").strip()
+    use_api = bool(api_key)
+    if use_api:
+        print("  CONNPASS_API_KEY を検出: connpass v2 API を利用します")
+    early_stop_limit = MAX_CALENDAR_EVENTS + CONNPASS_API_EARLY_STOP_BUFFER
+
+    def _api_limit_reached() -> bool:
+        return use_api and len(seen_urls) >= early_stop_limit
 
     # --- 都道府県別検索 ---
     for pref, pref_id in _PREFECTURE_IDS.items():
         for ym in months:
-            collected, ok = _fetch_rss_events(
-                params={"format": "rss", "pref_id": pref_id, "ym": ym},
-                place=pref,
-                today_str=today_str,
-                seen_urls=seen_urls,
-                label=f"{pref} {ym}",
-            )
+            if use_api:
+                # v2 API には RSS の pref_id 相当パラメータが無いため、
+                # keyword に都道府県名を指定して近似的に抽出する。
+                # 地名の言及ベースのため誤検出/取りこぼしがあり得る（best effort）。
+                collected, ok = _fetch_api_events(
+                    params={"keyword": pref, "ym": ym},
+                    place=pref,
+                    today_str=today_str,
+                    seen_urls=seen_urls,
+                    label=f"{pref} {ym}",
+                    api_key=api_key,
+                )
+            else:
+                collected, ok = _fetch_rss_events(
+                    params={"format": "rss", "pref_id": pref_id, "ym": ym},
+                    place=pref,
+                    today_str=today_str,
+                    seen_urls=seen_urls,
+                    label=f"{pref} {ym}",
+                )
             attempts += 1
             if not ok:
                 failures += 1
             events.extend(collected)
+            if _api_limit_reached():
+                print(
+                    f"  connpass API: 収集件数が上限付近のため以降の検索を終了 "
+                    f"({len(seen_urls)} 件)"
+                )
+                break
+        if _api_limit_reached():
+            break
 
     # --- オンラインイベント検索 ---
-    for ym in months:
-        collected, ok = _fetch_rss_events(
-            params={"format": "rss", "online": 1, "ym": ym},
-            place="オンライン",
-            today_str=today_str,
-            seen_urls=seen_urls,
-            label=f"オンライン {ym}",
-        )
-        attempts += 1
-        if not ok:
-            failures += 1
-        events.extend(collected)
+    if _api_limit_reached():
+        print("  connpass API: オンライン検索をスキップします")
+    else:
+        for ym in months:
+            if use_api:
+                # v2 API には RSS の online=1 相当パラメータが無いため、
+                # keyword="オンライン" を用いてオンライン系イベントを補完する。
+                # 表現ゆれ（リモート/Web開催等）により取りこぼし/誤検出の可能性がある。
+                collected, ok = _fetch_api_events(
+                    params={"keyword": "オンライン", "ym": ym},
+                    place="オンライン",
+                    today_str=today_str,
+                    seen_urls=seen_urls,
+                    label=f"オンライン {ym}",
+                    api_key=api_key,
+                )
+            else:
+                collected, ok = _fetch_rss_events(
+                    params={"format": "rss", "online": 1, "ym": ym},
+                    place="オンライン",
+                    today_str=today_str,
+                    seen_urls=seen_urls,
+                    label=f"オンライン {ym}",
+                )
+            attempts += 1
+            if not ok:
+                failures += 1
+            events.extend(collected)
+            if _api_limit_reached():
+                print(
+                    f"  connpass API: 収集件数が上限付近のためオンライン検索を終了 "
+                    f"({len(seen_urls)} 件)"
+                )
+                break
 
     # 全リクエスト失敗時は例外（既存 events.json の上書き防止）
     if attempts > 0 and failures == attempts:
         raise RuntimeError(
-            f"connpass RSS 取得が全 {attempts} 件失敗しました。"
+            f"connpass {'API' if use_api else 'RSS'} 取得が全 {attempts} 件失敗しました。"
             "既存の docs/events.json を保持するため処理を中断します。"
         )
 
@@ -632,10 +848,11 @@ def main() -> None:
     try:
         events = fetch_events(today)
     except RuntimeError as e:
-        # 全 RSS 取得失敗時は events.json を上書きせず非 0 終了
-        # （前回データを保持しサイト上のイベント表示が消えないようにする）
-        print(f"エラー: {e}", file=sys.stderr)
-        sys.exit(1)
+        # 全取得失敗時は events.json を上書きせず終了する。
+        # ワークフロー自体は失敗にせず、前回データを保持する。
+        print(f"警告: {e}", file=sys.stderr)
+        print("イベント取得に失敗したため、events.json の更新をスキップします。", file=sys.stderr)
+        return
     print(f"取得イベント数: {len(events)}")
 
     data = {

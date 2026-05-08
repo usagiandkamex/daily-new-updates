@@ -541,6 +541,23 @@ class TestFetchEvents(unittest.TestCase):
 
         self.assertIn("全", str(cm.exception))
 
+    def test_raises_when_all_feeds_fail_to_parse(self):
+        """全 RSS が feedparser で bozo 扱い & entries 空 → 例外送出。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+
+        def make_bozo_feed():
+            f = MagicMock()
+            f.entries = []
+            f.bozo = True
+            f.bozo_exception = Exception("malformed RSS")
+            return f
+
+        with patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse",
+                   side_effect=lambda c: make_bozo_feed()):
+            with self.assertRaises(RuntimeError):
+                fetch_events(today)
+
 
 if __name__ == "__main__":
     unittest.main()

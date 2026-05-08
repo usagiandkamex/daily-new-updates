@@ -161,6 +161,17 @@
     // Re-render days to reflect new selected state
     renderDays();
 
+    // Restore focus to the same day's button after re-render so that
+    // keyboard / screen-reader users don't lose their place when the
+    // grid's innerHTML is rebuilt.
+    const container = $("#cal-days");
+    if (container) {
+      const btn = container.querySelector(
+        `.cal-cell-button[data-date="${dateStr}"]`
+      );
+      if (btn) btn.focus();
+    }
+
     // Render event list panel
     renderDayPanel(dateStr);
   }

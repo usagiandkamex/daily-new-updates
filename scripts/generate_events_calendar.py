@@ -310,7 +310,9 @@ def _fetch_rss_events(
     - URL 重複（seen_urls）と IT キーワードフィルタを適用
     - 開催日が today_str より前のイベントは除外（日付単位、当日は表示対象）
     - 取得件数はログに出力
-    - 戻り値は (収集したイベント, 成功フラグ)。HTTP 例外/解析失敗時は成功フラグ False。
+    - 戻り値は (収集したイベント, 成功フラグ)。HTTP 例外、または
+      ``feedparser`` がパース失敗（``feed.bozo`` が真かつ ``entries`` が空）
+      とした場合は成功フラグ False を返す。
     """
     collected: list[dict] = []
     try:
@@ -322,6 +324,14 @@ def _fetch_rss_events(
         )
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
+        # feedparser はパース失敗を例外ではなく feed.bozo フラグで通知する。
+        # 壊れた RSS / 想定外レスポンス（HTML エラーページ等）を成功扱いに
+        # してしまうと events.json を空で上書きする恐れがあるため、
+        # entries が空のときに限り bozo を失敗扱いとする。
+        if getattr(feed, "bozo", False) and not feed.entries:
+            bozo_exc = getattr(feed, "bozo_exception", None)
+            print(f"  connpass RSS ({label}): RSS パース失敗 ({bozo_exc})")
+            return collected, False
         for entry in feed.entries:
             url = entry.get("link", "")
             if not url or url in seen_urls:

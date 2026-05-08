@@ -21,6 +21,23 @@
 
   // ── Helpers ──────────────────────────────────────────────────────
 
+  /** 現在時刻を Asia/Tokyo の {year, month(0-indexed), day} として返す。 */
+  function nowInJst() {
+    // events.json は JST 基準で生成されるため、表示側も JST に揃える。
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const get = (t) => parts.find((p) => p.type === t).value;
+    return {
+      year: Number(get("year")),
+      month: Number(get("month")) - 1, // 0-indexed
+      day: Number(get("day")),
+    };
+  }
+
   /** "2026/05/15 19:00" → "2026-05-15" */
   function startedAtToDate(startedAt) {
     if (!startedAt) return null;
@@ -53,8 +70,8 @@
     const container = $("#cal-days");
     if (!container) return;
 
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const t = nowInJst();
+    const todayStr = `${t.year}-${String(t.month + 1).padStart(2, "0")}-${String(t.day).padStart(2, "0")}`;
 
     // First day-of-week for the month (0=Sun)
     const firstDow = new Date(currentYear, currentMonth, 1).getDay();
@@ -93,7 +110,7 @@
           : "";
 
         const interactiveAttrs = hasEvs
-          ? ` role="gridcell" tabindex="0"`
+          ? ` role="button" tabindex="0"`
           : ` role="gridcell"`;
 
         html += `
@@ -214,10 +231,10 @@
 
     indexEvents();
 
-    // Set initial month to today
-    const now = new Date();
-    currentYear  = now.getFullYear();
-    currentMonth = now.getMonth();
+    // Set initial month to today (JST)
+    const t = nowInJst();
+    currentYear  = t.year;
+    currentMonth = t.month;
 
     renderMonthLabel();
     renderDays();

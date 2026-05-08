@@ -176,17 +176,25 @@ def _is_connpass_event_url(url: str) -> bool:
     if parsed.scheme != "https":
         return False
     host = (parsed.hostname or "").lower()
-    return host == "connpass.com" or host.endswith(".connpass.com")
+    if host != "connpass.com" and not host.endswith(".connpass.com"):
+        return False
+    # 説明文取得対象は connpass の「イベントページ」(/event/...) のみに限定する。
+    return parsed.path.startswith("/event/")
 
 
 def _truncate_description(text: str, max_chars: int = MAX_DESCRIPTION_CHARS) -> str:
-    """説明文を max_chars 文字以内に切り詰める。
+    """説明文を max_chars 文字以内に切り詰める（"…" を含めて max_chars 以内）。
 
     超過時は単語境界（最後のスペース）で切り詰めて末尾に "…" を付与する。
     """
     if len(text) <= max_chars:
         return text
-    return text[:max_chars].rsplit(" ", 1)[0] + "…"
+    if max_chars <= 1:
+        return "…"[:max_chars]
+    # "…" 1 文字分を確保した上で単語境界を探す。
+    head = text[: max_chars - 1]
+    boundary = head.rsplit(" ", 1)[0] if " " in head else head
+    return boundary + "…"
 
 
 def _fetch_event_description(url: str) -> str:

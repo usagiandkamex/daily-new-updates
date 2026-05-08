@@ -231,11 +231,11 @@ class TestDescriptionTruncation(unittest.TestCase):
         self.assertEqual(_truncate_description(text), text)
 
     def test_long_text_truncated_with_ellipsis(self):
-        """MAX_DESCRIPTION_CHARS を超えるテキストは '…' で終わる。"""
+        """MAX_DESCRIPTION_CHARS を超えるテキストは '…' で終わり、合計長は MAX 以内。"""
         text = "あ " * (MAX_DESCRIPTION_CHARS // 2 + 50)
         result = _truncate_description(text)
         self.assertTrue(result.endswith("…"))
-        self.assertLessEqual(len(result), MAX_DESCRIPTION_CHARS + 1)  # +1 for "…"
+        self.assertLessEqual(len(result), MAX_DESCRIPTION_CHARS)
 
     def test_truncation_at_word_boundary(self):
         """単語境界（スペース）で切り詰めること。"""
@@ -244,12 +244,20 @@ class TestDescriptionTruncation(unittest.TestCase):
         self.assertTrue(result.endswith("…"))
         # '…' の直前が単語内テキスト（スペースなし）であること
         self.assertFalse(result[:-1].endswith(" "))
+        self.assertLessEqual(len(result), MAX_DESCRIPTION_CHARS)
 
     def test_custom_max_chars(self):
-        """max_chars 引数で切り詰め長を変更できる。"""
+        """max_chars 引数で切り詰め長を変更できる。'…' 含めて max_chars 以内。"""
         result = _truncate_description("hello world foo bar baz", max_chars=10)
         self.assertTrue(result.endswith("…"))
-        self.assertLessEqual(len(result), 11)
+        self.assertLessEqual(len(result), 10)
+
+    def test_no_space_truncation(self):
+        """スペースを含まないテキストでも max_chars 以内に収まること。"""
+        text = "あ" * 1000
+        result = _truncate_description(text, max_chars=50)
+        self.assertTrue(result.endswith("…"))
+        self.assertEqual(len(result), 50)
 
 
 # ---------------------------------------------------------------------------
@@ -270,11 +278,17 @@ class TestIsConnpassEventUrl(unittest.TestCase):
         self.assertFalse(_is_connpass_event_url("http://connpass.com/event/123/"))
 
     def test_other_host_rejected(self):
-        self.assertFalse(_is_connpass_event_url("https://evil.example.com/"))
+        self.assertFalse(_is_connpass_event_url("https://evil.example.com/event/"))
 
     def test_lookalike_host_rejected(self):
         """connpass を含むだけのドメインは許可しない（サブドメイン境界チェック）。"""
         self.assertFalse(_is_connpass_event_url("https://evilconnpass.com/event/"))
+
+    def test_non_event_path_rejected(self):
+        """connpass.com でも /event/ 配下でない URL は許可しない。"""
+        self.assertFalse(_is_connpass_event_url("https://connpass.com/"))
+        self.assertFalse(_is_connpass_event_url("https://connpass.com/search/"))
+        self.assertFalse(_is_connpass_event_url("https://connpass.com/user/foo/"))
 
     def test_empty_rejected(self):
         self.assertFalse(_is_connpass_event_url(""))

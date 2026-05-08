@@ -284,7 +284,8 @@ def fetch_events(today: datetime) -> list[dict]:
                     if not _is_it_event(title, desc):
                         continue
                     started_at = _parse_started_at(entry)
-                    # 過去イベントをスキップ（日時不明は残す）
+                    # 開催日（日付部分）が今日より前のイベントをスキップ（日時不明は残す）
+                    # 当日開始のイベントは開始時刻に関わらず表示対象とする
                     if started_at and started_at[:10] < today_str:
                         continue
                     seen_urls.add(url)
@@ -292,7 +293,7 @@ def fetch_events(today: datetime) -> list[dict]:
                         "title": title,
                         "event_url": url,
                         "started_at": started_at,
-                        "place": "",
+                        "place": pref,
                         "catch": desc[:200],
                     })
                     count += 1
@@ -322,6 +323,8 @@ def fetch_events(today: datetime) -> list[dict]:
                 if not _is_it_event(title, desc):
                     continue
                 started_at = _parse_started_at(entry)
+                # 開催日（日付部分）が今日より前のイベントをスキップ（日時不明は残す）
+                # 当日開始のイベントは開始時刻に関わらず表示対象とする
                 if started_at and started_at[:10] < today_str:
                     continue
                 seen_urls.add(url)

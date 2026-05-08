@@ -36,5 +36,20 @@ jobs:
             echo "変更なし。スキップします。"
           else
             git commit -m "chore: イベントカレンダーデータ更新 ($(TZ=Asia/Tokyo date +%Y/%m/%d))"
-            git push
+            # 競合時のリトライ（他ワークフローと同時実行した場合の non-fast-forward 対策）
+            MAX_RETRIES=3
+            for i in $(seq 1 $MAX_RETRIES); do
+              git pull --rebase origin "${{ github.ref_name }}"
+              if git push; then
+                echo "プッシュ成功（試行 $i/$MAX_RETRIES）"
+                break
+              fi
+              if [ $i -lt $MAX_RETRIES ]; then
+                echo "プッシュ失敗（試行 $i/$MAX_RETRIES）。30秒後にリトライします..."
+                sleep 30
+              else
+                echo "プッシュが ${MAX_RETRIES} 回失敗しました。"
+                exit 1
+              fi
+            done
           fi

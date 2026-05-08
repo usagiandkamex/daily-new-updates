@@ -19,8 +19,6 @@
   let currentMonth  = 0;        // 0-indexed (0=Jan)
   let selectedDate  = null;     // "YYYY-MM-DD" | null
 
-  const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
-
   // ── Helpers ──────────────────────────────────────────────────────
 
   /** "2026/05/15 19:00" → "2026-05-15" */
@@ -88,7 +86,7 @@
         : "";
 
       html += `
-<div class="${cls}" data-date="${dateStr}" role="button" tabindex="${hasEvs ? 0 : -1}" aria-label="${dateStr}${hasEvs ? ` (${evs.length}件のイベント)` : ""}">
+<div class="${cls}" data-date="${dateStr}"${hasEvs ? ` role="button" tabindex="0"` : ` role="gridcell"`} aria-label="${dateStr}${hasEvs ? ` (${evs.length}件のイベント)` : ""}">
   <span class="cal-day-num">${day}</span>
   ${countBadge}
 </div>`;

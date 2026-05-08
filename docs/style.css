@@ -711,9 +711,11 @@ mark.hl {
   color: var(--surface);
   font-size: .62rem;
   font-weight: 700;
-  width: var(--cal-event-count-size);
+  min-width: var(--cal-event-count-size);
   height: var(--cal-event-count-size);
-  border-radius: 50%;
+  padding: 0 .2rem;
+  border-radius: 999px;
+  box-sizing: border-box;
   line-height: 1;
   box-shadow: 0 0 0 1px var(--surface);
 }
@@ -824,6 +826,7 @@ mark.hl {
   .cal-event-count {
     --cal-event-count-size: .95rem;
     font-size: .52rem;
+    padding: 0 .16rem;
   }
 }
 

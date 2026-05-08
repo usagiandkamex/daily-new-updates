@@ -527,6 +527,20 @@ class TestFetchEvents(unittest.TestCase):
             "https://connpass.com/event/o/",
         ])
 
+    def test_raises_when_all_requests_fail(self):
+        """全 RSS 取得が失敗した場合、events.json を空で上書きしないため例外を送出する。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+
+        def fake_get(*args, **kwargs):
+            raise RuntimeError("simulated total outage")
+
+        with patch("generate_events_calendar.requests.get", side_effect=fake_get), \
+             patch("generate_events_calendar.feedparser.parse", side_effect=lambda c: _make_feed()):
+            with self.assertRaises(RuntimeError) as cm:
+                fetch_events(today)
+
+        self.assertIn("全", str(cm.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

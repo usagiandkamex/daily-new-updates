@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
@@ -290,12 +291,13 @@ def _fetch_rss_events(
     today_str: str,
     seen_urls: set[str],
     label: str,
-) -> list[dict]:
+) -> tuple[list[dict], bool]:
     """connpass RSS を1回呼び出してイベントリストを返す（共通処理）。
 
     - URL 重複（seen_urls）と IT キーワードフィルタを適用
     - 開催日が today_str より前のイベントは除外（日付単位、当日は表示対象）
     - 取得件数はログに出力
+    - 戻り値は (収集したイベント, 成功フラグ)。HTTP 例外/解析失敗時は成功フラグ False。
     """
     collected: list[dict] = []
     try:
@@ -337,7 +339,8 @@ def _fetch_rss_events(
         print(f"  connpass RSS ({label}): {len(collected)} 件取得")
     except Exception as e:
         print(f"  connpass RSS ({label}): 取得失敗 ({e})")
-    return collected
+        return collected, False
+    return collected, True
 
 
 def fetch_events(today: datetime) -> list[dict]:
@@ -345,33 +348,53 @@ def fetch_events(today: datetime) -> list[dict]:
 
     関東（東京都・神奈川県）の pref_id 検索とオンライン（online=1）検索の
     2 系統で取得し、重複を排除して日時昇順に返す。
+
+    全 RSS 取得が失敗した場合は :class:`RuntimeError` を送出する
+    （docs/events.json を空で上書きしないため）。
     """
     today_str = today.strftime("%Y/%m/%d")
     months = _build_search_months(today, CALENDAR_LOOKAHEAD_MONTHS)
 
     events: list[dict] = []
     seen_urls: set[str] = set()
+    attempts = 0
+    failures = 0
 
     # --- 都道府県別検索 ---
     for pref, pref_id in _PREFECTURE_IDS.items():
         for ym in months:
-            events.extend(_fetch_rss_events(
+            collected, ok = _fetch_rss_events(
                 params={"format": "rss", "pref_id": pref_id, "ym": ym},
                 place=pref,
                 today_str=today_str,
                 seen_urls=seen_urls,
                 label=f"{pref} {ym}",
-            ))
+            )
+            attempts += 1
+            if not ok:
+                failures += 1
+            events.extend(collected)
 
     # --- オンラインイベント検索 ---
     for ym in months:
-        events.extend(_fetch_rss_events(
+        collected, ok = _fetch_rss_events(
             params={"format": "rss", "online": 1, "ym": ym},
             place="オンライン",
             today_str=today_str,
             seen_urls=seen_urls,
             label=f"オンライン {ym}",
-        ))
+        )
+        attempts += 1
+        if not ok:
+            failures += 1
+        events.extend(collected)
+
+    # 全リクエスト失敗時は例外（既存 events.json の上書き防止）
+    if attempts > 0 and failures == attempts:
+        raise RuntimeError(
+            f"connpass RSS 取得が全 {attempts} 件失敗しました。"
+            "既存の docs/events.json を保持するため処理を中断します。"
+        )
 
     # 日時昇順ソート（日時不明は末尾）
     events.sort(
@@ -396,7 +419,13 @@ def main() -> None:
     today = datetime.now(JST)
     print(f"イベントカレンダーデータ生成開始: {today.strftime('%Y-%m-%d %H:%M JST')}")
 
-    events = fetch_events(today)
+    try:
+        events = fetch_events(today)
+    except RuntimeError as e:
+        # 全 RSS 取得失敗時は events.json を上書きせず非 0 終了
+        # （前回データを保持しサイト上のイベント表示が消えないようにする）
+        print(f"エラー: {e}", file=sys.stderr)
+        sys.exit(1)
     print(f"取得イベント数: {len(events)}")
 
     data = {

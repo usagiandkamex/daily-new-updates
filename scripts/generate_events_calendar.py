@@ -152,7 +152,8 @@ def _extract_text_from_html(html_text: str) -> str:
         parser = _HTMLTextExtractor()
         parser.feed(html_text)
         return " ".join(parser.get_text().split())
-    except Exception:
+    except Exception as exc:
+        print(f"  connpass: HTML テキスト抽出で予期しないエラー: {type(exc).__name__}")
         return ""
 
 

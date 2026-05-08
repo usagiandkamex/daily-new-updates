@@ -281,8 +281,8 @@ class TestHTMLTextExtractor(unittest.TestCase):
         self.assertIn("text1", result)
         self.assertIn("text2", result)
 
-    def test_none_like_none_input_returns_empty(self):
-        """None は渡せないが空文字列は空文字列を返す。"""
+    def test_empty_string_input_returns_empty(self):
+        """空文字列は空文字列を返す。"""
         self.assertEqual(_extract_text_from_html(""), "")
 
 
@@ -1136,8 +1136,12 @@ class TestApiDescriptionExtraction(unittest.TestCase):
             },
         ]
         fetch_calls: list[str] = []
-        with patch("generate_events_calendar._fetch_event_description",
-                   side_effect=lambda url: (fetch_calls.append(url), "ページから取得した説明")[1]):
+
+        def _fake_fetch(url: str) -> str:
+            fetch_calls.append(url)
+            return "ページから取得した説明"
+
+        with patch("generate_events_calendar._fetch_event_description", side_effect=_fake_fetch):
             _enrich_descriptions(events)
 
         # description が既にあるイベントはスキップされ、ないものだけスクレイピング対象

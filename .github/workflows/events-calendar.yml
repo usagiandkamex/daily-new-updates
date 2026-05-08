@@ -36,5 +36,5 @@ jobs:
             echo "変更なし。スキップします。"
           else
             git commit -m "chore: イベントカレンダーデータ更新 ($(TZ=Asia/Tokyo date +%Y/%m/%d))"
-            git push origin main
+            git push
           fi

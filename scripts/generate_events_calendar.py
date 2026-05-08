@@ -21,7 +21,7 @@ import requests
 # 定数
 # ---------------------------------------------------------------------------
 
-CONNPASS_RSS_URL = "https://connpass.com/search/?format=rss"
+CONNPASS_RSS_URL = "https://connpass.com/search/"
 
 HTTP_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; daily-new-updates-bot/1.0)",

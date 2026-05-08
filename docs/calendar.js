@@ -145,9 +145,10 @@
           const meta = (timeHtml || placeHtml)
             ? `<div class="cal-event-meta">${timeHtml}${placeHtml}</div>`
             : "";
+          const safeUrl = /^https?:\/\//.test(ev.event_url) ? ev.event_url : "#";
           return `
 <li class="cal-event-item">
-  <a href="${esc(ev.event_url)}" target="_blank" rel="noopener noreferrer" class="cal-event-link">
+  <a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" class="cal-event-link">
     <strong class="cal-event-title">${esc(ev.title)}</strong>
     ${meta}
     ${catch_}

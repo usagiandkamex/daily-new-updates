@@ -431,8 +431,8 @@ class TestFetchEvents(unittest.TestCase):
             "https://connpass.com/event/t/",
         ])
 
-    def test_keeps_events_without_started_at(self):
-        """started_at が空のイベントは過去日フィルタの対象外（残す）。"""
+    def test_filters_events_without_started_at(self):
+        """started_at が無いイベントはカレンダー表示できないため除外される。"""
         today = datetime(2026, 5, 15, tzinfo=JST)
         feeds_iter = iter([
             _make_feed(
@@ -446,19 +446,16 @@ class TestFetchEvents(unittest.TestCase):
              patch("generate_events_calendar.feedparser.parse", side_effect=lambda c: next(feeds_iter)):
             events = fetch_events(today)
 
-        self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]["event_url"], "https://connpass.com/event/n/")
-        self.assertEqual(events[0]["started_at"], "")
+        self.assertEqual(events, [])
 
     def test_sorts_by_started_at_ascending(self):
-        """イベントは開催日時の昇順でソートされる（日時不明は末尾）。"""
+        """イベントは開催日時の昇順でソートされる。"""
         today = datetime(2026, 5, 15, tzinfo=JST)
         d1 = datetime(2026, 5, 18, tzinfo=JST)
         d2 = datetime(2026, 5, 25, tzinfo=JST)
         feeds_iter = iter([
             _make_feed(
                 self._entry("AWS later", "https://connpass.com/event/L/", published_dt=d2),
-                self._entry("AWS no-date", "https://connpass.com/event/N/"),
                 self._entry("AWS earlier", "https://connpass.com/event/E/", published_dt=d1),
             ),
             _make_feed(),
@@ -472,8 +469,31 @@ class TestFetchEvents(unittest.TestCase):
         self.assertEqual([e["event_url"] for e in events], [
             "https://connpass.com/event/E/",
             "https://connpass.com/event/L/",
-            "https://connpass.com/event/N/",
         ])
+
+    def test_filters_non_connpass_event_urls(self):
+        """connpass の /event/ 配下以外の URL を持つエントリは除外される（SSRF/表示崩れ対策）。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        future = datetime(2026, 5, 20, tzinfo=JST)
+        feeds_iter = iter([
+            _make_feed(
+                self._entry("AWS evil", "https://evilconnpass.com/event/1/", published_dt=future),
+                self._entry("AWS http", "http://connpass.com/event/2/", published_dt=future),
+                self._entry("AWS search", "https://connpass.com/search/", published_dt=future),
+                self._entry("AWS ok", "https://connpass.com/event/3/", published_dt=future),
+            ),
+            _make_feed(),
+            _make_feed(),
+        ])
+
+        with patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", side_effect=lambda c: next(feeds_iter)):
+            events = fetch_events(today)
+
+        self.assertEqual(
+            [e["event_url"] for e in events],
+            ["https://connpass.com/event/3/"],
+        )
 
     def test_continues_when_one_request_fails(self):
         """1 つの RSS 取得が失敗しても他の系統から取得継続する。"""

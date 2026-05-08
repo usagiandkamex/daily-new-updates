@@ -311,14 +311,20 @@ def _fetch_rss_events(
             url = entry.get("link", "")
             if not url or url in seen_urls:
                 continue
+            # 想定外ホスト/パスの URL（SSRF / 表示崩れの原因）は破棄する。
+            if not _is_connpass_event_url(url):
+                continue
             title = entry.get("title", "").strip()
             desc = entry.get("summary", "").strip()
             if not _is_it_event(title, desc):
                 continue
             started_at = _parse_started_at(entry)
-            # 開催日（日付部分）が今日より前のイベントをスキップ（日時不明は残す）
-            # 当日開始のイベントは開始時刻に関わらず表示対象とする
-            if started_at and started_at[:10] < today_str:
+            # started_at が無いイベントはカレンダー上に表示できないため除外する。
+            if not started_at:
+                continue
+            # 開催日（日付部分）が今日より前のイベントをスキップ。
+            # 当日開始のイベントは開始時刻に関わらず表示対象とする。
+            if started_at[:10] < today_str:
                 continue
             seen_urls.add(url)
             collected.append({

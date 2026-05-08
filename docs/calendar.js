@@ -109,8 +109,10 @@
           ? `<span class="cal-event-count">${evs.length}</span>`
           : "";
 
+        // ARIA grid モデル: row の子は gridcell。インタラクティブ化のため
+        // イベントのある日のみ tabindex="0" を付与してフォーカス可能にする。
         const interactiveAttrs = hasEvs
-          ? ` role="button" tabindex="0"`
+          ? ` role="gridcell" tabindex="0"`
           : ` role="gridcell"`;
 
         html += `

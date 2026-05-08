@@ -457,10 +457,9 @@ def _fetch_api_events(
             })
 
         next_start = start + returned
-        total_fetched = next_start - 1
+        last_fetched_position = next_start - 1
         if (
-            returned <= 0
-            or (available > 0 and total_fetched >= available)
+            (available > 0 and last_fetched_position >= available)
             or returned < CONNPASS_API_FETCH_COUNT
         ):
             break

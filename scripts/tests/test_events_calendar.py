@@ -692,7 +692,8 @@ class TestFetchEvents(unittest.TestCase):
             raise AssertionError(f"unexpected params: {params}")
 
         with patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}), \
-             patch("generate_events_calendar.requests.get", side_effect=fake_get):
+             patch("generate_events_calendar.requests.get", side_effect=fake_get), \
+             patch("builtins.print") as mock_print:
             events = fetch_events(today)
 
         self.assertEqual(len(events), 101)
@@ -703,6 +704,12 @@ class TestFetchEvents(unittest.TestCase):
         self.assertEqual(
             [req["kwargs"]["params"].get("start") for req in tokyo_requests],
             [1, 101],
+        )
+        self.assertFalse(
+            any(
+                "形式が不正" in (call.args[0] if call.args else "")
+                for call in mock_print.call_args_list
+            )
         )
 
     def test_api_fetch_keeps_pagination_when_metadata_is_missing(self):

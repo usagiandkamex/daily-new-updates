@@ -429,16 +429,18 @@ def _fetch_api_events(
 
         fetched_any_page = True
         events = data.get("events", [])
+        has_returned = "results_returned" in data
+        has_available = "results_available" in data
         returned_raw = data.get("results_returned")
         available_raw = data.get("results_available")
         returned = returned_raw if isinstance(returned_raw, int) else len(events)
         available = available_raw if isinstance(available_raw, int) else 0
-        if not isinstance(returned_raw, int):
+        if has_returned and not isinstance(returned_raw, int):
             print(
                 f"  警告: connpass API ({label}): results_returned の形式が不正 "
                 f"({type(returned_raw).__name__})"
             )
-        if not isinstance(available_raw, int):
+        if has_available and not isinstance(available_raw, int):
             print(
                 f"  警告: connpass API ({label}): results_available の形式が不正 "
                 f"({type(available_raw).__name__})"

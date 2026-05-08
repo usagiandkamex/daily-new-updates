@@ -211,17 +211,14 @@ def _fetch_event_description(url: str) -> str:
             allow_redirects=False,
         )
         # SSRF 対策: リダイレクトに追従しない。3xx は connpass 外への遷移
-        # 可能性があるため失敗扱いとする。
-        if resp.is_redirect or resp.is_permanent_redirect:
+        # 可能性があるため失敗扱いとする（allow_redirects=False のため
+        # requests は 3xx をそのまま返す）。
+        if 300 <= resp.status_code < 400:
             print(
                 f"  connpass: 説明文取得スキップ (リダイレクト {resp.status_code}): {url}"
             )
             return ""
         resp.raise_for_status()
-        # 念のため最終到達 URL も connpass の /event/ 配下であることを再確認
-        if not _is_connpass_event_url(resp.url):
-            print(f"  connpass: 説明文取得スキップ (想定外URL): {resp.url}")
-            return ""
         parser = _ConnpassEventPageParser()
         parser.feed(resp.text)
         # 余分な空白を正規化して返す

@@ -67,6 +67,8 @@
     "redhat.com", "summit.redhat.com",
     "hashicorp.com", "hashiconf.com",
     "vmware.com", "explore.vmware.com",
+    "databricks.com", "dataaisummit.com",
+    "openai.com",
   ]);
 
   function isTrustedVendorUrl(url) {

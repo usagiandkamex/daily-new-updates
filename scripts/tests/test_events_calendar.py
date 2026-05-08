@@ -8,6 +8,7 @@ import sys
 import os
 import unittest
 from datetime import datetime, timezone, timedelta
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -15,6 +16,9 @@ from generate_events_calendar import (
     _build_search_months,
     _is_it_event,
     _ConnpassEventPageParser,
+    _is_connpass_event_url,
+    _truncate_description,
+    fetch_events,
     MAX_DESCRIPTION_CHARS,
     JST,
 )
@@ -214,41 +218,280 @@ class TestConnpassEventPageParser(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestDescriptionTruncation(unittest.TestCase):
-    """説明文の切り詰めロジック（MAX_DESCRIPTION_CHARS）のテスト"""
-
-    def _truncate(self, text: str) -> str:
-        """generate_events_calendar._enrich_descriptions 内の切り詰めロジックを再現する。"""
-        if len(text) > MAX_DESCRIPTION_CHARS:
-            return text[:MAX_DESCRIPTION_CHARS].rsplit(" ", 1)[0] + "…"
-        return text
+    """_truncate_description() のテスト"""
 
     def test_short_text_unchanged(self):
         """MAX_DESCRIPTION_CHARS 以下のテキストは変更されない。"""
         text = "短いテキスト"
-        self.assertEqual(self._truncate(text), text)
+        self.assertEqual(_truncate_description(text), text)
 
     def test_exact_length_unchanged(self):
         """ちょうど MAX_DESCRIPTION_CHARS 文字のテキストは変更されない。"""
         text = "あ" * MAX_DESCRIPTION_CHARS
-        self.assertEqual(self._truncate(text), text)
+        self.assertEqual(_truncate_description(text), text)
 
     def test_long_text_truncated_with_ellipsis(self):
         """MAX_DESCRIPTION_CHARS を超えるテキストは '…' で終わる。"""
-        # MAX_DESCRIPTION_CHARS + 100 文字を超えるテキストを作成
         text = "あ " * (MAX_DESCRIPTION_CHARS // 2 + 50)
-        result = self._truncate(text)
+        result = _truncate_description(text)
         self.assertTrue(result.endswith("…"))
         self.assertLessEqual(len(result), MAX_DESCRIPTION_CHARS + 1)  # +1 for "…"
 
     def test_truncation_at_word_boundary(self):
         """単語境界（スペース）で切り詰めること。"""
-        # 'a' * (MAX_DESCRIPTION_CHARS - 5) + ' ' + 'b' * 100 のように単語境界がある
         prefix = "hello " * (MAX_DESCRIPTION_CHARS // 6 + 1)
-        result = self._truncate(prefix)
-        # スペースで終わらず '…' で終わること
+        result = _truncate_description(prefix)
         self.assertTrue(result.endswith("…"))
         # '…' の直前が単語内テキスト（スペースなし）であること
         self.assertFalse(result[:-1].endswith(" "))
+
+    def test_custom_max_chars(self):
+        """max_chars 引数で切り詰め長を変更できる。"""
+        result = _truncate_description("hello world foo bar baz", max_chars=10)
+        self.assertTrue(result.endswith("…"))
+        self.assertLessEqual(len(result), 11)
+
+
+# ---------------------------------------------------------------------------
+# _is_connpass_event_url
+# ---------------------------------------------------------------------------
+
+class TestIsConnpassEventUrl(unittest.TestCase):
+    """_is_connpass_event_url() のテスト（SSRF 対策）"""
+
+    def test_https_connpass_root(self):
+        self.assertTrue(_is_connpass_event_url("https://connpass.com/event/123/"))
+
+    def test_https_connpass_subdomain(self):
+        self.assertTrue(_is_connpass_event_url("https://hoge.connpass.com/event/123/"))
+
+    def test_http_rejected(self):
+        """http:// は許可しない（HTTPS のみ）。"""
+        self.assertFalse(_is_connpass_event_url("http://connpass.com/event/123/"))
+
+    def test_other_host_rejected(self):
+        self.assertFalse(_is_connpass_event_url("https://evil.example.com/"))
+
+    def test_lookalike_host_rejected(self):
+        """connpass を含むだけのドメインは許可しない（サブドメイン境界チェック）。"""
+        self.assertFalse(_is_connpass_event_url("https://evilconnpass.com/event/"))
+
+    def test_empty_rejected(self):
+        self.assertFalse(_is_connpass_event_url(""))
+
+    def test_invalid_url_rejected(self):
+        """壊れた URL でも例外を投げず False を返す。"""
+        self.assertFalse(_is_connpass_event_url("not a url"))
+
+
+# ---------------------------------------------------------------------------
+# fetch_events (HTTP モック)
+# ---------------------------------------------------------------------------
+
+def _make_response(content: bytes = b"<rss/>") -> MagicMock:
+    resp = MagicMock()
+    resp.content = content
+    resp.raise_for_status = MagicMock()
+    return resp
+
+
+def _make_feed(*entries: dict) -> MagicMock:
+    """feedparser.parse の戻り値をスタブする。entries は dict のリスト。"""
+    feed = MagicMock()
+    feed.entries = [
+        # entry.get(key, default) を使うため dict そのままを渡す
+        e for e in entries
+    ]
+    return feed
+
+
+class TestFetchEvents(unittest.TestCase):
+    """fetch_events() の統合テスト（requests / feedparser はモック）"""
+
+    def setUp(self):
+        # テスト中の RSS 取得回数を抑えるため lookahead を 0 か月にする
+        patcher = patch("generate_events_calendar.CALENDAR_LOOKAHEAD_MONTHS", 0)
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        # 説明文取得（HTTP）はスキップ
+        enrich_patcher = patch(
+            "generate_events_calendar._enrich_descriptions", lambda events: None
+        )
+        self.addCleanup(enrich_patcher.stop)
+        enrich_patcher.start()
+
+    def _entry(self, title: str, link: str, summary: str = "AWS hands-on",
+               published_dt: datetime | None = None) -> dict:
+        e: dict = {"title": title, "link": link, "summary": summary}
+        if published_dt is not None:
+            utc = published_dt.astimezone(timezone.utc)
+            e["published_parsed"] = (
+                utc.year, utc.month, utc.day, utc.hour, utc.minute, utc.second, 0, 0, 0
+            )
+        return e
+
+    def test_collects_pref_and_online_with_dedup(self):
+        """都道府県とオンラインの両系統からイベントを収集し、URL重複を排除する。"""
+        today = datetime(2026, 5, 15, 9, 0, tzinfo=JST)
+        future = datetime(2026, 5, 20, 19, 0, tzinfo=JST)
+        # 2 都県 + online で 3 回呼ばれる。1 件目を東京、2 件目を神奈川、
+        # 3 件目（オンライン）に同一 URL を含めて重複排除を検証
+        feeds_iter = iter([
+            _make_feed(
+                self._entry("AWS 勉強会", "https://connpass.com/event/1/", published_dt=future),
+            ),
+            _make_feed(
+                self._entry("Kubernetes ハンズオン", "https://connpass.com/event/2/", published_dt=future),
+            ),
+            _make_feed(
+                # 重複（東京で取得済み）→ スキップされる
+                self._entry("AWS 勉強会", "https://connpass.com/event/1/", published_dt=future),
+                self._entry("Python オンライン", "https://connpass.com/event/3/", published_dt=future),
+            ),
+        ])
+
+        with patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", side_effect=lambda c: next(feeds_iter)):
+            events = fetch_events(today)
+
+        urls = [e["event_url"] for e in events]
+        self.assertEqual(len(events), 3)
+        self.assertEqual(set(urls), {
+            "https://connpass.com/event/1/",
+            "https://connpass.com/event/2/",
+            "https://connpass.com/event/3/",
+        })
+        # place が正しく付与されている
+        place_by_url = {e["event_url"]: e["place"] for e in events}
+        self.assertEqual(place_by_url["https://connpass.com/event/1/"], "東京都")
+        self.assertEqual(place_by_url["https://connpass.com/event/2/"], "神奈川県")
+        self.assertEqual(place_by_url["https://connpass.com/event/3/"], "オンライン")
+
+    def test_filters_non_it_events(self):
+        """IT キーワードを含まないイベントは除外される。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        future = datetime(2026, 5, 20, tzinfo=JST)
+        feeds_iter = iter([
+            _make_feed(
+                self._entry("料理教室", "https://connpass.com/event/100/",
+                            summary="楽しいクッキング", published_dt=future),
+                self._entry("Python 入門", "https://connpass.com/event/101/",
+                            summary="Python の基礎", published_dt=future),
+            ),
+            _make_feed(),
+            _make_feed(),
+        ])
+
+        with patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", side_effect=lambda c: next(feeds_iter)):
+            events = fetch_events(today)
+
+        urls = [e["event_url"] for e in events]
+        self.assertEqual(urls, ["https://connpass.com/event/101/"])
+
+    def test_filters_past_events_by_date(self):
+        """開催日が today より前のイベントは除外される（日付単位）。"""
+        today = datetime(2026, 5, 15, 12, 0, tzinfo=JST)
+        past = datetime(2026, 5, 14, 19, 0, tzinfo=JST)
+        same_day_morning = datetime(2026, 5, 15, 9, 0, tzinfo=JST)
+        future = datetime(2026, 5, 20, tzinfo=JST)
+        feeds_iter = iter([
+            _make_feed(
+                self._entry("AWS past", "https://connpass.com/event/p/", published_dt=past),
+                # 当日朝開始（午前 9 時）→ 日付単位なので残す
+                self._entry("AWS today morning", "https://connpass.com/event/t/",
+                            published_dt=same_day_morning),
+                self._entry("AWS future", "https://connpass.com/event/f/", published_dt=future),
+            ),
+            _make_feed(),
+            _make_feed(),
+        ])
+
+        with patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", side_effect=lambda c: next(feeds_iter)):
+            events = fetch_events(today)
+
+        urls = sorted(e["event_url"] for e in events)
+        self.assertEqual(urls, [
+            "https://connpass.com/event/f/",
+            "https://connpass.com/event/t/",
+        ])
+
+    def test_keeps_events_without_started_at(self):
+        """started_at が空のイベントは過去日フィルタの対象外（残す）。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        feeds_iter = iter([
+            _make_feed(
+                self._entry("AWS no-date", "https://connpass.com/event/n/"),
+            ),
+            _make_feed(),
+            _make_feed(),
+        ])
+
+        with patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", side_effect=lambda c: next(feeds_iter)):
+            events = fetch_events(today)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["event_url"], "https://connpass.com/event/n/")
+        self.assertEqual(events[0]["started_at"], "")
+
+    def test_sorts_by_started_at_ascending(self):
+        """イベントは開催日時の昇順でソートされる（日時不明は末尾）。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        d1 = datetime(2026, 5, 18, tzinfo=JST)
+        d2 = datetime(2026, 5, 25, tzinfo=JST)
+        feeds_iter = iter([
+            _make_feed(
+                self._entry("AWS later", "https://connpass.com/event/L/", published_dt=d2),
+                self._entry("AWS no-date", "https://connpass.com/event/N/"),
+                self._entry("AWS earlier", "https://connpass.com/event/E/", published_dt=d1),
+            ),
+            _make_feed(),
+            _make_feed(),
+        ])
+
+        with patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", side_effect=lambda c: next(feeds_iter)):
+            events = fetch_events(today)
+
+        self.assertEqual([e["event_url"] for e in events], [
+            "https://connpass.com/event/E/",
+            "https://connpass.com/event/L/",
+            "https://connpass.com/event/N/",
+        ])
+
+    def test_continues_when_one_request_fails(self):
+        """1 つの RSS 取得が失敗しても他の系統から取得継続する。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        future = datetime(2026, 5, 20, tzinfo=JST)
+        # 1 回目（東京）は例外、残りは成功
+        call_count = {"n": 0}
+
+        def fake_get(*args, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise RuntimeError("simulated failure")
+            return _make_response()
+
+        feeds_iter = iter([
+            _make_feed(
+                self._entry("AWS k", "https://connpass.com/event/k/", published_dt=future),
+            ),
+            _make_feed(
+                self._entry("AWS o", "https://connpass.com/event/o/", published_dt=future),
+            ),
+        ])
+
+        with patch("generate_events_calendar.requests.get", side_effect=fake_get), \
+             patch("generate_events_calendar.feedparser.parse", side_effect=lambda c: next(feeds_iter)):
+            events = fetch_events(today)
+
+        urls = sorted(e["event_url"] for e in events)
+        self.assertEqual(urls, [
+            "https://connpass.com/event/k/",
+            "https://connpass.com/event/o/",
+        ])
 
 
 if __name__ == "__main__":

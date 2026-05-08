@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlparse
 
 import feedparser
 import requests
@@ -160,6 +161,34 @@ _PAGE_HEADERS = {
 }
 
 
+def _is_connpass_event_url(url: str) -> bool:
+    """URL が connpass.com（サブドメイン可）の HTTPS イベント URL かを判定する。
+
+    SSRF 対策として、`_enrich_descriptions()` の HTTP 取得対象を connpass.com に
+    限定するために使用する。
+    """
+    if not url:
+        return False
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    if parsed.scheme != "https":
+        return False
+    host = (parsed.hostname or "").lower()
+    return host == "connpass.com" or host.endswith(".connpass.com")
+
+
+def _truncate_description(text: str, max_chars: int = MAX_DESCRIPTION_CHARS) -> str:
+    """説明文を max_chars 文字以内に切り詰める。
+
+    超過時は単語境界（最後のスペース）で切り詰めて末尾に "…" を付与する。
+    """
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rsplit(" ", 1)[0] + "…"
+
+
 def _fetch_event_description(url: str) -> str:
     """connpass イベントページから説明文テキストを取得して返す。
 
@@ -183,10 +212,11 @@ def _fetch_event_description(url: str) -> str:
 def _enrich_descriptions(events: list[dict]) -> None:
     """connpass イベントページからイベント説明を取得し description フィールドを追加する。
 
-    対象は HTTPS URL を持つ先頭 MAX_ENRICH_EVENTS 件のみ。取得したテキストは
-    MAX_DESCRIPTION_CHARS 文字に切り詰めて保存する。
+    対象は connpass.com の HTTPS URL を持つ先頭 MAX_ENRICH_EVENTS 件のみ
+    （SSRF 対策で他ホストは除外）。取得したテキストは MAX_DESCRIPTION_CHARS
+    文字に切り詰めて保存する。
     """
-    targets = [ev for ev in events if ev.get("event_url", "").startswith("https://")]
+    targets = [ev for ev in events if _is_connpass_event_url(ev.get("event_url", ""))]
     targets = targets[:MAX_ENRICH_EVENTS]
     if not targets:
         return
@@ -203,10 +233,7 @@ def _enrich_descriptions(events: list[dict]) -> None:
             try:
                 ev, text = future.result()
                 if text:
-                    if len(text) > MAX_DESCRIPTION_CHARS:
-                        # 単語境界で切り詰め
-                        text = text[:MAX_DESCRIPTION_CHARS].rsplit(" ", 1)[0] + "…"
-                    ev["description"] = text
+                    ev["description"] = _truncate_description(text)
             except Exception as exc:
                 print(f"  connpass: 説明文補完で予期しないエラー: {type(exc).__name__}")
             done += 1
@@ -249,6 +276,56 @@ def _build_search_months(today: datetime, lookahead: int) -> list[str]:
     return months
 
 
+def _fetch_rss_events(
+    params: dict,
+    place: str,
+    today_str: str,
+    seen_urls: set[str],
+    label: str,
+) -> list[dict]:
+    """connpass RSS を1回呼び出してイベントリストを返す（共通処理）。
+
+    - URL 重複（seen_urls）と IT キーワードフィルタを適用
+    - 開催日が today_str より前のイベントは除外（日付単位、当日は表示対象）
+    - 取得件数はログに出力
+    """
+    collected: list[dict] = []
+    try:
+        resp = requests.get(
+            CONNPASS_RSS_URL,
+            params=params,
+            headers=HTTP_HEADERS,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.content)
+        for entry in feed.entries:
+            url = entry.get("link", "")
+            if not url or url in seen_urls:
+                continue
+            title = entry.get("title", "").strip()
+            desc = entry.get("summary", "").strip()
+            if not _is_it_event(title, desc):
+                continue
+            started_at = _parse_started_at(entry)
+            # 開催日（日付部分）が今日より前のイベントをスキップ（日時不明は残す）
+            # 当日開始のイベントは開始時刻に関わらず表示対象とする
+            if started_at and started_at[:10] < today_str:
+                continue
+            seen_urls.add(url)
+            collected.append({
+                "title": title,
+                "event_url": url,
+                "started_at": started_at,
+                "place": place,
+                "catch": desc[:200],
+            })
+        print(f"  connpass RSS ({label}): {len(collected)} 件取得")
+    except Exception as e:
+        print(f"  connpass RSS ({label}): 取得失敗 ({e})")
+    return collected
+
+
 def fetch_events(today: datetime) -> list[dict]:
     """今日以降のイベントを connpass RSS から取得する。
 
@@ -264,81 +341,23 @@ def fetch_events(today: datetime) -> list[dict]:
     # --- 都道府県別検索 ---
     for pref, pref_id in _PREFECTURE_IDS.items():
         for ym in months:
-            params = {"format": "rss", "pref_id": pref_id, "ym": ym}
-            try:
-                resp = requests.get(
-                    CONNPASS_RSS_URL,
-                    params=params,
-                    headers=HTTP_HEADERS,
-                    timeout=15,
-                )
-                resp.raise_for_status()
-                feed = feedparser.parse(resp.content)
-                count = 0
-                for entry in feed.entries:
-                    url = entry.get("link", "")
-                    if not url or url in seen_urls:
-                        continue
-                    title = entry.get("title", "").strip()
-                    desc = entry.get("summary", "").strip()
-                    if not _is_it_event(title, desc):
-                        continue
-                    started_at = _parse_started_at(entry)
-                    # 開催日（日付部分）が今日より前のイベントをスキップ（日時不明は残す）
-                    # 当日開始のイベントは開始時刻に関わらず表示対象とする
-                    if started_at and started_at[:10] < today_str:
-                        continue
-                    seen_urls.add(url)
-                    events.append({
-                        "title": title,
-                        "event_url": url,
-                        "started_at": started_at,
-                        "place": pref,
-                        "catch": desc[:200],
-                    })
-                    count += 1
-                print(f"  connpass RSS ({pref} {ym}): {count} 件取得")
-            except Exception as e:
-                print(f"  connpass RSS ({pref} {ym}): 取得失敗 ({e})")
+            events.extend(_fetch_rss_events(
+                params={"format": "rss", "pref_id": pref_id, "ym": ym},
+                place=pref,
+                today_str=today_str,
+                seen_urls=seen_urls,
+                label=f"{pref} {ym}",
+            ))
 
     # --- オンラインイベント検索 ---
     for ym in months:
-        params = {"format": "rss", "online": 1, "ym": ym}
-        try:
-            resp = requests.get(
-                CONNPASS_RSS_URL,
-                params=params,
-                headers=HTTP_HEADERS,
-                timeout=15,
-            )
-            resp.raise_for_status()
-            feed = feedparser.parse(resp.content)
-            count = 0
-            for entry in feed.entries:
-                url = entry.get("link", "")
-                if not url or url in seen_urls:
-                    continue
-                title = entry.get("title", "").strip()
-                desc = entry.get("summary", "").strip()
-                if not _is_it_event(title, desc):
-                    continue
-                started_at = _parse_started_at(entry)
-                # 開催日（日付部分）が今日より前のイベントをスキップ（日時不明は残す）
-                # 当日開始のイベントは開始時刻に関わらず表示対象とする
-                if started_at and started_at[:10] < today_str:
-                    continue
-                seen_urls.add(url)
-                events.append({
-                    "title": title,
-                    "event_url": url,
-                    "started_at": started_at,
-                    "place": "オンライン",
-                    "catch": desc[:200],
-                })
-                count += 1
-            print(f"  connpass RSS (オンライン {ym}): {count} 件取得")
-        except Exception as e:
-            print(f"  connpass RSS (オンライン {ym}): 取得失敗 ({e})")
+        events.extend(_fetch_rss_events(
+            params={"format": "rss", "online": 1, "ym": ym},
+            place="オンライン",
+            today_str=today_str,
+            seen_urls=seen_urls,
+            label=f"オンライン {ym}",
+        ))
 
     # 日時昇順ソート（日時不明は末尾）
     events.sort(

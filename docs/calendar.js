@@ -63,33 +63,46 @@
 
     let html = "";
 
-    // Leading empty cells
-    for (let i = 0; i < firstDow; i++) {
-      html += `<div class="cal-cell cal-cell-empty"></div>`;
-    }
+    // Total cells = leading empty + days. Pad to a full week for clean rows.
+    const totalCells = firstDow + daysInMonth;
+    const totalRows  = Math.ceil(totalCells / 7);
 
-    // Day cells
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const evs     = eventsByDate[dateStr] || [];
-      const hasEvs  = evs.length > 0;
-      const isToday = dateStr === todayStr;
-      const isSel   = dateStr === selectedDate;
+    for (let row = 0; row < totalRows; row++) {
+      html += `<div class="cal-row" role="row">`;
+      for (let col = 0; col < 7; col++) {
+        const cellIndex = row * 7 + col;
+        if (cellIndex < firstDow || cellIndex >= firstDow + daysInMonth) {
+          // Leading or trailing empty cell
+          html += `<div class="cal-cell cal-cell-empty" role="gridcell"></div>`;
+          continue;
+        }
+        const day     = cellIndex - firstDow + 1;
+        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const evs     = eventsByDate[dateStr] || [];
+        const hasEvs  = evs.length > 0;
+        const isToday = dateStr === todayStr;
+        const isSel   = dateStr === selectedDate;
 
-      let cls = "cal-cell";
-      if (hasEvs)  cls += " cal-cell-has-events";
-      if (isToday) cls += " cal-cell-today";
-      if (isSel)   cls += " cal-cell-selected";
+        let cls = "cal-cell";
+        if (hasEvs)  cls += " cal-cell-has-events";
+        if (isToday) cls += " cal-cell-today";
+        if (isSel)   cls += " cal-cell-selected";
 
-      const countBadge = hasEvs
-        ? `<span class="cal-event-count">${evs.length}</span>`
-        : "";
+        const countBadge = hasEvs
+          ? `<span class="cal-event-count">${evs.length}</span>`
+          : "";
 
-      html += `
-<div class="${cls}" data-date="${dateStr}"${hasEvs ? ` role="button" tabindex="0"` : ` role="gridcell"`} aria-label="${dateStr}${hasEvs ? ` (${evs.length}件のイベント)` : ""}">
+        const interactiveAttrs = hasEvs
+          ? ` role="gridcell" tabindex="0"`
+          : ` role="gridcell"`;
+
+        html += `
+<div class="${cls}" data-date="${dateStr}"${interactiveAttrs} aria-label="${dateStr}${hasEvs ? ` (${evs.length}件のイベント)` : ""}">
   <span class="cal-day-num">${day}</span>
   ${countBadge}
 </div>`;
+      }
+      html += `</div>`;
     }
 
     container.innerHTML = html;

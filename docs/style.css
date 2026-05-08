@@ -612,6 +612,9 @@ mark.hl {
   padding: .35rem 0;
 }
 .cal-days {
+  display: block;
+}
+.cal-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
 }

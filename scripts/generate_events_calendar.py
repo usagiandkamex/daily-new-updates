@@ -214,6 +214,46 @@ def _is_it_event(title: str, desc: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# connpass API レスポンスの description フィールド（HTML）からテキストを抽出
+# ---------------------------------------------------------------------------
+
+class _HTMLTextExtractor(HTMLParser):
+    """HTML タグを除去してプレーンテキストを抽出するシンプルなパーサー。
+
+    connpass v2 API が返す ``description`` フィールド（HTML 形式）を
+    プレーンテキストに変換するために使用する。
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        if data.strip():
+            self._parts.append(data)
+
+    def get_text(self) -> str:
+        return " ".join(self._parts)
+
+
+def _extract_text_from_html(html_text: str) -> str:
+    """HTML タグを除去してプレーンテキストを返す。
+
+    取得した文字列の余分な空白を正規化して返す。
+    パース失敗時は空文字列を返す。
+    """
+    if not html_text:
+        return ""
+    try:
+        parser = _HTMLTextExtractor()
+        parser.feed(html_text)
+        return " ".join(parser.get_text().split())
+    except Exception as exc:
+        print(f"  connpass: HTML テキスト抽出で予期しないエラー: {type(exc).__name__}")
+        return ""
+
+
+# ---------------------------------------------------------------------------
 # connpass イベントページから説明文を取得
 # ---------------------------------------------------------------------------
 
@@ -335,11 +375,15 @@ def _fetch_event_description(url: str) -> str:
 def _enrich_descriptions(events: list[dict]) -> None:
     """connpass イベントページからイベント説明を取得し description フィールドを追加する。
 
-    対象は connpass.com の HTTPS URL を持つ先頭 MAX_ENRICH_EVENTS 件のみ
-    （SSRF 対策で他ホストは除外）。取得したテキストは MAX_DESCRIPTION_CHARS
-    文字に切り詰めて保存する。
+    対象は connpass.com の HTTPS URL を持ち、かつ description が未設定の
+    先頭 MAX_ENRICH_EVENTS 件のみ（SSRF 対策で他ホストは除外）。
+    connpass v2 API 経路ではすでに description が設定済みのため実質スキップされる。
+    取得したテキストは MAX_DESCRIPTION_CHARS 文字に切り詰めて保存する。
     """
-    targets = [ev for ev in events if _is_connpass_event_url(ev.get("event_url", ""))]
+    targets = [
+        ev for ev in events
+        if _is_connpass_event_url(ev.get("event_url", "")) and not ev.get("description")
+    ]
     targets = targets[:MAX_ENRICH_EVENTS]
     if not targets:
         return
@@ -669,9 +713,14 @@ def _fetch_api_events(
                 continue
             title_raw = event.get("title")
             catch_raw = event.get("catch")
+            desc_html_raw = event.get("description")
             title = title_raw.strip() if isinstance(title_raw, str) else ""
-            desc = catch_raw.strip() if isinstance(catch_raw, str) else ""
-            if not _is_it_event(title, desc):
+            catch = catch_raw.strip() if isinstance(catch_raw, str) else ""
+            desc_html = desc_html_raw.strip() if isinstance(desc_html_raw, str) else ""
+            desc_plain = _extract_text_from_html(desc_html) if desc_html else ""
+            # catch と description 両方を IT フィルタに使用する
+            filter_text = (catch + " " + desc_plain).strip()
+            if not _is_it_event(title, filter_text):
                 continue
             started_at = _parse_started_at_api(event.get("started_at", ""))
             if not started_at:
@@ -679,13 +728,18 @@ def _fetch_api_events(
             if started_at[:10] < today_str:
                 continue
             seen_urls.add(url)
-            collected.append({
+            ev_dict: dict = {
                 "title": title,
                 "event_url": url,
                 "started_at": started_at,
                 "place": place,
-                "catch": desc[:200],
-            })
+                "catch": catch[:200],
+            }
+            # API から取得した説明文（HTML）をプレーンテキストに変換して保存する。
+            # これにより connpass ページへのスクレイピングが不要になる。
+            if desc_plain:
+                ev_dict["description"] = _truncate_description(desc_plain)
+            collected.append(ev_dict)
 
         # seen_urls は全検索条件で共有しており、最終的な events.json の件数上限
         # （MAX_CALENDAR_EVENTS）付近まで到達したら全体の取得コストを抑えるため

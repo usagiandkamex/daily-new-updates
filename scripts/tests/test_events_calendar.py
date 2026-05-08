@@ -17,6 +17,8 @@ from generate_events_calendar import (
     _is_it_event,
     _parse_started_at_api,
     _ConnpassEventPageParser,
+    _HTMLTextExtractor,
+    _extract_text_from_html,
     _is_connpass_event_url,
     _fetch_api_events,
     _truncate_description,
@@ -233,6 +235,55 @@ class TestConnpassEventPageParser(unittest.TestCase):
         result = self._parse(html)
         self.assertNotEqual(result, "")
         self.assertIn("実テキスト", result)
+
+
+# ---------------------------------------------------------------------------
+# _HTMLTextExtractor / _extract_text_from_html
+# ---------------------------------------------------------------------------
+
+class TestHTMLTextExtractor(unittest.TestCase):
+    """_HTMLTextExtractor と _extract_text_from_html() のテスト"""
+
+    def test_strips_html_tags(self):
+        """HTML タグが除去されてテキストのみ返る。"""
+        result = _extract_text_from_html("<p>Hello <strong>world</strong></p>")
+        self.assertIn("Hello", result)
+        self.assertIn("world", result)
+        self.assertNotIn("<p>", result)
+        self.assertNotIn("<strong>", result)
+
+    def test_strips_japanese_html(self):
+        """日本語 HTML タグが除去されてテキストのみ返る。"""
+        html = "<div><h2>タイトル</h2><p>イベントの説明文です。</p></div>"
+        result = _extract_text_from_html(html)
+        self.assertIn("タイトル", result)
+        self.assertIn("イベントの説明文です。", result)
+        self.assertNotIn("<h2>", result)
+
+    def test_empty_string_returns_empty(self):
+        """空文字列は空文字列を返す。"""
+        self.assertEqual(_extract_text_from_html(""), "")
+
+    def test_plain_text_returns_unchanged(self):
+        """HTML タグを含まない文字列はそのまま返る。"""
+        self.assertEqual(_extract_text_from_html("プレーンテキスト"), "プレーンテキスト")
+
+    def test_html_entities_decoded(self):
+        """HTML エンティティがデコードされる。"""
+        result = _extract_text_from_html("&lt;sample&gt; &amp; test")
+        self.assertIn("<sample>", result)
+        self.assertIn("& test", result)
+
+    def test_normalizes_whitespace(self):
+        """余分な空白が正規化される。"""
+        result = _extract_text_from_html("<p>  text1  </p><p>  text2  </p>")
+        self.assertNotIn("  ", result)
+        self.assertIn("text1", result)
+        self.assertIn("text2", result)
+
+    def test_none_like_none_input_returns_empty(self):
+        """None は渡せないが空文字列は空文字列を返す。"""
+        self.assertEqual(_extract_text_from_html(""), "")
 
 
 # ---------------------------------------------------------------------------
@@ -997,6 +1048,103 @@ class TestFetchEvents(unittest.TestCase):
 
         self.assertEqual(len(events), 2)
         self.assertEqual(call_labels, ["東京都 202605", "神奈川県 202605"])
+
+
+class TestApiDescriptionExtraction(unittest.TestCase):
+    """connpass v2 API の description フィールド取得に関するテスト"""
+
+    def _make_api_event(self, title, url, catch="", description="", started_at="2026-05-20T10:00:00+09:00"):
+        return {
+            "title": title,
+            "url": url,
+            "catch": catch,
+            "description": description,
+            "started_at": started_at,
+        }
+
+    def test_api_description_stored_in_event(self):
+        """API レスポンスの description フィールドが event dict に保存される。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        event_desc_html = "<p>Python勉強会の詳しい説明です。クラウドやAWSについて学びます。</p>"
+        with patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}):
+            resp = _make_api_response([self._make_api_event(
+                "Python 勉強会",
+                "https://connpass.com/event/300/",
+                catch="python",
+                description=event_desc_html,
+            )])
+            responses = iter([resp, _make_api_response([]), _make_api_response([])])
+            with patch("generate_events_calendar.requests.get", side_effect=lambda *a, **kw: next(responses)), \
+                 patch("generate_events_calendar._enrich_descriptions") as mock_enrich:
+                events = fetch_events(today)
+
+        self.assertEqual(len(events), 1)
+        self.assertIn("description", events[0])
+        self.assertIn("Python勉強会の詳しい説明", events[0]["description"])
+        self.assertNotIn("<p>", events[0]["description"])
+
+    def test_api_no_description_field_no_key_in_event(self):
+        """API レスポンスに description がない場合、event dict に description キーは入らない。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        with patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}):
+            resp = _make_api_response([self._make_api_event(
+                "Python 勉強会",
+                "https://connpass.com/event/301/",
+                catch="python",
+            )])
+            responses = iter([resp, _make_api_response([]), _make_api_response([])])
+            with patch("generate_events_calendar.requests.get", side_effect=lambda *a, **kw: next(responses)), \
+                 patch("generate_events_calendar._enrich_descriptions"):
+                events = fetch_events(today)
+
+        self.assertEqual(len(events), 1)
+        self.assertNotIn("description", events[0])
+
+    def test_api_description_used_for_it_event_filter(self):
+        """IT キーワードが catch にはなく description にある場合もフィルタを通過する。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        desc_html = "<p>このイベントではKubernetesとDockerについて学びます。</p>"
+        with patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}):
+            resp = _make_api_response([self._make_api_event(
+                "コンテナ技術勉強会",
+                "https://connpass.com/event/302/",
+                catch="",  # catch にキーワードなし
+                description=desc_html,  # description にキーワードあり
+            )])
+            responses = iter([resp, _make_api_response([]), _make_api_response([])])
+            with patch("generate_events_calendar.requests.get", side_effect=lambda *a, **kw: next(responses)), \
+                 patch("generate_events_calendar._enrich_descriptions"):
+                events = fetch_events(today)
+
+        # Kubernetes/Docker キーワードが description にあるのでフィルタを通過する
+        self.assertEqual(len(events), 1)
+        self.assertIn("description", events[0])
+
+    def test_enrich_skips_events_with_description(self):
+        """description が既に設定されているイベントはページスクレイピングをスキップする。"""
+        from generate_events_calendar import _enrich_descriptions
+        events = [
+            {
+                "title": "AWS 勉強会",
+                "event_url": "https://connpass.com/event/400/",
+                "description": "既存の説明文",
+            },
+            {
+                "title": "Python 勉強会",
+                "event_url": "https://connpass.com/event/401/",
+                # description なし
+            },
+        ]
+        fetch_calls: list[str] = []
+        with patch("generate_events_calendar._fetch_event_description",
+                   side_effect=lambda url: (fetch_calls.append(url), "ページから取得した説明")[1]):
+            _enrich_descriptions(events)
+
+        # description が既にあるイベントはスキップされ、ないものだけスクレイピング対象
+        self.assertEqual(len(fetch_calls), 1)
+        self.assertIn("event/401", fetch_calls[0])
+        self.assertEqual(events[0]["description"], "既存の説明文")
+        self.assertIn("ページから取得した説明", events[1].get("description", ""))
 
 
 class TestMain(unittest.TestCase):

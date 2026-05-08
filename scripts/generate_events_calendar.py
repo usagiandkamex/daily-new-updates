@@ -467,6 +467,9 @@ def _fetch_api_events(
                 "catch": desc[:200],
             })
 
+        # seen_urls は全検索条件で共有しており、最終的な events.json の件数上限
+        # （MAX_CALENDAR_EVENTS）付近まで到達したら全体の取得コストを抑えるため
+        # この検索条件の追加ページ取得を早期終了する。
         if len(seen_urls) >= MAX_CALENDAR_EVENTS + CONNPASS_API_EARLY_STOP_BUFFER:
             print(
                 f"  connpass API ({label}): 取得件数が上限付近のため追加ページ取得を終了 "

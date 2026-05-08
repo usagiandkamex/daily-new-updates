@@ -552,7 +552,7 @@ def main() -> None:
         # 全取得失敗時は events.json を上書きせず終了する。
         # ワークフロー自体は失敗にせず、前回データを保持する。
         print(f"警告: {e}", file=sys.stderr)
-        print("イベント取得に失敗したため、events.json の更新をスキップします。")
+        print("イベント取得に失敗したため、events.json の更新をスキップします。", file=sys.stderr)
         return
     print(f"取得イベント数: {len(events)}")
 

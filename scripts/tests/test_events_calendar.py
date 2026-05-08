@@ -797,7 +797,7 @@ class TestFetchEvents(unittest.TestCase):
         self.assertEqual(len(events), 100)
         self.assertEqual(len(requests_calls), 1)
 
-    def test_api_fetch_returns_false_when_first_page_payload_is_not_dict(self):
+    def test_api_fetch_fails_when_first_page_payload_is_not_dict(self):
         """1ページ目の JSON が dict 以外なら取得失敗として返す。"""
         response = _make_response()
         response.json = MagicMock(return_value=["unexpected"])

@@ -440,19 +440,23 @@ def _fetch_api_events(
             )
             break
 
-        events = data.get("events", [])
-        if not isinstance(events, list):
+        events_raw = data.get("events")
+        if events_raw is None:
+            events = []
+        elif not isinstance(events_raw, list):
             if not fetched_any_page:
                 print(
                     f"  connpass API ({label}): events の形式が不正 "
-                    f"({type(events).__name__})"
+                    f"({type(events_raw).__name__})"
                 )
                 return collected, False
             print(
                 f"  connpass API ({label} p{page_num}): 追加取得の events 形式が不正 "
-                f"({type(events).__name__})"
+                f"({type(events_raw).__name__})"
             )
             break
+        else:
+            events = events_raw
 
         fetched_any_page = True
         has_returned = "results_returned" in data

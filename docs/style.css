@@ -625,6 +625,7 @@ mark.hl {
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   padding: .25rem .35rem;
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -669,8 +670,12 @@ mark.hl {
 }
 
 .cal-cell-today .cal-day-num {
-  background: var(--primary);
-  color: #fff;
+  --cal-today-bg: #fff4db;
+  --cal-today-fg: #92400e;
+  --cal-today-border: #f59e0b;
+  background: var(--cal-today-bg);
+  color: var(--cal-today-fg);
+  border: 1px solid var(--cal-today-border);
   border-radius: 50%;
   width: 1.45rem;
   height: 1.45rem;
@@ -695,14 +700,24 @@ mark.hl {
 }
 
 .cal-event-count {
-  display: inline-block;
+  --cal-event-count-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: .125rem;
+  right: .125rem;
   background: var(--primary);
-  color: #fff;
+  color: var(--surface);
   font-size: .62rem;
   font-weight: 700;
-  border-radius: 20px;
-  padding: .05rem .3rem;
-  line-height: 1.4;
+  min-width: var(--cal-event-count-size);
+  height: var(--cal-event-count-size);
+  padding: 0 .2rem;
+  border-radius: 999px;
+  box-sizing: border-box;
+  line-height: 1;
+  box-shadow: 0 0 0 1px var(--surface);
 }
 
 /* Day detail panel */
@@ -808,7 +823,11 @@ mark.hl {
   .btn-read { display: block; padding: .5rem 2rem; }
   .search-input { max-width: 100%; }
   .cal-cell { min-height: 1.8rem; padding: .15rem .2rem; }
-  .cal-event-count { display: none; }
+  .cal-event-count {
+    --cal-event-count-size: .95rem;
+    font-size: .52rem;
+    padding: 0 .16rem;
+  }
 }
 
 @media (max-width: 480px) {

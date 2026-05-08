@@ -394,6 +394,7 @@ def _fetch_api_events(
 
     v2 API の ``count``（最大100）+ ``start``（1-indexed）でページングし、
     最終ページまで順次取得する。
+    戻り値は ``(収集したイベント, 成功フラグ)``。
     """
     collected: list[dict] = []
     connpass_headers = {
@@ -456,12 +457,12 @@ def _fetch_api_events(
             })
 
         next_start = start + returned
-        fetched_total = next_start - 1
-        if returned <= 0:
-            break
-        if available > 0 and fetched_total >= available:
-            break
-        if returned < CONNPASS_API_FETCH_COUNT:
+        total_fetched = next_start - 1
+        if (
+            returned <= 0
+            or (available > 0 and total_fetched >= available)
+            or returned < CONNPASS_API_FETCH_COUNT
+        ):
             break
         start = next_start
 

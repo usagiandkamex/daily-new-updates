@@ -29,6 +29,7 @@ import requests
 CONNPASS_RSS_URL = "https://connpass.com/search/"
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
 CONNPASS_API_FETCH_COUNT = 100
+CONNPASS_API_MAX_PAGES = 10
 
 HTTP_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; daily-new-updates-bot/1.0)",
@@ -389,23 +390,47 @@ def _fetch_api_events(
     label: str,
     api_key: str,
 ) -> tuple[list[dict], bool]:
-    """connpass v2 API を1回呼び出してイベントリストを返す（APIキー利用）。"""
+    """connpass v2 API を呼び出してイベントリストを返す（APIキー利用）。
+
+    v2 API の ``count``（最大100）+ ``start``（1-indexed）でページングし、
+    最終ページまで順次取得する。
+    """
     collected: list[dict] = []
     connpass_headers = {
         **HTTP_HEADERS,
         "Accept": "application/json",
         "X-API-Key": api_key,
     }
-    try:
-        resp = requests.get(
-            CONNPASS_API_URL,
-            params={**params, "count": CONNPASS_API_FETCH_COUNT, "order": 2},
-            headers=connpass_headers,
-            timeout=30,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+    start = 1
+    fetched_any_page = False
+    for page in range(1, CONNPASS_API_MAX_PAGES + 1):
+        try:
+            resp = requests.get(
+                CONNPASS_API_URL,
+                params={
+                    **params,
+                    "count": CONNPASS_API_FETCH_COUNT,
+                    "start": start,
+                    "order": 2,
+                },
+                headers=connpass_headers,
+                timeout=30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            if not fetched_any_page:
+                print(f"  connpass API ({label}): 取得失敗 ({e})")
+                return collected, False
+            print(f"  connpass API ({label} p{page}): 追加取得失敗 ({e})")
+            break
+
+        fetched_any_page = True
         events = data.get("events", [])
+        returned_raw = data.get("results_returned")
+        available_raw = data.get("results_available")
+        returned = returned_raw if isinstance(returned_raw, int) else len(events)
+        available = available_raw if isinstance(available_raw, int) else 0
         for event in events:
             url = event.get("url") or event.get("event_url", "")
             if not url or url in seen_urls:
@@ -429,10 +454,17 @@ def _fetch_api_events(
                 "place": place,
                 "catch": desc[:200],
             })
-        print(f"  connpass API ({label}): {len(collected)} 件取得")
-    except Exception as e:
-        print(f"  connpass API ({label}): 取得失敗 ({e})")
-        return collected, False
+
+        fetched_total = start - 1 + returned
+        if returned <= 0:
+            break
+        if available > 0 and fetched_total >= available:
+            break
+        if returned < CONNPASS_API_FETCH_COUNT:
+            break
+        start = fetched_total + 1
+
+    print(f"  connpass API ({label}): {len(collected)} 件取得")
     return collected, True
 
 

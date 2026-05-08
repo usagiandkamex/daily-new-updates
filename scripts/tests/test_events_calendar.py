@@ -648,6 +648,7 @@ class TestFetchEvents(unittest.TestCase):
         self.assertEqual(first_request["kwargs"]["headers"].get("X-API-Key"), "test-key")
         self.assertEqual(first_request["kwargs"]["params"].get("count"), 100)
         self.assertEqual(first_request["kwargs"]["params"].get("order"), 2)
+        self.assertFalse(first_request["kwargs"].get("allow_redirects", True))
         feedparser_parse.assert_not_called()
 
     def test_api_fetch_paginates_with_start_param(self):
@@ -918,6 +919,51 @@ class TestFetchEvents(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(len(events), 1)
         self.assertEqual(len(requests_calls), 2)
+
+    def test_api_fetch_skips_invalid_event_items(self):
+        """events 内の不正要素（非 dict / 非文字列 URL）はスキップする。"""
+        started = "2026-05-20T10:00:00+09:00"
+        response = _make_api_response([
+            ["not", "dict"],
+            {
+                "title": "AWS invalid url type",
+                "url": 12345,
+                "catch": "aws",
+                "started_at": started,
+            },
+            {
+                "title": 123,
+                "url": "https://connpass.com/event/25002/",
+                "catch": "aws",
+                "started_at": started,
+            },
+            {
+                "title": "AWS 正常",
+                "url": "https://connpass.com/event/25003/",
+                "catch": "aws",
+                "started_at": started,
+            },
+        ])
+
+        with patch("generate_events_calendar.requests.get", return_value=response):
+            events, ok = _fetch_api_events(
+                params={"keyword": "東京都", "ym": "202605"},
+                place="東京都",
+                today_str="2026/05/01",
+                seen_urls=set(),
+                label="東京都 202605",
+                api_key="test-key",
+            )
+
+        self.assertTrue(ok)
+        self.assertEqual(len(events), 2)
+        self.assertEqual(
+            [ev["event_url"] for ev in events],
+            [
+                "https://connpass.com/event/25002/",
+                "https://connpass.com/event/25003/",
+            ],
+        )
 
     def test_fetch_events_stops_global_api_search_after_limit(self):
         """API 利用時は上限付近到達後に以降の検索を打ち切る。"""

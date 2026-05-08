@@ -417,6 +417,7 @@ def _fetch_api_events(
                 },
                 headers=connpass_headers,
                 timeout=30,
+                allow_redirects=False,
             )
             resp.raise_for_status()
             data = resp.json()
@@ -476,13 +477,20 @@ def _fetch_api_events(
                 f"({type(available_raw).__name__})"
             )
         for event in events:
-            url = event.get("url") or event.get("event_url", "")
+            if not isinstance(event, dict):
+                continue
+            url_raw = event.get("url") or event.get("event_url", "")
+            if not isinstance(url_raw, str):
+                continue
+            url = url_raw.strip()
             if not url or url in seen_urls:
                 continue
             if not _is_connpass_event_url(url):
                 continue
-            title = (event.get("title") or "").strip()
-            desc = (event.get("catch") or "").strip()
+            title_raw = event.get("title")
+            catch_raw = event.get("catch")
+            title = title_raw.strip() if isinstance(title_raw, str) else ""
+            desc = catch_raw.strip() if isinstance(catch_raw, str) else ""
             if not _is_it_event(title, desc):
                 continue
             started_at = _parse_started_at_api(event.get("started_at", ""))

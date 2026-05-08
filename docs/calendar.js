@@ -38,6 +38,22 @@
     };
   }
 
+  /** connpass.com (subdomain ok) の HTTPS /event/ URL のみ許可。
+   *  生成側 (_is_connpass_event_url) と同じポリシー。 */
+  function isConnpassEventUrl(url) {
+    if (typeof url !== "string") return false;
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch (_) {
+      return false;
+    }
+    if (parsed.protocol !== "https:") return false;
+    const host = (parsed.hostname || "").toLowerCase();
+    if (host !== "connpass.com" && !host.endsWith(".connpass.com")) return false;
+    return parsed.pathname.startsWith("/event/");
+  }
+
   /** "2026/05/15 19:00" → "2026-05-15" */
   function startedAtToDate(startedAt) {
     if (!startedAt) return null;
@@ -109,32 +125,33 @@
           ? `<span class="cal-event-count">${evs.length}</span>`
           : "";
 
-        // ARIA grid モデル: row の子は gridcell。インタラクティブ化のため
-        // イベントのある日のみ tabindex="0" を付与してフォーカス可能にする。
-        const interactiveAttrs = hasEvs
-          ? ` role="gridcell" tabindex="0"`
-          : ` role="gridcell"`;
-
-        html += `
-<div class="${cls}" data-date="${dateStr}"${interactiveAttrs} aria-label="${dateStr}${hasEvs ? ` (${evs.length}件のイベント)` : ""}">
-  <span class="cal-day-num">${day}</span>
-  ${countBadge}
+        // ARIA grid モデル: row の子は gridcell。インタラクティブ化はネスト
+        // した <button> で実現することで「ボタン」セマンティクスと grid 階層
+        // 双方を満たす。イベントのない日は単なる gridcell。
+        const ariaLabel = `${dateStr}${hasEvs ? ` (${evs.length}件のイベント)` : ""}`;
+        if (hasEvs) {
+          html += `
+<div class="${cls}" role="gridcell">
+  <button type="button" class="cal-cell-button" data-date="${dateStr}" aria-label="${ariaLabel}">
+    <span class="cal-day-num">${day}</span>
+    ${countBadge}
+  </button>
 </div>`;
+        } else {
+          html += `
+<div class="${cls}" role="gridcell" aria-label="${ariaLabel}">
+  <span class="cal-day-num">${day}</span>
+</div>`;
+        }
       }
       html += `</div>`;
     }
 
     container.innerHTML = html;
 
-    // Click / keyboard handlers
-    container.querySelectorAll(".cal-cell-has-events").forEach((cell) => {
-      cell.addEventListener("click", () => selectDate(cell.dataset.date));
-      cell.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          selectDate(cell.dataset.date);
-        }
-      });
+    // Click / keyboard handlers (button が click/Enter/Space をネイティブで処理)
+    container.querySelectorAll(".cal-cell-button").forEach((btn) => {
+      btn.addEventListener("click", () => selectDate(btn.dataset.date));
     });
   }
 
@@ -176,7 +193,7 @@
           const meta = (timeHtml || placeHtml)
             ? `<div class="cal-event-meta">${timeHtml}${placeHtml}</div>`
             : "";
-          const safeUrl = /^https?:\/\//.test(ev.event_url) ? ev.event_url : "#";
+          const safeUrl = isConnpassEventUrl(ev.event_url) ? ev.event_url : "#";
           return `
 <li class="cal-event-item">
   <a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" class="cal-event-link">

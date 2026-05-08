@@ -645,6 +645,29 @@ mark.hl {
   background: #f0f6ff;
 }
 
+/* Interactive button nested inside a gridcell for event-having days.
+   Strip native button chrome so it blends with the surrounding cell. */
+.cal-cell-button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: .25rem;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cal-cell-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
 .cal-cell-today .cal-day-num {
   background: var(--primary);
   color: #fff;

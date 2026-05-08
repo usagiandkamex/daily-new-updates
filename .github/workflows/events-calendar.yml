@@ -88,9 +88,9 @@ jobs:
           gh pr review "$PR_URL" --approve --body "自動承認します。"
 
           MAX_RETRIES=3
-          RETRY_WAIT=90
+          RETRY_WAIT=30
           for i in $(seq 1 $MAX_RETRIES); do
-            if gh pr merge "$PR_URL" --merge --admin --delete-branch; then
+            if gh pr merge "$PR_URL" --merge --delete-branch; then
               echo "マージ成功（試行 $i/$MAX_RETRIES）"
               break
             fi

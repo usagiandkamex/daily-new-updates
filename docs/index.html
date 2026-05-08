@@ -21,6 +21,7 @@
       </a>
       <nav class="site-nav" aria-label="メインナビゲーション">
         <a href="#latest">Latest</a>
+        <a href="#events">Events</a>
         <a href="#archive">Archive</a>
         <a href="#about">About</a>
       </nav>
@@ -36,6 +37,51 @@
         <p class="section-subtitle">最新のデイリーアップデート・テクニカル雑談をまとめて確認</p>
         <div id="latest-grid" class="cards-grid" aria-live="polite">
           <div class="loading">データを読み込み中…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Events Calendar Section ===== -->
+    <section id="events" class="section-events">
+      <div class="container">
+        <h2 class="section-title">Events</h2>
+        <p class="section-subtitle">関東・オンライン開催の IT イベントを月次カレンダーで確認できます</p>
+
+        <div id="calendar-widget" class="calendar-widget">
+
+          <!-- Loading state -->
+          <p id="cal-loading" class="loading">イベントデータを読み込み中…</p>
+
+          <!-- Month navigation -->
+          <div class="cal-nav" aria-label="月ナビゲーション">
+            <button id="cal-prev" class="cal-nav-btn" aria-label="前の月">‹</button>
+            <span id="cal-month-label" class="cal-month-label" aria-live="polite"></span>
+            <button id="cal-next" class="cal-nav-btn" aria-label="次の月">›</button>
+          </div>
+
+          <!-- Calendar grid -->
+          <div class="cal-grid" role="grid" aria-label="イベントカレンダー">
+            <div class="cal-grid-header" role="row">
+              <div role="columnheader" aria-label="日曜日">日</div>
+              <div role="columnheader" aria-label="月曜日">月</div>
+              <div role="columnheader" aria-label="火曜日">火</div>
+              <div role="columnheader" aria-label="水曜日">水</div>
+              <div role="columnheader" aria-label="木曜日">木</div>
+              <div role="columnheader" aria-label="金曜日">金</div>
+              <div role="columnheader" aria-label="土曜日">土</div>
+            </div>
+            <div id="cal-days" class="cal-days" role="rowgroup"></div>
+          </div>
+
+          <!-- Day detail panel -->
+          <div id="cal-day-panel" class="cal-day-panel" hidden aria-live="polite">
+            <div class="cal-day-panel-header">
+              <span id="cal-day-title" class="cal-day-title"></span>
+              <button id="cal-close-panel" class="cal-close-btn" aria-label="閉じる">✕</button>
+            </div>
+            <ul id="cal-events-list" class="cal-events-list" aria-label="イベント一覧"></ul>
+          </div>
+
         </div>
       </div>
     </section>
@@ -133,5 +179,6 @@
   </footer>
 
   <script src="app.js"></script>
+  <script src="calendar.js"></script>
 </body>
 </html>

@@ -1,0 +1,68 @@
+name: イベントカレンダー更新
+
+on:
+  schedule:
+    # 毎日 3:00 JST (= 18:00 UTC 前日)
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-events:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v6
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: 依存関係インストール
+        run: pip install -r scripts/requirements.txt
+
+      - name: イベントカレンダーデータ生成
+        run: python scripts/generate_events_calendar.py
+
+      - name: 変更をコミット & プッシュ
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/events.json
+          if git diff --staged --quiet; then
+            echo "変更なし。スキップします。"
+          else
+            git commit -m "chore: イベントカレンダーデータ更新 ($(TZ=Asia/Tokyo date +%Y/%m/%d))"
+            # 競合時のリトライ（他ワークフローと同時実行した場合の non-fast-forward 対策）
+            # pull --rebase / push のどちらの失敗でもリトライ対象とし、rebase 中断時は
+            # `git rebase --abort` でクリーンな状態に戻してから次の試行に進む。
+            MAX_RETRIES=3
+            for i in $(seq 1 $MAX_RETRIES); do
+              if ! git pull --rebase origin "${{ github.ref_name }}"; then
+                echo "git pull --rebase 失敗（試行 $i/$MAX_RETRIES）。"
+                git rebase --abort 2>/dev/null || true
+                if [ $i -lt $MAX_RETRIES ]; then
+                  echo "30秒後にリトライします..."
+                  sleep 30
+                  continue
+                else
+                  echo "git pull --rebase が ${MAX_RETRIES} 回失敗しました。"
+                  exit 1
+                fi
+              fi
+              if git push; then
+                echo "プッシュ成功（試行 $i/$MAX_RETRIES）"
+                break
+              fi
+              if [ $i -lt $MAX_RETRIES ]; then
+                echo "プッシュ失敗（試行 $i/$MAX_RETRIES）。30秒後にリトライします..."
+                sleep 30
+              else
+                echo "プッシュが ${MAX_RETRIES} 回失敗しました。"
+                exit 1
+              fi
+            done
+          fi

@@ -757,7 +757,7 @@ mark.hl {
   color: var(--text);
   transition: background var(--ease);
 }
-.cal-event-link:hover {
+a.cal-event-link:hover {
   background: #f0f6ff;
 }
 
@@ -768,7 +768,7 @@ mark.hl {
   margin-bottom: .3rem;
   color: var(--primary);
 }
-.cal-event-link:hover .cal-event-title { text-decoration: underline; }
+a.cal-event-link:hover .cal-event-title { text-decoration: underline; }
 
 .cal-event-meta {
   display: flex;

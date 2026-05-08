@@ -513,6 +513,7 @@ def fetch_events(today: datetime) -> list[dict]:
     use_api = bool(api_key)
     if use_api:
         print("  CONNPASS_API_KEY を検出: connpass v2 API を利用します")
+    early_stop_limit = MAX_CALENDAR_EVENTS + CONNPASS_API_EARLY_STOP_BUFFER
 
     # --- 都道府県別検索 ---
     for pref, pref_id in _PREFECTURE_IDS.items():
@@ -541,33 +542,50 @@ def fetch_events(today: datetime) -> list[dict]:
             if not ok:
                 failures += 1
             events.extend(collected)
+            if use_api and len(seen_urls) >= early_stop_limit:
+                print(
+                    f"  connpass API: 収集件数が上限付近のため以降の検索を終了 "
+                    f"({len(seen_urls)} 件)"
+                )
+                break
+        if use_api and len(seen_urls) >= early_stop_limit:
+            break
 
     # --- オンラインイベント検索 ---
-    for ym in months:
-        if use_api:
-            # v2 API には RSS の online=1 相当パラメータが無いため、
-            # keyword="オンライン" を用いてオンライン系イベントを補完する。
-            # 表現ゆれ（リモート/Web開催等）により取りこぼし/誤検出の可能性がある。
-            collected, ok = _fetch_api_events(
-                params={"keyword": "オンライン", "ym": ym},
-                place="オンライン",
-                today_str=today_str,
-                seen_urls=seen_urls,
-                label=f"オンライン {ym}",
-                api_key=api_key,
-            )
-        else:
-            collected, ok = _fetch_rss_events(
-                params={"format": "rss", "online": 1, "ym": ym},
-                place="オンライン",
-                today_str=today_str,
-                seen_urls=seen_urls,
-                label=f"オンライン {ym}",
-            )
-        attempts += 1
-        if not ok:
-            failures += 1
-        events.extend(collected)
+    if use_api and len(seen_urls) >= early_stop_limit:
+        print("  connpass API: オンライン検索をスキップします")
+    else:
+        for ym in months:
+            if use_api:
+                # v2 API には RSS の online=1 相当パラメータが無いため、
+                # keyword="オンライン" を用いてオンライン系イベントを補完する。
+                # 表現ゆれ（リモート/Web開催等）により取りこぼし/誤検出の可能性がある。
+                collected, ok = _fetch_api_events(
+                    params={"keyword": "オンライン", "ym": ym},
+                    place="オンライン",
+                    today_str=today_str,
+                    seen_urls=seen_urls,
+                    label=f"オンライン {ym}",
+                    api_key=api_key,
+                )
+            else:
+                collected, ok = _fetch_rss_events(
+                    params={"format": "rss", "online": 1, "ym": ym},
+                    place="オンライン",
+                    today_str=today_str,
+                    seen_urls=seen_urls,
+                    label=f"オンライン {ym}",
+                )
+            attempts += 1
+            if not ok:
+                failures += 1
+            events.extend(collected)
+            if use_api and len(seen_urls) >= early_stop_limit:
+                print(
+                    f"  connpass API: 収集件数が上限付近のためオンライン検索を終了 "
+                    f"({len(seen_urls)} 件)"
+                )
+                break
 
     # 全リクエスト失敗時は例外（既存 events.json の上書き防止）
     if attempts > 0 and failures == attempts:

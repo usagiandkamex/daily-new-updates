@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from generate_events_calendar import (
     _build_search_months,
     _is_it_event,
+    _parse_started_at_api,
     _ConnpassEventPageParser,
     _is_connpass_event_url,
     _fetch_api_events,
@@ -69,6 +70,25 @@ class TestBuildSearchMonths(unittest.TestCase):
             today = datetime(2026, 4, 1, tzinfo=JST)
             result = _build_search_months(today, n)
             self.assertEqual(len(result), n + 1)
+
+
+# ---------------------------------------------------------------------------
+# _parse_started_at_api
+# ---------------------------------------------------------------------------
+
+class TestParseStartedAtApi(unittest.TestCase):
+    """_parse_started_at_api() のテスト"""
+
+    def test_converts_zulu_to_jst(self):
+        """UTC(Z)表記を JST へ変換する。"""
+        self.assertEqual(
+            _parse_started_at_api("2026-05-20T01:00:00Z"),
+            "2026/05/20 10:00",
+        )
+
+    def test_invalid_format_returns_empty(self):
+        """不正な日時文字列は空文字列を返す。"""
+        self.assertEqual(_parse_started_at_api("not-a-date"), "")
 
 
 # ---------------------------------------------------------------------------
@@ -769,6 +789,37 @@ class TestFetchEvents(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(len(events), 100)
         self.assertEqual(len(requests_calls), 1)
+
+    def test_fetch_events_stops_global_api_search_after_limit(self):
+        """API 利用時は上限付近到達後に以降の検索を打ち切る。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        call_labels: list[str] = []
+
+        def fake_fetch_api_events(*, params, place, today_str, seen_urls, label, api_key):
+            call_labels.append(label)
+            idx = len(call_labels)
+            url = f"https://connpass.com/event/{24000 + idx}/"
+            seen_urls.add(url)
+            return (
+                [{
+                    "title": f"AWS event {idx}",
+                    "event_url": url,
+                    "started_at": "2026/05/20 10:00",
+                    "place": place,
+                    "catch": "aws",
+                }],
+                True,
+            )
+
+        with patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}), \
+             patch("generate_events_calendar._fetch_api_events", side_effect=fake_fetch_api_events), \
+             patch("generate_events_calendar._enrich_descriptions"), \
+             patch("generate_events_calendar.MAX_CALENDAR_EVENTS", 2), \
+             patch("generate_events_calendar.CONNPASS_API_EARLY_STOP_BUFFER", 0):
+            events = fetch_events(today)
+
+        self.assertEqual(len(events), 2)
+        self.assertEqual(call_labels, ["東京都 202605", "神奈川県 202605"])
 
 
 class TestMain(unittest.TestCase):

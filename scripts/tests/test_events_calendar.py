@@ -796,6 +796,8 @@ class TestFetchEvents(unittest.TestCase):
         call_labels: list[str] = []
 
         def fake_fetch_api_events(*, params, place, today_str, seen_urls, label, api_key):
+            # 実装シグネチャ互換のため受け取る（本テストでは未使用）。
+            _ = (params, today_str, api_key)
             call_labels.append(label)
             idx = len(call_labels)
             url = f"https://connpass.com/event/{24000 + idx}/"

@@ -515,6 +515,9 @@ def fetch_events(today: datetime) -> list[dict]:
         print("  CONNPASS_API_KEY を検出: connpass v2 API を利用します")
     early_stop_limit = MAX_CALENDAR_EVENTS + CONNPASS_API_EARLY_STOP_BUFFER
 
+    def _api_limit_reached() -> bool:
+        return use_api and len(seen_urls) >= early_stop_limit
+
     # --- 都道府県別検索 ---
     for pref, pref_id in _PREFECTURE_IDS.items():
         for ym in months:
@@ -542,17 +545,17 @@ def fetch_events(today: datetime) -> list[dict]:
             if not ok:
                 failures += 1
             events.extend(collected)
-            if use_api and len(seen_urls) >= early_stop_limit:
+            if _api_limit_reached():
                 print(
                     f"  connpass API: 収集件数が上限付近のため以降の検索を終了 "
                     f"({len(seen_urls)} 件)"
                 )
                 break
-        if use_api and len(seen_urls) >= early_stop_limit:
+        if _api_limit_reached():
             break
 
     # --- オンラインイベント検索 ---
-    if use_api and len(seen_urls) >= early_stop_limit:
+    if _api_limit_reached():
         print("  connpass API: オンライン検索をスキップします")
     else:
         for ym in months:
@@ -580,7 +583,7 @@ def fetch_events(today: datetime) -> list[dict]:
             if not ok:
                 failures += 1
             events.extend(collected)
-            if use_api and len(seen_urls) >= early_stop_limit:
+            if _api_limit_reached():
                 print(
                     f"  connpass API: 収集件数が上限付近のためオンライン検索を終了 "
                     f"({len(seen_urls)} 件)"

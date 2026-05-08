@@ -484,11 +484,11 @@ def _fetch_one_vendor_feed(feed_info: dict) -> list[dict]:
 
     取得失敗時は空リストを返す（fetch_vendor_news_events でのログ出力のため例外を抑制する）。
     """
-    name = feed_info["name"]
-    url = feed_info["url"]
-    place = feed_info.get("place", "")
     results: list[dict] = []
     try:
+        name = feed_info["name"]
+        url = feed_info["url"]
+        place = feed_info.get("place", "")
         resp = requests.get(url, headers=HTTP_HEADERS, timeout=10)
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
@@ -516,7 +516,8 @@ def _fetch_one_vendor_feed(feed_info: dict) -> list[dict]:
             })
         print(f"  ベンダーイベント RSS ({name}): {len(results)} 件取得")
     except Exception as e:
-        print(f"  ベンダーイベント RSS ({name}): 取得失敗 ({e})")
+        label = feed_info.get("name", repr(feed_info))
+        print(f"  ベンダーイベント RSS ({label}): 取得失敗 ({e})")
     return results
 
 
@@ -549,10 +550,15 @@ def fetch_vendor_news_events(today: datetime) -> list[dict]:
             for feed_info in VENDOR_EVENT_NEWS_FEEDS
         }
         for future in as_completed(futures):
-            for ev in future.result():
-                if ev["event_url"] not in seen_urls:
-                    seen_urls.add(ev["event_url"])
-                    events.append(ev)
+            try:
+                for ev in future.result():
+                    if ev["event_url"] not in seen_urls:
+                        seen_urls.add(ev["event_url"])
+                        events.append(ev)
+            except Exception as e:
+                feed_info = futures[future]
+                name = feed_info.get("name", str(feed_info))
+                print(f"  ベンダーイベント RSS ({name}): フューチャー取得失敗 ({e})")
 
     return events
 

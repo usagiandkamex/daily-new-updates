@@ -246,14 +246,17 @@
           const meta = (timeHtml || placeHtml)
             ? `<div class="cal-event-meta">${timeHtml}${placeHtml}</div>`
             : "";
-          const safeUrl = isSafeEventUrl(ev.event_url, !!ev.vendor_event) ? ev.event_url : "#";
-          return `
-<li class="cal-event-item">
-  <a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" class="cal-event-link">
+          const hasSafeUrl = isSafeEventUrl(ev.event_url, !!ev.vendor_event);
+          const contentHtml = `
     <strong class="cal-event-title">${esc(ev.title)}</strong>
     ${meta}
     ${descHtml}
-  </a>
+  `;
+          return `
+<li class="cal-event-item">
+  ${hasSafeUrl
+    ? `<a href="${esc(ev.event_url)}" target="_blank" rel="noopener noreferrer" class="cal-event-link">${contentHtml}</a>`
+    : `<div class="cal-event-link">${contentHtml}</div>`}
 </li>`;
         })
         .join("");

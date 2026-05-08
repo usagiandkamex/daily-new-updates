@@ -1,0 +1,40 @@
+name: イベントカレンダー更新
+
+on:
+  schedule:
+    # 毎日深夜 0:00 JST (= 15:00 UTC 前日)
+    - cron: '0 15 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-events:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v6
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: 依存関係インストール
+        run: pip install feedparser requests
+
+      - name: イベントカレンダーデータ生成
+        run: python scripts/generate_events_calendar.py
+
+      - name: 変更をコミット & プッシュ
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/events.json
+          if git diff --staged --quiet; then
+            echo "変更なし。スキップします。"
+          else
+            git commit -m "chore: イベントカレンダーデータ更新 ($(TZ=Asia/Tokyo date +%Y/%m/%d))"
+            git push origin main
+          fi

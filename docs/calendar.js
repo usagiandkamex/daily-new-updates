@@ -62,7 +62,11 @@
     "techcommunity.microsoft.com", "azure.microsoft.com",
     "aws.amazon.com", "awsevents.com", "reinvent.awsevents.com",
     "cloud.google.com", "next.google.com",
-    "cncf.io", "events.linuxfoundation.org",
+    "cncf.io", "events.linuxfoundation.org", "linuxfoundation.org",
+    "github.com", "githubuniverse.com",
+    "redhat.com", "summit.redhat.com",
+    "hashicorp.com", "hashiconf.com",
+    "vmware.com", "explore.vmware.com",
   ]);
 
   function isTrustedVendorUrl(url) {

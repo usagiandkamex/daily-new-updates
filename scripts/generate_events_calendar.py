@@ -95,6 +95,36 @@ VENDOR_EVENT_NEWS_FEEDS: list[dict] = [
         "url": "https://news.google.com/rss/search?q=KubeCon+CloudNativeCon+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
         "place": "現地開催 / オンライン",
     },
+    # Linux Foundation
+    {
+        "name": "Open Source Summit Japan",
+        "url": "https://news.google.com/rss/search?q=Open+Source+Summit+Japan+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "東京 / オンライン",
+    },
+    # HashiCorp
+    {
+        "name": "HashiConf",
+        "url": "https://news.google.com/rss/search?q=HashiConf+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "現地開催 / オンライン",
+    },
+    # GitHub
+    {
+        "name": "GitHub Universe",
+        "url": "https://news.google.com/rss/search?q=GitHub+Universe+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "San Francisco / オンライン",
+    },
+    # Red Hat
+    {
+        "name": "Red Hat Summit",
+        "url": "https://news.google.com/rss/search?q=Red+Hat+Summit+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Boston / オンライン",
+    },
+    # VMware (Broadcom)
+    {
+        "name": "VMware Explore",
+        "url": "https://news.google.com/rss/search?q=VMware+Explore+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Las Vegas / オンライン",
+    },
 ]
 
 # ベンダーイベントニュース：フィードごとの最大取得記事数

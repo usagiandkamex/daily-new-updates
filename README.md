@@ -345,3 +345,10 @@ Azure 関連情報は、Microsoft 公式ソース（Azure Blog・Azure Release C
 | Hacker News (Best) | `https://hnrss.org/best` |
 | Google News Engineering Blog EN | Google News RSS |
 | Google News - Anthropic Engineering | Google News RSS（`site:anthropic.com/engineering`） |
+
+## ライセンス
+
+本リポジトリは [MIT License](LICENSE) の下で公開されています。
+
+なお、収集対象の各 RSS/Atom フィードや記事の本文・要約は、それぞれの元サイト・配信元の権利者に帰属します。本リポジトリの MIT ライセンスは、リポジトリ内のスクリプト等のコードに対して適用されるものであり、収集された外部コンテンツには適用されません。
+

@@ -63,6 +63,102 @@ _ENRICH_WORKERS = 5
 # イベントページ取得タイムアウト（秒）
 _PAGE_FETCH_TIMEOUT = 10
 
+# 大手ベンダー・大規模カンファレンス情報取得用 RSS フィード（Google News 検索）
+# 各フィードには「name」（表示名）「url」（RSS URL）「place」（開催場所候補）を定義する。
+VENDOR_EVENT_NEWS_FEEDS: list[dict] = [
+    # Microsoft
+    {
+        "name": "Microsoft Build",
+        "url": "https://news.google.com/rss/search?q=Microsoft+Build+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Seattle / オンライン",
+    },
+    {
+        "name": "Microsoft Ignite",
+        "url": "https://news.google.com/rss/search?q=Microsoft+Ignite+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Chicago / オンライン",
+    },
+    # AWS
+    {
+        "name": "AWS Summit Japan",
+        "url": "https://news.google.com/rss/search?q=AWS+Summit+Japan+%E9%96%8B%E5%82%AC+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "東京 / オンライン",
+    },
+    {
+        "name": "AWS re:Invent",
+        "url": "https://news.google.com/rss/search?q=AWS+re%3AInvent+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Las Vegas / オンライン",
+    },
+    # Google Cloud
+    {
+        "name": "Google Cloud Next",
+        "url": "https://news.google.com/rss/search?q=Google+Cloud+Next+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Las Vegas / オンライン",
+    },
+    # CNCF・大規模コミュニティカンファレンス
+    {
+        "name": "KubeCon + CloudNativeCon",
+        "url": "https://news.google.com/rss/search?q=KubeCon+CloudNativeCon+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "現地開催 / オンライン",
+    },
+    # Linux Foundation
+    {
+        "name": "Open Source Summit Japan",
+        "url": "https://news.google.com/rss/search?q=Open+Source+Summit+Japan+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "東京 / オンライン",
+    },
+    # HashiCorp
+    {
+        "name": "HashiConf",
+        "url": "https://news.google.com/rss/search?q=HashiConf+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "現地開催 / オンライン",
+    },
+    # GitHub
+    {
+        "name": "GitHub Universe",
+        "url": "https://news.google.com/rss/search?q=GitHub+Universe+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "San Francisco / オンライン",
+    },
+    # Red Hat
+    {
+        "name": "Red Hat Summit",
+        "url": "https://news.google.com/rss/search?q=Red+Hat+Summit+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Boston / オンライン",
+    },
+    # VMware (Broadcom)
+    {
+        "name": "VMware Explore",
+        "url": "https://news.google.com/rss/search?q=VMware+Explore+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Las Vegas / オンライン",
+    },
+    # Databricks
+    {
+        "name": "Data + AI Summit",
+        "url": "https://news.google.com/rss/search?q=Databricks+Data+AI+Summit+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "San Francisco / オンライン",
+    },
+    # OpenAI
+    {
+        "name": "OpenAI DevDay",
+        "url": "https://news.google.com/rss/search?q=OpenAI+DevDay+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "San Francisco / オンライン",
+    },
+    # NVIDIA
+    {
+        "name": "NVIDIA GTC",
+        "url": "https://news.google.com/rss/search?q=NVIDIA+GTC+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "San Jose / オンライン",
+    },
+    # Google
+    {
+        "name": "Google I/O",
+        "url": "https://news.google.com/rss/search?q=Google+IO+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Mountain View / オンライン",
+    },
+]
+
+# ベンダーイベントニュース：フィードごとの最大取得記事数
+_VENDOR_EVENT_MAX_ENTRIES_PER_FEED = 5
+
 # ---------------------------------------------------------------------------
 # IT 関連イベント判定
 # ---------------------------------------------------------------------------
@@ -427,6 +523,90 @@ def _fetch_rss_events(
     return collected, True
 
 
+def _fetch_one_vendor_feed(feed_info: dict) -> list[dict]:
+    """単一のベンダーイベント RSS フィードを取得し、イベントリストを返す。
+
+    取得失敗時は空リストを返す（fetch_vendor_news_events でのログ出力のため例外を抑制する）。
+    """
+    results: list[dict] = []
+    try:
+        name = feed_info["name"]
+        url = feed_info["url"]
+        place = feed_info.get("place", "")
+        resp = requests.get(url, headers=HTTP_HEADERS, timeout=10)
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.content)
+        if getattr(feed, "bozo", False) and not feed.entries:
+            print(f"  ベンダーイベント RSS ({name}): RSS パース失敗")
+            return results
+        for entry in feed.entries[:_VENDOR_EVENT_MAX_ENTRIES_PER_FEED]:
+            article_url = entry.get("link", "")
+            if not article_url:
+                continue
+            title = entry.get("title", "").strip()
+            desc = entry.get("summary", "").strip()
+            if not title:
+                continue
+            started_at = _parse_started_at(entry)
+            if not started_at:
+                continue
+            results.append({
+                "title": f"[{name}] {title}",
+                "event_url": article_url,
+                "started_at": started_at,
+                "place": place,
+                "catch": desc[:200],
+                "vendor_event": True,
+            })
+        print(f"  ベンダーイベント RSS ({name}): {len(results)} 件取得")
+    except Exception as e:
+        label = feed_info.get("name", repr(feed_info))
+        print(f"  ベンダーイベント RSS ({label}): 取得失敗 ({e})")
+    return results
+
+
+def fetch_vendor_news_events(today: datetime) -> list[dict]:
+    """大手ベンダー・大規模コミュニティカンファレンスの最新情報を Google News RSS から取得する。
+
+    VENDOR_EVENT_NEWS_FEEDS に定義された各カンファレンス（Microsoft Build / Ignite、
+    AWS Summit / re:Invent、Google Cloud Next、KubeCon 等）の最新ニュース記事を取得し、
+    記事の公開日をカレンダー表示日として events.json に追加する。
+
+    connpass イベントと異なり、ベンダーイベントニュースは公開日が今日より前の記事も
+    収集対象とする（直近のカンファレンス情報や参加レポートも含めたいため）。
+
+    これにより、カレンダー上でベンダーイベント関連の最新情報が公開された日付を
+    ひと目で確認できるようになる。各エントリには「ベンダーイベント情報」であることを
+    示す place フィールドおよび vendor_event フラグが設定される。
+
+    取得失敗は警告のみでスキップし、connpass 系の取得には影響しない。
+    全フィードを並列取得してレイテンシを削減する（ThreadPoolExecutor）。
+    """
+    if not VENDOR_EVENT_NEWS_FEEDS:
+        return []
+    print(f"  ベンダーイベント RSS を並列取得中 ({today.strftime('%Y/%m/%d')} 時点)...")
+    events: list[dict] = []
+    seen_urls: set[str] = set()
+
+    with ThreadPoolExecutor(max_workers=min(len(VENDOR_EVENT_NEWS_FEEDS), 8)) as executor:
+        futures = {
+            executor.submit(_fetch_one_vendor_feed, feed_info): feed_info
+            for feed_info in VENDOR_EVENT_NEWS_FEEDS
+        }
+        for future in as_completed(futures):
+            try:
+                for ev in future.result():
+                    if ev["event_url"] not in seen_urls:
+                        seen_urls.add(ev["event_url"])
+                        events.append(ev)
+            except Exception as e:
+                feed_info = futures[future]
+                name = feed_info.get("name", str(feed_info))
+                print(f"  ベンダーイベント RSS ({name}): フューチャー取得失敗 ({e})")
+
+    return events
+
+
 def _fetch_api_events(
     params: dict,
     place: str,
@@ -691,6 +871,18 @@ def fetch_events(today: datetime) -> list[dict]:
             "既存の docs/events.json を保持するため処理を中断します。"
         )
 
+    # --- 大手ベンダー・大規模カンファレンス情報 ---
+    print("  ベンダーイベント情報を取得中...")
+    vendor_events = fetch_vendor_news_events(today)
+    # connpass と URL の重複がなければ追加（seen_urls は connpass 側のみ管理）
+    added_vendor_count = 0
+    for ev in vendor_events:
+        if ev["event_url"] not in seen_urls:
+            seen_urls.add(ev["event_url"])
+            events.append(ev)
+            added_vendor_count += 1
+    print(f"  ベンダーイベント追加: {added_vendor_count} 件（取得 {len(vendor_events)} 件）")
+
     # 日時昇順ソート（日時不明は末尾）
     events.sort(
         key=lambda e: (0, e["started_at"]) if e.get("started_at") else (1, "")
@@ -700,7 +892,7 @@ def fetch_events(today: datetime) -> list[dict]:
         print(f"  ※ {len(events)} 件 → {MAX_CALENDAR_EVENTS} 件に制限")
         events = events[:MAX_CALENDAR_EVENTS]
 
-    # connpass イベントページからイベント説明を取得
+    # connpass イベントページからイベント説明を取得（ベンダーイベントは対象外）
     _enrich_descriptions(events)
 
     return events

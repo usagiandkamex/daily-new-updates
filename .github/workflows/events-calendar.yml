@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update-events:
@@ -24,6 +25,33 @@ jobs:
       - name: 依存関係インストール
         run: pip install -r scripts/requirements.txt
 
+      - name: 対象日・ブランチ名の設定
+        run: |
+          TARGET_DATE=$(TZ=Asia/Tokyo date +%Y%m%d)
+          echo "TARGET_DATE=${TARGET_DATE}" >> $GITHUB_ENV
+          echo "TARGET_DATE_FORMATTED=$(TZ=Asia/Tokyo date +%Y/%m/%d)" >> $GITHUB_ENV
+          echo "BRANCH_NAME=events-calendar-${TARGET_DATE}" >> $GITHUB_ENV
+
+      - name: 既存ブランチ・PRのクリーンアップ
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --state open --json number -q '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING_PR" ]; then
+            echo "既存PR #${EXISTING_PR} をクローズします"
+            gh pr close "$EXISTING_PR" --comment "再実行のためクローズします。" || true
+          fi
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
+            echo "既存ブランチ $BRANCH_NAME を削除します"
+            git push origin --delete "$BRANCH_NAME" || true
+          fi
+
+      - name: ブランチ作成
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH_NAME"
+
       - name: イベントカレンダーデータ生成
         env:
           CONNPASS_API_KEY: ${{ secrets.CONNPASS_API_KEY }}
@@ -31,40 +59,46 @@ jobs:
 
       - name: 変更をコミット & プッシュ
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/events.json
           if git diff --staged --quiet; then
             echo "変更なし。スキップします。"
+            echo "HAS_CHANGES=false" >> $GITHUB_ENV
           else
-            git commit -m "chore: イベントカレンダーデータ更新 ($(TZ=Asia/Tokyo date +%Y/%m/%d))"
-            # 競合時のリトライ（他ワークフローと同時実行した場合の non-fast-forward 対策）
-            # pull --rebase / push のどちらの失敗でもリトライ対象とし、rebase 中断時は
-            # `git rebase --abort` でクリーンな状態に戻してから次の試行に進む。
-            MAX_RETRIES=3
-            for i in $(seq 1 $MAX_RETRIES); do
-              if ! git pull --rebase origin "${{ github.ref_name }}"; then
-                echo "git pull --rebase 失敗（試行 $i/$MAX_RETRIES）。"
-                git rebase --abort 2>/dev/null || true
-                if [ $i -lt $MAX_RETRIES ]; then
-                  echo "30秒後にリトライします..."
-                  sleep 30
-                  continue
-                else
-                  echo "git pull --rebase が ${MAX_RETRIES} 回失敗しました。"
-                  exit 1
-                fi
-              fi
-              if git push; then
-                echo "プッシュ成功（試行 $i/$MAX_RETRIES）"
-                break
-              fi
-              if [ $i -lt $MAX_RETRIES ]; then
-                echo "プッシュ失敗（試行 $i/$MAX_RETRIES）。30秒後にリトライします..."
-                sleep 30
-              else
-                echo "プッシュが ${MAX_RETRIES} 回失敗しました。"
-                exit 1
-              fi
-            done
+            echo "HAS_CHANGES=true" >> $GITHUB_ENV
+            git commit -m "chore: イベントカレンダーデータ更新 (${TARGET_DATE_FORMATTED})"
+            git push origin "$BRANCH_NAME"
           fi
+
+      - name: プルリクエスト作成・承認 & マージ
+        if: env.HAS_CHANGES == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+            --title "イベントカレンダーデータ更新 (${TARGET_DATE_FORMATTED})" \
+            --body "## イベントカレンダーデータ更新
+
+          - docs/events.json を更新
+
+          ---
+          > このPRは GitHub Actions により自動作成されました。" \
+            --base main \
+            --head "$BRANCH_NAME")
+
+          gh pr review "$PR_URL" --approve --body "自動承認します。"
+
+          MAX_RETRIES=3
+          RETRY_WAIT=90
+          for i in $(seq 1 $MAX_RETRIES); do
+            if gh pr merge "$PR_URL" --merge --admin --delete-branch; then
+              echo "マージ成功（試行 $i/$MAX_RETRIES）"
+              break
+            fi
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "マージ失敗（試行 $i/$MAX_RETRIES）。${RETRY_WAIT}秒後にリトライします..."
+              sleep $RETRY_WAIT
+            else
+              echo "マージが ${MAX_RETRIES} 回失敗しました。"
+              exit 1
+            fi
+          done

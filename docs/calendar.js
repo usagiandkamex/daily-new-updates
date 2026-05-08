@@ -70,7 +70,7 @@
     "databricks.com", "dataaisummit.com",
     "openai.com",
     "nvidia.com", "gtc.nvidia.com",
-    "io.google",
+    "io.google", "events.google.com",
   ]);
 
   function isTrustedVendorUrl(url) {

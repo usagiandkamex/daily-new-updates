@@ -1,4 +1,950 @@
 {
-  "generated_at": "2026-05-08T00:00:00Z",
-  "events": []
+  "generated_at": "2026-05-08T16:17:47Z",
+  "events": [
+    {
+      "title": "[第７回] AIロボット駆動科学研究会",
+      "event_url": "https://ai-robot-science.connpass.com/event/388928/",
+      "started_at": "2026/05/11 13:30",
+      "place": "神奈川県",
+      "catch": ""
+    },
+    {
+      "title": ".NETラボ 勉強会 2026年5月",
+      "event_url": "https://dotnetlab.connpass.com/event/386362/",
+      "started_at": "2026/05/23 13:00",
+      "place": "東京都",
+      "catch": "ハイブリッド勉強会(YouTube Live)"
+    },
+    {
+      "title": "React.js Next.js 勉強会",
+      "event_url": "https://programmersguild.connpass.com/event/386442/",
+      "started_at": "2026/05/23 13:00",
+      "place": "東京都",
+      "catch": "飛び入り参加OK！ 初心者からベテランまで大歓迎！！開発が好きな方のご参加お待ちしてます！"
+    },
+    {
+      "title": "【秋葉原】フリーランスエンジニア交流会！今後検討したい人も現役の人も大歓迎の交流",
+      "event_url": "https://mecha-mote-se.connpass.com/event/391512/",
+      "started_at": "2026/05/23 13:00",
+      "place": "東京都",
+      "catch": "フリーランスエンジニアに興味のある方、フリーランスとして働いている方々が集まり交流する会です！"
+    },
+    {
+      "title": "【恵比寿】エンジニアLT会！~AIについて語ろう~",
+      "event_url": "https://yuru-engineer.connpass.com/event/392617/",
+      "started_at": "2026/05/23 13:00",
+      "place": "東京都",
+      "catch": "どなたでも参加費無料のエンジニア向けLT会です！"
+    },
+    {
+      "title": "AIなんでもLightning Talk交流会（初心者〜上級者歓迎）",
+      "event_url": "https://craftstage.connpass.com/event/391315/",
+      "started_at": "2026/05/23 14:00",
+      "place": "神奈川県",
+      "catch": "初心者から上級者まで誰でも歓迎！川崎駅直結・AI関連のなんでも発表できるLT会です"
+    },
+    {
+      "title": "AIキャラクター開発のディープな話 #1：LT登壇申し込み用",
+      "event_url": "https://connpass.com/event/392963/",
+      "started_at": "2026/05/23 14:30",
+      "place": "東京都",
+      "catch": "LT登壇希望者はこちらからお申し込みください！"
+    },
+    {
+      "title": "AIキャラクター開発のディープな話 #1",
+      "event_url": "https://connpass.com/event/391371/",
+      "started_at": "2026/05/23 15:00",
+      "place": "東京都",
+      "catch": "交流会以上学会未満のAIキャラクター開発に関するディープな話で交流する場"
+    },
+    {
+      "title": "第39回CoderDojoたまち",
+      "event_url": "https://coderdojo-tamachi.connpass.com/event/390890/",
+      "started_at": "2026/05/24 09:30",
+      "place": "東京都",
+      "catch": "東京都港区 田町駅周辺でみんなでプログラミングを楽しもう"
+    },
+    {
+      "title": "第65回 CoderDojo厚木",
+      "event_url": "https://coderdojo-atsugi.connpass.com/event/392701/",
+      "started_at": "2026/05/24 10:30",
+      "place": "神奈川県",
+      "catch": "CoderDojoは、誰でも無料で参加できる子どもたちがプログラミングを学ぶ場を提供する活動です。"
+    },
+    {
+      "title": "第31回オープンCAE勉強会@関東（構造など）",
+      "event_url": "https://openfem-kanto.connpass.com/event/387481/",
+      "started_at": "2026/05/24 13:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "AI駆動開発 Women's Party! 【Women's Base 1周年記念】",
+      "event_url": "https://aid.connpass.com/event/389312/",
+      "started_at": "2026/05/24 14:00",
+      "place": "東京都",
+      "catch": "AIを活用した開発を学び、共有できる基地 Women's Base へようこそ！"
+    },
+    {
+      "title": "PyLadies Tokyo Meetup #109 AI駆動開発 Women's Party!",
+      "event_url": "https://pyladies-tokyo.connpass.com/event/393105/",
+      "started_at": "2026/05/24 14:00",
+      "place": "東京都",
+      "catch": "AI駆動開発 Women 他技術女性コミュニティとの共催イベントだよ"
+    },
+    {
+      "title": "Effect指向プログラミング言語Flixについて語る会",
+      "event_url": "https://connpass.com/event/391664/",
+      "started_at": "2026/05/24 17:00",
+      "place": "東京都",
+      "catch": "次世代のプログラミング言語について語る会"
+    },
+    {
+      "title": "JAWS-UG横浜 #101 - AI-DLC支部キックオフ[共催]",
+      "event_url": "https://jawsug-yokohama.connpass.com/event/392906/",
+      "started_at": "2026/05/25 18:30",
+      "place": "東京都",
+      "catch": "もう一度”チーム”になろう"
+    },
+    {
+      "title": "【残り3枠】FDEの最前線 AI駆動開発勉強会",
+      "event_url": "https://creator-square.connpass.com/event/389784/",
+      "started_at": "2026/05/25 19:00",
+      "place": "東京都",
+      "catch": "最新のAI駆動開発及びAI駆動系の事例を学べる"
+    },
+    {
+      "title": "PHPerKaigi mini #1",
+      "event_url": "https://phperkaigi.connpass.com/event/391161/",
+      "started_at": "2026/05/25 19:00",
+      "place": "東京都",
+      "catch": "PHPerのためのココロトキメク勉強会"
+    },
+    {
+      "title": "GitHub Copilot CLI を装備せよ 〜実践テクニック共有会 LT Night〜",
+      "event_url": "https://findy.connpass.com/event/391200/",
+      "started_at": "2026/05/25 19:00",
+      "place": "東京都",
+      "catch": "TECH BATON in 東京オフラインシリーズ！"
+    },
+    {
+      "title": "わいわいswiftc #45 オフライン @ KTC",
+      "event_url": "https://iosdiscord.connpass.com/event/391205/",
+      "started_at": "2026/05/25 19:00",
+      "place": "東京都",
+      "catch": "優しくて平和で有意義なswiftc勉強会"
+    },
+    {
+      "title": "OpenID TechNight vol.23 ~ AI x API x Enterprise",
+      "event_url": "https://openid.connpass.com/event/391821/",
+      "started_at": "2026/05/25 19:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "Scrum Developers Night! in Tokyo（オンサイト開催）",
+      "event_url": "https://smn.connpass.com/event/392708/",
+      "started_at": "2026/05/25 19:30",
+      "place": "東京都",
+      "catch": "より良いエンジニアリングを目指す人達の課題解決型イベントです！"
+    },
+    {
+      "title": "JAWS-UG Sales #6 はじめてのBuilderCards",
+      "event_url": "https://jawsug-sales.connpass.com/event/381691/",
+      "started_at": "2026/05/26 18:30",
+      "place": "東京都",
+      "catch": "Salesも 楽しみたいの BuilderCards（詠み人知らず）"
+    },
+    {
+      "title": "Agent Frameworkによるマルチエージェント実装体験ハンズオン",
+      "event_url": "https://hack-everything.connpass.com/event/389635/",
+      "started_at": "2026/05/26 18:30",
+      "place": "東京都",
+      "catch": "Durable Agentで実践！今すぐ体験するマルチエージェント開発"
+    },
+    {
+      "title": "AI Agent時代を生き残るエンジニアの条件＠初台",
+      "event_url": "https://aiinnovation.connpass.com/event/379994/",
+      "started_at": "2026/05/26 19:00",
+      "place": "東京都",
+      "catch": "～Claude Code・Cursor・AI Agentで変わる開発現場のリアル～＋交流会"
+    },
+    {
+      "title": "STORES Data Lounge「事業と伴走するデータ活用組織」",
+      "event_url": "https://hey.connpass.com/event/390162/",
+      "started_at": "2026/05/26 19:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "AI時代のリーダーシップ：生成AIが変える意思決定と組織戦略",
+      "event_url": "https://connpass.com/event/390566/",
+      "started_at": "2026/05/26 19:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "筋肉エンジニアのLT会【オフライン】 ~オフラインでLTしﾏｯｽﾙ~",
+      "event_url": "https://noukin-engineer.connpass.com/event/390704/",
+      "started_at": "2026/05/26 19:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "毎週火曜にやってる！プログラミング&ITなんでも勉強部屋（5月第4週）",
+      "event_url": "https://hfs.connpass.com/event/390996/",
+      "started_at": "2026/05/26 19:00",
+      "place": "東京都",
+      "catch": "毎週火曜にやってる、もくもく勉強部屋！！"
+    },
+    {
+      "title": "AI時代に、品質エンジニアとして何者になるか - セッションとパネルトークで語る各社の現在地",
+      "event_url": "https://bitkey.connpass.com/event/391877/",
+      "started_at": "2026/05/26 19:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "AI 時代のプロダクト開発を問い直す Meetup",
+      "event_url": "https://layerx.connpass.com/event/392455/",
+      "started_at": "2026/05/26 19:00",
+      "place": "東京都",
+      "catch": "AI エージェント前提のプロダクトチームを考える"
+    },
+    {
+      "title": "ハーネスエンジニアリング勉強会",
+      "event_url": "https://aibuilderstokyo.connpass.com/event/393039/",
+      "started_at": "2026/05/26 19:30",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "AI×動画編集のLT会 〜AIで変わるクリエイティブと自動化の最前線〜 (仮)",
+      "event_url": "https://cryptocafenbar.connpass.com/event/392758/",
+      "started_at": "2026/05/26 20:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "安野さんご登壇！〜エンジニアチームの開発体制や技術選定の背景と展望〜",
+      "event_url": "https://findy.connpass.com/event/389503/",
+      "started_at": "2026/05/27 12:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "JAWS-UG SRE支部 #16 集まれ！俺たちの作った最強の運用Agent大LT大会",
+      "event_url": "https://jawsug-sre.connpass.com/event/390226/",
+      "started_at": "2026/05/27 18:30",
+      "place": "東京都",
+      "catch": "このConnpassページはAIが作りました"
+    },
+    {
+      "title": "【AI nativeなプロダクト開発】AIオフレコトーク＃5",
+      "event_url": "https://flexy.connpass.com/event/391202/",
+      "started_at": "2026/05/27 19:00",
+      "place": "東京都",
+      "catch": "ログラス CPO・LayerX Ai Workfofce CPOが本音で語る意思決定の裏側"
+    },
+    {
+      "title": "【増枠】なんでもCopilot#82「なんでもCopilot2周年 feat CWBJ」",
+      "event_url": "https://nandemo.connpass.com/event/391809/",
+      "started_at": "2026/05/27 19:00",
+      "place": "東京都",
+      "catch": "品川参加の方でアンケートに会社名とお名前記載ない方はキャンセルとさせていただきます<(_ _)>"
+    },
+    {
+      "title": "【未経験者歓迎！】ご飯を食べながらアプリ開発もくもく会＆LT会",
+      "event_url": "https://mirameet.connpass.com/event/391827/",
+      "started_at": "2026/05/27 19:00",
+      "place": "東京都",
+      "catch": "平日業務後にご飯でも食べながら、ゆる～くもくもくする勉強会です！"
+    },
+    {
+      "title": "渋谷 Biz × AI: ビジネスにおける AI 利活用 事例勉強会 第5回",
+      "event_url": "https://d-cube.connpass.com/event/391897/",
+      "started_at": "2026/05/27 19:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "「エンジニアインターン、どうやって取った？」準備のリアルを語るLT会 Progate BAR",
+      "event_url": "https://progate.connpass.com/event/390727/",
+      "started_at": "2026/05/28 17:30",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "「AIが使える」はもう武器じゃない——次の市場価値をどこで作るか",
+      "event_url": "https://connpass.com/event/393132/",
+      "started_at": "2026/05/28 18:30",
+      "place": "東京都",
+      "catch": "Claude・Cursor・Codexを使いこなすエンジニアのための、リアルなキャリア戦略論"
+    },
+    {
+      "title": "アニメから得た学びを発表会",
+      "event_url": "https://engineers-anime.connpass.com/event/391098/",
+      "started_at": "2026/05/28 18:45",
+      "place": "東京都",
+      "catch": "第２２回目の開催です！「エンジニアがアニメから得た学び」を発表したりアニメについて語ったりします"
+    },
+    {
+      "title": "TiDBユーザグループ「TiUG」TiDBハンズオン #9",
+      "event_url": "https://tiug.connpass.com/event/391800/",
+      "started_at": "2026/05/28 18:45",
+      "place": "東京都",
+      "catch": "ハンズオン回！実際にみんなでTiDBを触って学ぼう！"
+    },
+    {
+      "title": "第26回Ques　#ques26",
+      "event_url": "https://ques.connpass.com/event/388065/",
+      "started_at": "2026/05/28 19:00",
+      "place": "東京都",
+      "catch": "AIで加速するQAの現場"
+    },
+    {
+      "title": "AIエージェントマニアNight #3 〜AIエージェント×プライシング・課金設計〜",
+      "event_url": "https://moneyforward.connpass.com/event/388513/",
+      "started_at": "2026/05/28 19:00",
+      "place": "東京都",
+      "catch": "AIエージェント×オペレーション設計"
+    },
+    {
+      "title": "【CBs限定】English Night for Builders vol.1",
+      "event_url": "https://englishcafe4builders.connpass.com/event/389151/",
+      "started_at": "2026/05/28 19:00",
+      "place": "東京都",
+      "catch": "AWS Community Builders限定で英語学習会を行います。英語力不問！"
+    },
+    {
+      "title": "【CDLE Cyber Security】AI × Security 勉強会#7＠赤坂トラストタワー",
+      "event_url": "https://jdla.connpass.com/event/391886/",
+      "started_at": "2026/05/28 19:00",
+      "place": "東京都",
+      "catch": "AI for Security, Security for AI"
+    },
+    {
+      "title": "AIエージェント設計勉強会 〜long-runningタスクの設計と実践知〜",
+      "event_url": "https://layerx.connpass.com/event/391940/",
+      "started_at": "2026/05/28 19:00",
+      "place": "東京都",
+      "catch": "電通総研様・LayerX共催イベント"
+    },
+    {
+      "title": "「AI駆動経営」勉強会 #2",
+      "event_url": "https://aid.connpass.com/event/392570/",
+      "started_at": "2026/05/28 19:00",
+      "place": "東京都",
+      "catch": "新しい事業と企業のあり方「AI-Driven Management」と「AI駆動企業」への挑戦！！"
+    },
+    {
+      "title": "Python ボルダリング部 #215",
+      "event_url": "https://kabepy.connpass.com/event/393131/",
+      "started_at": "2026/05/28 19:00",
+      "place": "東京都",
+      "catch": "ロッキー新宿曙橋店"
+    },
+    {
+      "title": "第187回 PHP勉強会＠東京",
+      "event_url": "https://phpstudy.connpass.com/event/391794/",
+      "started_at": "2026/05/28 19:30",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "クリエイティブ交流会#13 【AIの知らなかった使い方が学べる！？】〜みんなのAI活用LT",
+      "event_url": "https://connpass.com/event/392006/",
+      "started_at": "2026/05/28 19:30",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "JEDAI Meetup! Databricks実践事例特集",
+      "event_url": "https://jedai.connpass.com/event/390596/",
+      "started_at": "2026/05/29 18:00",
+      "place": "東京都",
+      "catch": "バラエティ豊かな実践事例をお届け！"
+    },
+    {
+      "title": "インフラの『ムリ・ムダ・ムラ』をなくしたい！ 最適化・効率化LT会【シナマケミートアップ東京#13】",
+      "event_url": "https://synergy-marketing.connpass.com/event/391242/",
+      "started_at": "2026/05/29 18:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "Postman API Night Tokyo 2026 Late Spring",
+      "event_url": "https://postman.connpass.com/event/384511/",
+      "started_at": "2026/05/29 18:30",
+      "place": "東京都",
+      "catch": "【現地参加】Postman の API イベント in 東京 #9"
+    },
+    {
+      "title": "CodeRabbit User Group Tokyo #2",
+      "event_url": "https://crug.connpass.com/event/392395/",
+      "started_at": "2026/05/29 18:30",
+      "place": "東京都",
+      "catch": "AIコードレビューで開発生産性を向上させよう！"
+    },
+    {
+      "title": "ゆるSRE勉強会 #16",
+      "event_url": "https://yuru-sre.connpass.com/event/388731/",
+      "started_at": "2026/05/29 19:20",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "全３回でiPhoneアプリのリリースを目指す Claude Codeを活用した開発ハンズオン 第３回",
+      "event_url": "https://k-dev.connpass.com/event/389627/",
+      "started_at": "2026/05/30 10:30",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "Progateハッカソン 2026.05",
+      "event_url": "https://progate.connpass.com/event/390889/",
+      "started_at": "2026/05/30 11:00",
+      "place": "東京都",
+      "catch": "2日間でプロダクトを作り上げよう！学生エンジニア向けハッカソン"
+    },
+    {
+      "title": "RUNTEQ発｜エンジニアもくもく会5",
+      "event_url": "https://connpass.com/event/392833/",
+      "started_at": "2026/05/30 11:00",
+      "place": "東京都",
+      "catch": "初心者大歓迎｜質問してもOK・しなくてもOK"
+    },
+    {
+      "title": "Women Who Go Tokyo 10周年!! イベント",
+      "event_url": "https://womenwhogo-tokyo.connpass.com/event/376133/",
+      "started_at": "2026/05/30 12:30",
+      "place": "東京都",
+      "catch": "共催: Gophers Japan"
+    },
+    {
+      "title": "Women Who Go Tokyo 10周年!! イベント with TinyGo Keeb",
+      "event_url": "https://tinygo-keeb.connpass.com/event/388907/",
+      "started_at": "2026/05/30 12:30",
+      "place": "東京都",
+      "catch": "Women Who Go Tokyo 10周年!! イベント"
+    },
+    {
+      "title": "Laboratory Automation月例勉強会 / 2026.05",
+      "event_url": "https://laboratoryautomation.connpass.com/event/388811/",
+      "started_at": "2026/05/30 13:00",
+      "place": "東京都",
+      "catch": "2026年5月開催分です。東京とオンラインのハイブリッド開催です。"
+    },
+    {
+      "title": "AI Agent時代を生き残るエンジニアの条件＠初台",
+      "event_url": "https://aiinnovation.connpass.com/event/393249/",
+      "started_at": "2026/05/30 13:00",
+      "place": "東京都",
+      "catch": "～Claude Code・Cursor・AI Agentで変わる開発現場のリアル～＋交流会"
+    },
+    {
+      "title": "第113回 Machine Learning 15minutes! Hybrid",
+      "event_url": "https://machine-learning15minutes.connpass.com/event/392371/",
+      "started_at": "2026/05/30 14:00",
+      "place": "東京都",
+      "catch": "機械学習(AI・人工知能)に関するカジュアルトークイベント"
+    },
+    {
+      "title": "【恵比寿】エンジニアLT会！~AIについて語ろう~",
+      "event_url": "https://yuru-engineer.connpass.com/event/392618/",
+      "started_at": "2026/05/31 13:00",
+      "place": "東京都",
+      "catch": "どなたでも参加費無料のエンジニア向けLT会です！"
+    },
+    {
+      "title": "トランジスタ技術オフ会 「AI時代の設計・解析ツールを使った開発！＋自作アイデア回路の研究会」",
+      "event_url": "https://toragi.connpass.com/event/392633/",
+      "started_at": "2026/06/01 18:00",
+      "place": "東京都",
+      "catch": "トランジスタ技術2026年6月号「AI時代！DVD2枚　エンジニア厳選　設計ツール大全集」連携"
+    },
+    {
+      "title": "AI企業・ソリューションが集結！AI特化展示会＆カンファレンス｜AI Market ExCon",
+      "event_url": "https://ai-market-seminar.connpass.com/event/390945/",
+      "started_at": "2026/06/02 10:00",
+      "place": "東京都",
+      "catch": "堀江貴文氏、日本マイクロソフト 業務執行役員 西脇氏、アクセンチュア 常務執行役員 保科氏も登壇！"
+    },
+    {
+      "title": "【生成AIベストプラクティス公開】上場企業15社以上で効果が出た生成AIを起点とする業務改善の最前線",
+      "event_url": "https://connpass.com/event/392393/",
+      "started_at": "2026/06/02 17:00",
+      "place": "オンライン",
+      "catch": ""
+    },
+    {
+      "title": "Treasure AI Night — AIネイティブプロダクトの裏側",
+      "event_url": "https://treasure-data.connpass.com/event/391551/",
+      "started_at": "2026/06/02 18:15",
+      "place": "東京都",
+      "catch": "エンタープライズで実現するAIネイティブの設計"
+    },
+    {
+      "title": "【JAWS-UG Leaders限定】新オフィス視察会",
+      "event_url": "https://jawsug.connpass.com/event/393098/",
+      "started_at": "2026/06/02 19:00",
+      "place": "東京都",
+      "catch": "※JAWS-UGの支部運営等に携わっている方限定のイベントになります"
+    },
+    {
+      "title": "CodeRabbit User Group Osaka #2",
+      "event_url": "https://crug.connpass.com/event/392035/",
+      "started_at": "2026/06/02 19:00",
+      "place": "オンライン",
+      "catch": "AIコードレビューで開発生産性を向上させよう！"
+    },
+    {
+      "title": "Microsoft Buildを徹夜するBar",
+      "event_url": "https://msmvpbar.connpass.com/event/389861/",
+      "started_at": "2026/06/02 20:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "Azure環境でもランサムウェア対策バックアップを！Veeamで実現する3-2-1ルール",
+      "event_url": "https://connpass.com/event/392446/",
+      "started_at": "2026/06/03 15:00",
+      "place": "オンライン",
+      "catch": ""
+    },
+    {
+      "title": "Spirit of CRE　課題に挑み、顧客に寄り添うエンジニアの魂の在り方",
+      "event_url": "https://moneyforward.connpass.com/event/391048/",
+      "started_at": "2026/06/03 19:00",
+      "place": "東京都",
+      "catch": "最近耳にするようになった職種、CRE。その実態について、赤裸々にトークしちゃいます！"
+    },
+    {
+      "title": "【無料】40～50代のためのAI時代キャリア戦略ー変化の時代に詰まないキャリアの組み立て方",
+      "event_url": "https://numtr.connpass.com/event/392486/",
+      "started_at": "2026/06/03 21:00",
+      "place": "オンライン",
+      "catch": "生成AI時代のキャリア戦略を考えよう"
+    },
+    {
+      "title": "第16回 opensource COBOL活用セミナー",
+      "event_url": "https://osscons-cobol.connpass.com/event/391088/",
+      "started_at": "2026/06/04 14:00",
+      "place": "東京都",
+      "catch": "AI活用で目指すCOBOLの明るい未来"
+    },
+    {
+      "title": "Product Security Square  #4 | GMO Flatt Security",
+      "event_url": "https://flatt.connpass.com/event/385036/",
+      "started_at": "2026/06/04 18:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "【増枠】AI Ops Community Vol.4 ~AIでSales組織全体をどう加速させるか",
+      "event_url": "https://ai-ops.connpass.com/event/386433/",
+      "started_at": "2026/06/04 19:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "プロダクトとして考えるPlatform Engineering　改善の判断基準とマルチテナント設計",
+      "event_url": "https://lancersagent.connpass.com/event/390301/",
+      "started_at": "2026/06/04 19:00",
+      "place": "オンライン",
+      "catch": ""
+    },
+    {
+      "title": "グッドパッチの実践から語る“作りながら決める”PdMとは",
+      "event_url": "https://connpass.com/event/391760/",
+      "started_at": "2026/06/05 12:00",
+      "place": "オンライン",
+      "catch": "AI時代で変わる開発プロセスと使われるプロダクトを作る体験設計の実践"
+    },
+    {
+      "title": "製造業でも生成AI活用したい！名古屋LLM MeetUp#12",
+      "event_url": "https://kinto-technologies.connpass.com/event/388207/",
+      "started_at": "2026/06/05 18:00",
+      "place": "オンライン",
+      "catch": ""
+    },
+    {
+      "title": "26卒エンジニアの輪を広げNight",
+      "event_url": "https://every.connpass.com/event/391858/",
+      "started_at": "2026/06/05 19:30",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "【限定配信】第1回 やさしいClaude Code LT大会",
+      "event_url": "https://biosbootcamp.connpass.com/event/392765/",
+      "started_at": "2026/06/05 19:30",
+      "place": "オンライン",
+      "catch": "AI駆動開発のようなエンジニア向けだけでなく、AI駆動社会に向けて一般人向けのやさしいイベント"
+    },
+    {
+      "title": "ブラックサンダーpresents ブラッカソン",
+      "event_url": "https://connpass.com/event/390591/",
+      "started_at": "2026/06/06 10:00",
+      "place": "東京都",
+      "catch": "ブラックサンダー主催のエンジニア向けハッカソン！"
+    },
+    {
+      "title": "AI駆動開発ゆるもく会",
+      "event_url": "https://solo-dev-guild.connpass.com/event/392508/",
+      "started_at": "2026/06/06 10:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "EDA Tech Talk @東京 #06 ー実務で使えるAI活用術ー",
+      "event_url": "https://eda.connpass.com/event/391745/",
+      "started_at": "2026/06/06 12:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "第71回 CoderDojo武蔵小杉 ※初めての方歓迎",
+      "event_url": "https://coderdojo-musashikosugi.connpass.com/event/392851/",
+      "started_at": "2026/06/06 13:30",
+      "place": "オンライン",
+      "catch": "2026年のテーマ：ロボットプログラミングをやってみよう！※初回の方向け説明を含みます"
+    },
+    {
+      "title": "モダンJavaScript茶話会 ＃107 【Webフロントをみんなで楽しく語ろう】",
+      "event_url": "https://hikariba.connpass.com/event/392867/",
+      "started_at": "2026/06/06 15:00",
+      "place": "オンライン",
+      "catch": ""
+    },
+    {
+      "title": "AI BASE #8",
+      "event_url": "https://aibase.connpass.com/event/392930/",
+      "started_at": "2026/06/07 09:00",
+      "place": "オンライン",
+      "catch": "生成AIの最新情報を追う！朝活"
+    },
+    {
+      "title": "【2026年版・第5回】プロジェクトマネージャ試験勉強会",
+      "event_url": "https://setk.connpass.com/event/392881/",
+      "started_at": "2026/06/07 09:30",
+      "place": "オンライン",
+      "catch": "今年こそ！PM試験の合格を目指す勉強会"
+    },
+    {
+      "title": "Dataform Meetup #2",
+      "event_url": "https://dataform-jp.connpass.com/event/392030/",
+      "started_at": "2026/06/08 19:00",
+      "place": "東京都",
+      "catch": "熱狂のイベントが1年ぶりに帰ってきた！登壇公募あり＆グーグルクラウドよりゲスト登壇！※オフラインのみ"
+    },
+    {
+      "title": "AIがゲームのプレイをコーチングする時代へ〜LangGraphによるマルチエージェント格ゲー分析〜",
+      "event_url": "https://tech-lab.connpass.com/event/391892/",
+      "started_at": "2026/06/10 19:00",
+      "place": "オンライン",
+      "catch": "ストリートファイター6を題材にしたAIプレイ分析"
+    },
+    {
+      "title": "筋肉エンジニアのもくもく会 ~ 立って筋トレする… 私にとってはそれだけで奇跡だ ~ #33",
+      "event_url": "https://noukin-engineer.connpass.com/event/386924/",
+      "started_at": "2026/06/13 08:00",
+      "place": "オンライン",
+      "catch": ""
+    },
+    {
+      "title": "【#58hack】58ハッカソン2026 feat.関西学生エンジニア in #大阪公立大学",
+      "event_url": "https://58hackathon.connpass.com/event/388565/",
+      "started_at": "2026/06/13 11:00",
+      "place": "オンライン",
+      "catch": "エンジニア学生対象の夜通しハッカソン。キックオフは5/26(火)19時開催。新入生・初心者大歓迎！"
+    },
+    {
+      "title": "第5回 セキュリティ若手の会（LT&交流会）",
+      "event_url": "https://sec-wakate.connpass.com/event/384749/",
+      "started_at": "2026/06/13 13:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "React.js Next.js 勉強会",
+      "event_url": "https://programmersguild.connpass.com/event/389222/",
+      "started_at": "2026/06/13 13:00",
+      "place": "東京都",
+      "catch": "飛び入り参加OK！ 初心者からベテランまで大歓迎！！開発が好きな方のご参加お待ちしてます！"
+    },
+    {
+      "title": "システムエンジニアのゆるキャリア・ラウンジ『SIerから事業会社に転職してどうだった？』",
+      "event_url": "https://findy.connpass.com/event/392608/",
+      "started_at": "2026/06/13 13:00",
+      "place": "東京都",
+      "catch": "―私も悩んだあのときをシェアする、キャリアチェンジLT・Q&A会"
+    },
+    {
+      "title": "第62回　CoderDojo伊勢原",
+      "event_url": "https://coderdojo-isehara.connpass.com/event/392763/",
+      "started_at": "2026/06/13 14:00",
+      "place": "オンライン",
+      "catch": "７歳から17歳を対象とした無料プログラミング道場"
+    },
+    {
+      "title": "第27回FA設備技術勉強会",
+      "event_url": "https://fa-study.connpass.com/event/389906/",
+      "started_at": "2026/06/13 18:00",
+      "place": "オンライン",
+      "catch": "生産設備技術に関する勉強会をオンラインで開催します"
+    },
+    {
+      "title": "第111回 CoderDojo Owari",
+      "event_url": "https://coderdojoowari.connpass.com/event/387653/",
+      "started_at": "2026/06/14 10:00",
+      "place": "オンライン",
+      "catch": "小〜高校生のプログラミングクラブ"
+    },
+    {
+      "title": "OWASP Saitama MTG #32",
+      "event_url": "https://owaspsaitama.connpass.com/event/391727/",
+      "started_at": "2026/06/15 19:00",
+      "place": "オンライン",
+      "catch": "サイバーセキュリティに関する勉強会です。"
+    },
+    {
+      "title": "AIと踏み出した！活用共有LT会",
+      "event_url": "https://hello-output.connpass.com/event/393225/",
+      "started_at": "2026/06/16 19:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "JAWS-UG朝会 #82",
+      "event_url": "https://jawsug-asa.connpass.com/event/384851/",
+      "started_at": "2026/06/17 07:30",
+      "place": "オンライン",
+      "catch": "AWSのごった煮です！"
+    },
+    {
+      "title": "【2026年6月17日】PLUG AI SUSHI NIGHT v14  AI Native開発とは",
+      "event_url": "https://stract.connpass.com/event/390891/",
+      "started_at": "2026/06/17 19:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "Go Connect #14",
+      "event_url": "https://gotalk.connpass.com/event/388086/",
+      "started_at": "2026/06/17 19:30",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "明日から会議で使えるデータドリブン超入門－感覚ではなく“データで語る”人になる－",
+      "event_url": "https://numtr.connpass.com/event/392488/",
+      "started_at": "2026/06/17 21:00",
+      "place": "オンライン",
+      "catch": "参加者全員に「ダメKPI・良いKPI改善事例集」PDFプレゼント"
+    },
+    {
+      "title": "SaaS is deadからClaudeで実現するSaaS with AIへ【エンジニアの放課後】",
+      "event_url": "https://engineers-afterwork.connpass.com/event/391970/",
+      "started_at": "2026/06/18 18:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "【社会人向けエンジニア新卒採用】Re:Career採用 説明会",
+      "event_url": "https://cyberagent.connpass.com/event/392623/",
+      "started_at": "2026/06/18 19:00",
+      "place": "オンライン",
+      "catch": "サイバーエージェントの社会人向け新卒採用「Re:Career採用」の説明と質疑応答を行います。"
+    },
+    {
+      "title": "エンジニア英語キャリア Meetup #2",
+      "event_url": "https://pn-developer-lounge.connpass.com/event/391195/",
+      "started_at": "2026/06/18 19:15",
+      "place": "東京都",
+      "catch": "〜英語キャリア はじめの一歩、次の一歩〜"
+    },
+    {
+      "title": "なんでもCopilot（グローバル）#3「Copilot関連ニュースを英語でサクッと振り返ろう！」",
+      "event_url": "https://nandemo.connpass.com/event/393059/",
+      "started_at": "2026/06/18 21:00",
+      "place": "オンライン",
+      "catch": "Copilotに関する最近のニュースを、ユルく英語で振り返ります！英語学習のキッカケにもぜひ。"
+    },
+    {
+      "title": "【現地orオンライン】第 11 回 JAZUG for Women",
+      "event_url": "https://jazug.connpass.com/event/390193/",
+      "started_at": "2026/06/19 19:30",
+      "place": "東京都",
+      "catch": "女性エンジニアのためのAzure勉強会"
+    },
+    {
+      "title": "小中学生向けプログラミング道場 CoderDojo新代田第32回（無料）",
+      "event_url": "https://coder-dojo-shindaita.connpass.com/event/391415/",
+      "started_at": "2026/06/20 13:00",
+      "place": "東京都",
+      "catch": "小中学生がプログラミングを無料で楽しむ場を提供しています"
+    },
+    {
+      "title": "【運動不足も解消】もくもく勉強会",
+      "event_url": "https://kintech.connpass.com/event/392698/",
+      "started_at": "2026/06/20 14:00",
+      "place": "東京都",
+      "catch": "集中時間・運動・交流、すべて叶う！"
+    },
+    {
+      "title": "HR×AIマニアNight #1 〜人事データ活用のリアルを語る夜〜",
+      "event_url": "https://moneyforward.connpass.com/event/390073/",
+      "started_at": "2026/06/22 19:00",
+      "place": "東京都",
+      "catch": "人事データ活用のリアルを語る夜"
+    },
+    {
+      "title": "エンジニアインターン、どうやって準備する？ 京都で語るLT会",
+      "event_url": "https://progate.connpass.com/event/393108/",
+      "started_at": "2026/06/25 18:00",
+      "place": "オンライン",
+      "catch": ""
+    },
+    {
+      "title": "Media-JAWS x JAWS-UG千葉支部 #3 1年ぶり！幕張よ再びやって来た！",
+      "event_url": "https://jawsug-chiba.connpass.com/event/391407/",
+      "started_at": "2026/06/25 18:30",
+      "place": "オンライン",
+      "catch": "1年ぶりのMedia‐JAWSコラボ回！1年ぶりの海浜幕張開催！"
+    },
+    {
+      "title": "CoderDojo日本橋 #１２",
+      "event_url": "https://coderdojo-nihonbashi.connpass.com/event/392167/",
+      "started_at": "2026/06/27 09:15",
+      "place": "東京都",
+      "catch": "子どものための無料のプログラミングワークショップです。"
+    },
+    {
+      "title": "React.js Next.js 勉強会",
+      "event_url": "https://programmersguild.connpass.com/event/389224/",
+      "started_at": "2026/06/27 13:00",
+      "place": "東京都",
+      "catch": "飛び入り参加OK！ 初心者からベテランまで大歓迎！！開発が好きな方のご参加お待ちしてます！"
+    },
+    {
+      "title": ".NETラボ 勉強会 2026年6月",
+      "event_url": "https://dotnetlab.connpass.com/event/390843/",
+      "started_at": "2026/06/27 13:00",
+      "place": "東京都",
+      "catch": "ハイブリッド勉強会(YouTube Live)"
+    },
+    {
+      "title": "きのこカンファレンス2026（6/27前夜祭）",
+      "event_url": "https://kinoko.connpass.com/event/391117/",
+      "started_at": "2026/06/27 17:00",
+      "place": "東京都",
+      "catch": "エンジニアがこの先生きのこるためのカンファレンス"
+    },
+    {
+      "title": "2026年06月イベント：初めての半導体設計・製造体験！一日で作るインバータ回路ハンズオン",
+      "event_url": "https://ishikai.connpass.com/event/388722/",
+      "started_at": "2026/06/28 13:00",
+      "place": "オンライン",
+      "catch": "一日で環境構築～回路～レイアウト～テープアプトまでを一気にやる企画です。"
+    },
+    {
+      "title": "「実践ソフトウェアエンジニアリング」輪読会 第70回",
+      "event_url": "https://sercus.connpass.com/event/392814/",
+      "started_at": "2026/06/29 19:00",
+      "place": "オンライン",
+      "catch": ""
+    },
+    {
+      "title": "Laboratory Automation Developers Conference 2026",
+      "event_url": "https://laboratoryautomation.connpass.com/event/378798/",
+      "started_at": "2026/07/02 12:00",
+      "place": "東京都",
+      "catch": "LADEC2026、研究室の自動化にまつわる学会です。"
+    },
+    {
+      "title": "Laboratory Automation Developers Conference 2026",
+      "event_url": "https://laboratoryautomation.connpass.com/event/380191/",
+      "started_at": "2026/07/02 12:00",
+      "place": "東京都",
+      "catch": "LADEC2026、研究室の自動化にまつわる学会です。"
+    },
+    {
+      "title": "JNSA セキュリティ カフェ2026 #1",
+      "event_url": "https://connpass.com/event/390580/",
+      "started_at": "2026/07/02 18:00",
+      "place": "オンライン",
+      "catch": "「OBOG講話　セキュリティ業界の魅力とは？」 -業界で活躍する先輩たちのトーク-"
+    },
+    {
+      "title": "NCDC Tech Meetup #1 AI駆動開発",
+      "event_url": "https://ncdc-dev.connpass.com/event/391347/",
+      "started_at": "2026/07/02 19:00",
+      "place": "東京都",
+      "catch": "【登壇者募集中】NCDC初オフライン開催イベント"
+    },
+    {
+      "title": "React.js Next.js 勉強会",
+      "event_url": "https://programmersguild.connpass.com/event/392590/",
+      "started_at": "2026/07/11 13:00",
+      "place": "東京都",
+      "catch": "飛び入り参加OK！ 初心者からベテランまで大歓迎！！開発が好きな方のご参加お待ちしてます！"
+    },
+    {
+      "title": "第112回 CoderDojo Owari",
+      "event_url": "https://coderdojoowari.connpass.com/event/390006/",
+      "started_at": "2026/07/12 10:00",
+      "place": "オンライン",
+      "catch": "小〜高校生のプログラミングクラブ"
+    },
+    {
+      "title": "ツール・ド・Azure STAGE8：AOAIの利用料金を完全理解＆コスト見える化の仕組みづくり",
+      "event_url": "https://tech-lab.connpass.com/event/392285/",
+      "started_at": "2026/07/15 12:00",
+      "place": "オンライン",
+      "catch": "複雑な課金の「仕組み」を理解し、「結局いくらかかるの？」に自信を持って答えるコスト管理術"
+    },
+    {
+      "title": "Gunma.web #60 ハーネスエンジニアリング LT会",
+      "event_url": "https://gunmaweb.connpass.com/event/391510/",
+      "started_at": "2026/07/18 14:00",
+      "place": "オンライン",
+      "catch": "#54以降続いてる生成AI関連！今回は今話題のハーネスエンジニアリングの知見を共有しあう会"
+    },
+    {
+      "title": "とあるセキュリティイベントを振り返る会",
+      "event_url": "https://nikinusu.connpass.com/event/392538/",
+      "started_at": "2026/07/18 18:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "Network Developer Night #4",
+      "event_url": "https://net-dev-night.connpass.com/event/389455/",
+      "started_at": "2026/07/23 18:00",
+      "place": "東京都",
+      "catch": ""
+    },
+    {
+      "title": "React.js Next.js 勉強会",
+      "event_url": "https://programmersguild.connpass.com/event/392591/",
+      "started_at": "2026/07/25 13:00",
+      "place": "東京都",
+      "catch": "飛び入り参加OK！ 初心者からベテランまで大歓迎！！開発が好きな方のご参加お待ちしてます！"
+    },
+    {
+      "title": "2026年07月イベント：初めての半導体設計・製造体験！一日で作るインバータ回路ハンズオン",
+      "event_url": "https://ishikai.connpass.com/event/390287/",
+      "started_at": "2026/07/26 13:00",
+      "place": "東京都",
+      "catch": "一日で環境構築～回路～レイアウト～テープアプトまでを一気にやる企画です。"
+    },
+    {
+      "title": "リチェルカ Engineer's meetup #17",
+      "event_url": "https://recerqa48.connpass.com/event/390850/",
+      "started_at": "2026/07/27 19:00",
+      "place": "東京都",
+      "catch": "毎週月曜開催 — 社内LTに参加できるエンジニアミートアップ"
+    }
+  ]
 }

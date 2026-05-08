@@ -443,6 +443,8 @@ def fetch_events(today: datetime) -> list[dict]:
     未設定時は既存 RSS 検索を使用する。
     関東（東京都・神奈川県）とオンラインの 2 系統で取得し、重複を排除して
     日時昇順に返す。
+    なお v2 API では pref_id/online 相当の構造化パラメータが無いため、
+    keyword ベースの絞り込みは best effort（誤検出・取りこぼしあり）となる。
 
     全リクエスト失敗時は :class:`RuntimeError` を送出する
     （docs/events.json を空で上書きしないため）。

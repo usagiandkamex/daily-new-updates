@@ -7,7 +7,7 @@ generate_events_calendar.py の純粋ロジックの単体テスト
 import sys
 import os
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -25,6 +25,7 @@ from generate_events_calendar import (
     fetch_events,
     fetch_vendor_news_events,
     VENDOR_EVENT_NEWS_FEEDS,
+    VENDOR_EVENT_LOOKBACK_DAYS,
     main,
     MAX_DESCRIPTION_CHARS,
     JST,
@@ -1349,6 +1350,32 @@ class TestFetchVendorNewsEvents(unittest.TestCase):
         # ベンダーイベントに vendor_event フラグが付いていること
         vendor = next(e for e in events if e["event_url"] == "https://news.google.com/article/build")
         self.assertTrue(vendor.get("vendor_event"))
+
+    def test_skips_articles_older_than_lookback(self):
+        """VENDOR_EVENT_LOOKBACK_DAYS より前の記事（参加レポート等）はカレンダーから除外される。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        # ルックバック期間より 1 日前 → 除外されるべき
+        old_pub = today - timedelta(days=VENDOR_EVENT_LOOKBACK_DAYS + 1)
+        # ルックバック期間内 → 含まれるべき
+        recent_pub = today - timedelta(days=VENDOR_EVENT_LOOKBACK_DAYS - 1)
+
+        feed = _make_feed(
+            self._entry("Old Summit 参加レポート", "https://news.google.com/article/old", published_dt=old_pub),
+            self._entry("Recent Summit 2026 開催", "https://news.google.com/article/recent", published_dt=recent_pub),
+        )
+
+        with patch("generate_events_calendar.VENDOR_EVENT_NEWS_FEEDS", [
+            {"name": "Test Summit", "url": "https://news.google.com/rss/test", "place": "東京"},
+        ]), \
+             patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", return_value=feed):
+            events = fetch_vendor_news_events(today)
+
+        urls = [e["event_url"] for e in events]
+        self.assertNotIn("https://news.google.com/article/old", urls,
+                         "ルックバック期間より前の記事はカレンダーに含まれてはいけない")
+        self.assertIn("https://news.google.com/article/recent", urls,
+                      "ルックバック期間内の記事はカレンダーに含まれるべき")
 
     def test_vendor_events_list_not_empty(self):
         """VENDOR_EVENT_NEWS_FEEDS が空でないこと（設定漏れ防止）。"""

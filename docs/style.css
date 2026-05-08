@@ -697,18 +697,19 @@ mark.hl {
 }
 
 .cal-event-count {
+  --cal-event-count-size: 1.1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: absolute;
-  top: .08rem;
-  right: .08rem;
+  top: .125rem;
+  right: .125rem;
   background: var(--primary);
   color: #fff;
   font-size: .62rem;
   font-weight: 700;
-  width: 1.1rem;
-  height: 1.1rem;
+  width: var(--cal-event-count-size);
+  height: var(--cal-event-count-size);
   border-radius: 50%;
   line-height: 1;
   box-shadow: 0 0 0 1px #fff;
@@ -818,9 +819,8 @@ mark.hl {
   .search-input { max-width: 100%; }
   .cal-cell { min-height: 1.8rem; padding: .15rem .2rem; }
   .cal-event-count {
+    --cal-event-count-size: .95rem;
     font-size: .52rem;
-    width: .95rem;
-    height: .95rem;
   }
 }
 

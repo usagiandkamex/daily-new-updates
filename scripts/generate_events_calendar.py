@@ -462,6 +462,47 @@ def _fetch_rss_events(
     return collected, True
 
 
+def _fetch_one_vendor_feed(feed_info: dict) -> list[dict]:
+    """単一のベンダーイベント RSS フィードを取得し、イベントリストを返す。
+
+    取得失敗時は空リストを返す（fetch_vendor_news_events でのログ出力のため例外は握り潰す）。
+    """
+    name = feed_info["name"]
+    url = feed_info["url"]
+    place = feed_info.get("place", "")
+    results: list[dict] = []
+    try:
+        resp = requests.get(url, headers=HTTP_HEADERS, timeout=10)
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.content)
+        if getattr(feed, "bozo", False) and not feed.entries:
+            print(f"  ベンダーイベント RSS ({name}): RSS パース失敗")
+            return results
+        for entry in feed.entries[:_VENDOR_EVENT_MAX_ENTRIES_PER_FEED]:
+            article_url = entry.get("link", "")
+            if not article_url:
+                continue
+            title = entry.get("title", "").strip()
+            desc = entry.get("summary", "").strip()
+            if not title:
+                continue
+            started_at = _parse_started_at(entry)
+            if not started_at:
+                continue
+            results.append({
+                "title": f"[{name}] {title}",
+                "event_url": article_url,
+                "started_at": started_at,
+                "place": place,
+                "catch": desc[:200],
+                "vendor_event": True,
+            })
+        print(f"  ベンダーイベント RSS ({name}): {len(results)} 件取得")
+    except Exception as e:
+        print(f"  ベンダーイベント RSS ({name}): 取得失敗 ({e})")
+    return results
+
+
 def fetch_vendor_news_events(today: datetime) -> list[dict]:
     """大手ベンダー・大規模コミュニティカンファレンスの最新情報を Google News RSS から取得する。
 
@@ -477,49 +518,23 @@ def fetch_vendor_news_events(today: datetime) -> list[dict]:
     示す place フィールドおよび vendor_event フラグが設定される。
 
     取得失敗は警告のみでスキップし、connpass 系の取得には影響しない。
+    全フィードを並列取得してレイテンシを削減する（ThreadPoolExecutor）。
     """
     # today は将来の拡張（例: 取得日時のログ出力）のために保持する
     _ = today
     events: list[dict] = []
     seen_urls: set[str] = set()
 
-    for feed_info in VENDOR_EVENT_NEWS_FEEDS:
-        name = feed_info["name"]
-        url = feed_info["url"]
-        place = feed_info.get("place", "")
-        count = 0
-        try:
-            resp = requests.get(url, headers=HTTP_HEADERS, timeout=15)
-            resp.raise_for_status()
-            feed = feedparser.parse(resp.content)
-            if getattr(feed, "bozo", False) and not feed.entries:
-                print(f"  ベンダーイベント RSS ({name}): RSS パース失敗")
-                continue
-            for entry in feed.entries[:_VENDOR_EVENT_MAX_ENTRIES_PER_FEED]:
-                article_url = entry.get("link", "")
-                if not article_url or article_url in seen_urls:
-                    continue
-                title = entry.get("title", "").strip()
-                desc = entry.get("summary", "").strip()
-                if not title:
-                    continue
-                started_at = _parse_started_at(entry)
-                # 公開日（started_at）が取得できない場合はカレンダーに表示できないためスキップ
-                if not started_at:
-                    continue
-                seen_urls.add(article_url)
-                events.append({
-                    "title": f"[{name}] {title}",
-                    "event_url": article_url,
-                    "started_at": started_at,
-                    "place": place,
-                    "catch": desc[:200],
-                    "vendor_event": True,
-                })
-                count += 1
-            print(f"  ベンダーイベント RSS ({name}): {count} 件取得")
-        except Exception as e:
-            print(f"  ベンダーイベント RSS ({name}): 取得失敗 ({e})")
+    with ThreadPoolExecutor(max_workers=len(VENDOR_EVENT_NEWS_FEEDS)) as executor:
+        futures = {
+            executor.submit(_fetch_one_vendor_feed, feed_info): feed_info
+            for feed_info in VENDOR_EVENT_NEWS_FEEDS
+        }
+        for future in as_completed(futures):
+            for ev in future.result():
+                if ev["event_url"] not in seen_urls:
+                    seen_urls.add(ev["event_url"])
+                    events.append(ev)
 
     return events
 
@@ -583,11 +598,13 @@ def fetch_events(today: datetime) -> list[dict]:
     print("  ベンダーイベント情報を取得中...")
     vendor_events = fetch_vendor_news_events(today)
     # connpass と URL の重複がなければ追加（seen_urls は connpass 側のみ管理）
+    added_vendor_count = 0
     for ev in vendor_events:
         if ev["event_url"] not in seen_urls:
             seen_urls.add(ev["event_url"])
             events.append(ev)
-    print(f"  ベンダーイベント合計: {len(vendor_events)} 件")
+            added_vendor_count += 1
+    print(f"  ベンダーイベント追加: {added_vendor_count} 件（取得 {len(vendor_events)} 件）")
 
     # 日時昇順ソート（日時不明は末尾）
     events.sort(

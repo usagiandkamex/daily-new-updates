@@ -648,11 +648,9 @@ class TestFetchVendorNewsEvents(unittest.TestCase):
         """1 つのフィード取得が失敗しても他フィードの取得を継続する。"""
         today = datetime(2026, 5, 15, tzinfo=JST)
         pub = datetime(2026, 5, 14, 9, 0, tzinfo=JST)
-        call_count = {"n": 0}
 
-        def fake_get(*args, **kwargs):
-            call_count["n"] += 1
-            if call_count["n"] == 1:
+        def fake_get(url, *args, **kwargs):
+            if "fail" in url:
                 raise RuntimeError("simulated failure")
             return _make_response()
 

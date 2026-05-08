@@ -757,7 +757,9 @@ mark.hl {
   color: var(--text);
   transition: background var(--ease);
 }
-a.cal-event-link:hover {
+a.cal-event-link:hover,
+a.cal-event-link:focus,
+a.cal-event-link:focus-visible {
   background: #f0f6ff;
 }
 
@@ -768,7 +770,11 @@ a.cal-event-link:hover {
   margin-bottom: .3rem;
   color: var(--primary);
 }
-a.cal-event-link:hover .cal-event-title { text-decoration: underline; }
+a.cal-event-link:hover .cal-event-title,
+a.cal-event-link:focus .cal-event-title,
+a.cal-event-link:focus-visible .cal-event-title { text-decoration: underline; }
+
+.cal-event-link--text .cal-event-title { color: var(--text); }
 
 .cal-event-meta {
   display: flex;

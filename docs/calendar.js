@@ -255,8 +255,8 @@
           return `
 <li class="cal-event-item">
   ${hasSafeUrl
-    ? `<a href="${esc(ev.event_url)}" target="_blank" rel="noopener noreferrer" class="cal-event-link">${contentHtml}</a>`
-    : `<div class="cal-event-link">${contentHtml}</div>`}
+    ? `<a href="${esc(ev.event_url)}" target="_blank" rel="noopener noreferrer" class="cal-event-link cal-event-link--anchor">${contentHtml}</a>`
+    : `<div class="cal-event-link cal-event-link--text">${contentHtml}</div>`}
 </li>`;
         })
         .join("");

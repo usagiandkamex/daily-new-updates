@@ -334,15 +334,20 @@ class TestFetchEvents(unittest.TestCase):
         self.addCleanup(patcher.stop)
         patcher.start()
         # デフォルトは RSS 経路を使う（API キー経路は個別テストで上書き）
-        env_patcher = patch.dict("os.environ", {"CONNPASS_API_KEY": ""})
-        self.addCleanup(env_patcher.stop)
-        env_patcher.start()
+        self._orig_connpass_api_key = os.environ.pop("CONNPASS_API_KEY", None)
+        self.addCleanup(self._restore_connpass_api_key)
         # 説明文取得（HTTP）はスキップ
         enrich_patcher = patch(
             "generate_events_calendar._enrich_descriptions", lambda events: None
         )
         self.addCleanup(enrich_patcher.stop)
         enrich_patcher.start()
+
+    def _restore_connpass_api_key(self):
+        if self._orig_connpass_api_key is None:
+            os.environ.pop("CONNPASS_API_KEY", None)
+        else:
+            os.environ["CONNPASS_API_KEY"] = self._orig_connpass_api_key
 
     def _entry(self, title: str, link: str, summary: str = "AWS hands-on",
                published_dt: datetime | None = None) -> dict:

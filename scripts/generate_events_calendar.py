@@ -289,6 +289,7 @@ def _parse_started_at_api(started_at: str) -> str:
     if not started_at:
         return ""
     try:
+        # connpass v2 API は ISO8601（例: 2026-05-20T10:00:00+09:00 / ...Z）を返す。
         dt = datetime.fromisoformat(started_at.replace("Z", "+00:00")).astimezone(JST)
         return dt.strftime("%Y/%m/%d %H:%M")
     except (TypeError, ValueError):

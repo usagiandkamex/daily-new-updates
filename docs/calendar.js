@@ -135,7 +135,8 @@
         .map((ev) => {
           const time  = ev.started_at ? ev.started_at.slice(11) : "";
           const place = ev.place || "";
-          const catch_ = ev.catch ? `<p class="cal-event-catch">${esc(ev.catch)}</p>` : "";
+          const descText = ev.description || ev.catch || "";
+          const descHtml = descText ? `<p class="cal-event-catch">${esc(descText)}</p>` : "";
           const placeHtml = place
             ? `<span class="cal-event-place">📍 ${esc(place)}</span>`
             : "";
@@ -151,7 +152,7 @@
   <a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" class="cal-event-link">
     <strong class="cal-event-title">${esc(ev.title)}</strong>
     ${meta}
-    ${catch_}
+    ${descHtml}
   </a>
 </li>`;
         })

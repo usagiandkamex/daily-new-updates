@@ -609,7 +609,7 @@ mark.hl {
   font-size: .75rem;
   font-weight: 700;
   color: var(--muted);
-  padding: .5rem 0;
+  padding: .35rem 0;
 }
 .cal-days {
   display: grid;
@@ -618,14 +618,14 @@ mark.hl {
 
 /* Day cells */
 .cal-cell {
-  min-height: 3.2rem;
+  min-height: 2rem;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  padding: .35rem .4rem .25rem;
-  position: relative;
+  padding: .25rem .35rem;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: center;
+  gap: .25rem;
 }
 .cal-cell:nth-child(7n) { border-right: none; }
 
@@ -671,11 +671,10 @@ mark.hl {
   display: inline-block;
   background: var(--primary);
   color: #fff;
-  font-size: .65rem;
+  font-size: .62rem;
   font-weight: 700;
   border-radius: 20px;
-  padding: .05rem .35rem;
-  margin-top: .2rem;
+  padding: .05rem .3rem;
   line-height: 1.4;
 }
 
@@ -781,7 +780,7 @@ mark.hl {
   .footer-inner { flex-direction: column; text-align: center; }
   .btn-read { display: block; padding: .5rem 2rem; }
   .search-input { max-width: 100%; }
-  .cal-cell { min-height: 2.4rem; padding: .2rem .25rem .15rem; }
+  .cal-cell { min-height: 1.8rem; padding: .15rem .2rem; }
   .cal-event-count { display: none; }
 }
 

@@ -432,10 +432,19 @@ def _fetch_api_events(
         available_raw = data.get("results_available")
         returned = returned_raw if isinstance(returned_raw, int) else len(events)
         available = available_raw if isinstance(available_raw, int) else 0
-        if returned_raw is not None and not isinstance(returned_raw, int):
-            print(f"  connpass API ({label}): results_returned の形式が不正 ({type(returned_raw).__name__})")
-        if available_raw is not None and not isinstance(available_raw, int):
-            print(f"  connpass API ({label}): results_available の形式が不正 ({type(available_raw).__name__})")
+        metadata_invalid = False
+        if not isinstance(returned_raw, int):
+            print(
+                f"  警告: connpass API ({label}): results_returned の形式が不正 "
+                f"({type(returned_raw).__name__})"
+            )
+            metadata_invalid = True
+        if not isinstance(available_raw, int):
+            print(
+                f"  警告: connpass API ({label}): results_available の形式が不正 "
+                f"({type(available_raw).__name__})"
+            )
+            metadata_invalid = True
         for event in events:
             url = event.get("url") or event.get("event_url", "")
             if not url or url in seen_urls:
@@ -459,6 +468,9 @@ def _fetch_api_events(
                 "place": place,
                 "catch": desc[:200],
             })
+
+        if metadata_invalid:
+            break
 
         next_start = start + returned
         if (

@@ -670,9 +670,12 @@ mark.hl {
 }
 
 .cal-cell-today .cal-day-num {
-  background: #fff4db;
-  color: #92400e;
-  border: 1px solid #f59e0b;
+  --cal-today-bg: #fff4db;
+  --cal-today-fg: #92400e;
+  --cal-today-border: #f59e0b;
+  background: var(--cal-today-bg);
+  color: var(--cal-today-fg);
+  border: 1px solid var(--cal-today-border);
   border-radius: 50%;
   width: 1.45rem;
   height: 1.45rem;
@@ -705,7 +708,7 @@ mark.hl {
   top: .125rem;
   right: .125rem;
   background: var(--primary);
-  color: #fff;
+  color: var(--surface);
   font-size: .62rem;
   font-weight: 700;
   width: var(--cal-event-count-size);

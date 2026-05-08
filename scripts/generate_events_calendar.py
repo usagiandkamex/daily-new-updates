@@ -537,8 +537,9 @@ def fetch_vendor_news_events(today: datetime) -> list[dict]:
     取得失敗は警告のみでスキップし、connpass 系の取得には影響しない。
     全フィードを並列取得してレイテンシを削減する（ThreadPoolExecutor）。
     """
-    # today は将来の拡張（例: 取得日時のログ出力）のために保持する
-    _ = today
+    if not VENDOR_EVENT_NEWS_FEEDS:
+        return []
+    print(f"  ベンダーイベント RSS を並列取得中 ({today.strftime('%Y/%m/%d')} 時点)...")
     events: list[dict] = []
     seen_urls: set[str] = set()
 

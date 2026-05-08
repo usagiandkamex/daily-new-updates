@@ -353,7 +353,7 @@ def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
 
 def fetch_category(category: str, since: datetime) -> list[dict]:
     """カテゴリに属する全フィードから記事を収集する。"""
-    # event_reports は15フィードで逐次取得するため max_items_per_feed を抑えてレイテンシを削減
+    # event_reports は多数のフィードで逐次取得するため max_items_per_feed を抑えてレイテンシを削減
     max_items = 3 if category == "event_reports" else 10
     return _ags.fetch_category(
         FEEDS, category, since, max_age_days=MAX_ARTICLE_AGE_DAYS,

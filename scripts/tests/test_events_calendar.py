@@ -634,6 +634,15 @@ class TestFetchEvents(unittest.TestCase):
         today = datetime(2026, 5, 15, tzinfo=JST)
         started = "2026-05-20T10:00:00+09:00"
         captured_requests: list[dict] = []
+        first_page_events = [
+            {
+                "title": f"AWS 東京 {i}",
+                "url": f"https://connpass.com/event/{21000 + i}/",
+                "catch": "aws",
+                "started_at": started,
+            }
+            for i in range(100)
+        ]
 
         def fake_get(*args, **kwargs):
             captured_requests.append({"args": args, "kwargs": kwargs})
@@ -642,20 +651,15 @@ class TestFetchEvents(unittest.TestCase):
             start = params.get("start")
             if keyword == "東京都" and start == 1:
                 return _make_api_response(
-                    [{
-                        "title": "AWS 東京 1",
-                        "url": "https://connpass.com/event/210/",
-                        "catch": "aws",
-                        "started_at": started,
-                    }],
+                    first_page_events,
                     results_returned=100,
                     results_available=101,
                 )
             if keyword == "東京都" and start == 101:
                 return _make_api_response(
                     [{
-                        "title": "AWS 東京 2",
-                        "url": "https://connpass.com/event/211/",
+                        "title": "AWS 東京 101",
+                        "url": "https://connpass.com/event/21101/",
                         "catch": "aws",
                         "started_at": started,
                     }],
@@ -670,10 +674,7 @@ class TestFetchEvents(unittest.TestCase):
              patch("generate_events_calendar.requests.get", side_effect=fake_get):
             events = fetch_events(today)
 
-        self.assertEqual(
-            sorted(e["event_url"] for e in events),
-            ["https://connpass.com/event/210/", "https://connpass.com/event/211/"],
-        )
+        self.assertEqual(len(events), 101)
         tokyo_requests = [
             req for req in captured_requests
             if req["kwargs"]["params"].get("keyword") == "東京都"

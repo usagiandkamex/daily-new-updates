@@ -455,14 +455,15 @@ def _fetch_api_events(
                 "catch": desc[:200],
             })
 
-        fetched_total = start - 1 + returned
+        next_start = start + returned
+        fetched_total = next_start - 1
         if returned <= 0:
             break
         if available > 0 and fetched_total >= available:
             break
         if returned < CONNPASS_API_FETCH_COUNT:
             break
-        start = fetched_total + 1
+        start = next_start
 
     print(f"  connpass API ({label}): {len(collected)} 件取得")
     return collected, True

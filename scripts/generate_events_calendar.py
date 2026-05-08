@@ -394,7 +394,7 @@ def _fetch_api_events(
     """connpass v2 API を呼び出してイベントリストを返す（APIキー利用）。
 
     v2 API の ``count``（最大100）+ ``start``（1-indexed）でページングし、
-    最終ページまで順次取得する。
+    ``CONNPASS_API_MAX_PAGES`` の上限内で順次取得する。
     戻り値は ``(収集したイベント, 成功フラグ)``。
     """
     collected: list[dict] = []

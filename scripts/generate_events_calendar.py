@@ -58,6 +58,48 @@ _ENRICH_WORKERS = 5
 # イベントページ取得タイムアウト（秒）
 _PAGE_FETCH_TIMEOUT = 10
 
+# 大手ベンダー・大規模カンファレンス情報取得用 RSS フィード（Google News 検索）
+# 各フィードには「name」（表示名）「url」（RSS URL）「place」（開催場所候補）を定義する。
+VENDOR_EVENT_NEWS_FEEDS: list[dict] = [
+    # Microsoft
+    {
+        "name": "Microsoft Build",
+        "url": "https://news.google.com/rss/search?q=Microsoft+Build+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Seattle / オンライン",
+    },
+    {
+        "name": "Microsoft Ignite",
+        "url": "https://news.google.com/rss/search?q=Microsoft+Ignite+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Chicago / オンライン",
+    },
+    # AWS
+    {
+        "name": "AWS Summit Japan",
+        "url": "https://news.google.com/rss/search?q=AWS+Summit+Japan+%E9%96%8B%E5%82%AC+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "東京 / オンライン",
+    },
+    {
+        "name": "AWS re:Invent",
+        "url": "https://news.google.com/rss/search?q=AWS+re%3AInvent+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Las Vegas / オンライン",
+    },
+    # Google Cloud
+    {
+        "name": "Google Cloud Next",
+        "url": "https://news.google.com/rss/search?q=Google+Cloud+Next+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Las Vegas / オンライン",
+    },
+    # CNCF・大規模コミュニティカンファレンス
+    {
+        "name": "KubeCon + CloudNativeCon",
+        "url": "https://news.google.com/rss/search?q=KubeCon+CloudNativeCon+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "現地開催 / オンライン",
+    },
+]
+
+# ベンダーイベントニュース：フィードごとの最大取得記事数
+_VENDOR_EVENT_MAX_ENTRIES_PER_FEED = 5
+
 # ---------------------------------------------------------------------------
 # IT 関連イベント判定
 # ---------------------------------------------------------------------------
@@ -366,13 +408,73 @@ def _fetch_rss_events(
     return collected, True
 
 
+def fetch_vendor_news_events(today: datetime) -> list[dict]:
+    """大手ベンダー・大規模コミュニティカンファレンスの最新情報を Google News RSS から取得する。
+
+    VENDOR_EVENT_NEWS_FEEDS に定義された各カンファレンス（Microsoft Build / Ignite、
+    AWS Summit / re:Invent、Google Cloud Next、KubeCon 等）の最新ニュース記事を取得し、
+    記事の公開日をカレンダー表示日として events.json に追加する。
+
+    これにより、カレンダー上でベンダーイベント関連の最新情報が公開された日付を
+    ひと目で確認できるようになる。各エントリには「ベンダーイベント情報」であることを
+    示す place フィールドが設定される。
+
+    取得失敗は警告のみでスキップし、connpass 系の取得には影響しない。
+    """
+    today_str = today.strftime("%Y/%m/%d")
+    events: list[dict] = []
+    seen_urls: set[str] = set()
+
+    for feed_info in VENDOR_EVENT_NEWS_FEEDS:
+        name = feed_info["name"]
+        url = feed_info["url"]
+        place = feed_info.get("place", "")
+        count = 0
+        try:
+            resp = requests.get(url, headers=HTTP_HEADERS, timeout=15)
+            resp.raise_for_status()
+            feed = feedparser.parse(resp.content)
+            if getattr(feed, "bozo", False) and not feed.entries:
+                print(f"  ベンダーイベント RSS ({name}): RSS パース失敗")
+                continue
+            for entry in feed.entries[:_VENDOR_EVENT_MAX_ENTRIES_PER_FEED]:
+                article_url = entry.get("link", "")
+                if not article_url or article_url in seen_urls:
+                    continue
+                title = entry.get("title", "").strip()
+                desc = entry.get("summary", "").strip()
+                if not title:
+                    continue
+                started_at = _parse_started_at(entry)
+                # 公開日が今日より前の記事も含める（直近情報として有用）
+                if not started_at:
+                    continue
+                seen_urls.add(article_url)
+                events.append({
+                    "title": f"[{name}] {title}",
+                    "event_url": article_url,
+                    "started_at": started_at,
+                    "place": place,
+                    "catch": desc[:200],
+                    "vendor_event": True,
+                })
+                count += 1
+            print(f"  ベンダーイベント RSS ({name}): {count} 件取得")
+        except Exception as e:
+            print(f"  ベンダーイベント RSS ({name}): 取得失敗 ({e})")
+
+    return events
+
+
 def fetch_events(today: datetime) -> list[dict]:
-    """今日以降のイベントを connpass RSS から取得する。
+    """今日以降のイベントを connpass RSS から取得し、ベンダーイベント情報を追加する。
 
     関東（東京都・神奈川県）の pref_id 検索とオンライン（online=1）検索の
-    2 系統で取得し、重複を排除して日時昇順に返す。
+    2 系統で connpass イベントを取得し、さらに大手ベンダー・大規模カンファレンスの
+    最新ニュースを Google News RSS から取得して合わせて返す。
+    重複を排除して日時昇順に返す。
 
-    全 RSS 取得が失敗した場合は :class:`RuntimeError` を送出する
+    全 connpass RSS 取得が失敗した場合は :class:`RuntimeError` を送出する
     （docs/events.json を空で上書きしないため）。
     """
     today_str = today.strftime("%Y/%m/%d")
@@ -419,6 +521,16 @@ def fetch_events(today: datetime) -> list[dict]:
             "既存の docs/events.json を保持するため処理を中断します。"
         )
 
+    # --- 大手ベンダー・大規模カンファレンス情報 ---
+    print("  ベンダーイベント情報を取得中...")
+    vendor_events = fetch_vendor_news_events(today)
+    # connpass と URL の重複がなければ追加（seen_urls は connpass 側のみ管理）
+    for ev in vendor_events:
+        if ev["event_url"] not in seen_urls:
+            seen_urls.add(ev["event_url"])
+            events.append(ev)
+    print(f"  ベンダーイベント合計: {len(vendor_events)} 件")
+
     # 日時昇順ソート（日時不明は末尾）
     events.sort(
         key=lambda e: (0, e["started_at"]) if e.get("started_at") else (1, "")
@@ -428,7 +540,7 @@ def fetch_events(today: datetime) -> list[dict]:
         print(f"  ※ {len(events)} 件 → {MAX_CALENDAR_EVENTS} 件に制限")
         events = events[:MAX_CALENDAR_EVENTS]
 
-    # connpass イベントページからイベント説明を取得
+    # connpass イベントページからイベント説明を取得（ベンダーイベントは対象外）
     _enrich_descriptions(events)
 
     return events

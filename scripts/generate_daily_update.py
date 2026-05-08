@@ -152,6 +152,17 @@ FEEDS = {
         {"name": "Qiita 勉強会", "url": "https://qiita.com/tags/勉強会/feed"},
         {"name": "はてなブックマーク IT 勉強会", "url": "https://b.hatena.ne.jp/q/IT%20%E5%8B%89%E5%BC%B7%E4%BC%9A%20%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D?mode=rss&sort=hot"},
         {"name": "Google News Zenn IT 勉強会イベント", "url": "https://news.google.com/rss/search?q=site%3Azenn.dev+%E5%8B%89%E5%BC%B7%E4%BC%9A+%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2+connpass&hl=ja&gl=JP&ceid=JP:ja"},
+        # --- 大手ベンダー・大規模カンファレンス情報 ---
+        # Microsoft
+        {"name": "Google News Microsoft Build", "url": "https://news.google.com/rss/search?q=Microsoft+Build+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News Microsoft Ignite", "url": "https://news.google.com/rss/search?q=Microsoft+Ignite+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja"},
+        # AWS
+        {"name": "Google News AWS Summit Japan", "url": "https://news.google.com/rss/search?q=AWS+Summit+Japan+%E9%96%8B%E5%82%AC+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "Google News AWS re:Invent", "url": "https://news.google.com/rss/search?q=AWS+re%3AInvent+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja"},
+        # Google Cloud
+        {"name": "Google News Google Cloud Next", "url": "https://news.google.com/rss/search?q=Google+Cloud+Next+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja"},
+        # CNCF・大規模コミュニティ
+        {"name": "Google News KubeCon CloudNativeCon", "url": "https://news.google.com/rss/search?q=KubeCon+CloudNativeCon+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja"},
     ],
 }
 
@@ -1538,21 +1549,26 @@ SECTION_DEFINITIONS = [
     },
     {
         "key": "community",
-        "header": "## 5. コミュニティイベント情報（東京・神奈川）",
+        "header": "## 5. コミュニティイベント情報（東京・神奈川）および大手ベンダー・大規模カンファレンス",
         "system": (
             "あなたは IT コミュニティイベント情報の専門ライターです。"
             "提供されたデータを元に、正確で分かりやすい日本語の記事セクションを作成してください。"
             "IT 関連（クラウド、AI、DevOps、セキュリティ、プログラミング、インフラ等）のイベントのみを対象とし、"
             "IT と無関係なイベント（スポーツ、料理、育児、不動産、エンタメ等）は除外してください。"
+            "Microsoft・AWS・Google Cloud などの大手ベンダーが主催する大規模カンファレンス"
+            "（Microsoft Build、Microsoft Ignite、AWS Summit、AWS re:Invent、Google Cloud Next 等）"
+            "および KubeCon + CloudNativeCon などの大規模コミュニティカンファレンスも積極的に取り上げてください。"
         ),
         "instruction": (
             "以下の connpass イベントデータと参加レポート・イベント宣伝記事を元に"
-            "「## 5. コミュニティイベント情報（東京・神奈川）」セクションを作成してください。\n\n"
+            "「## 5. コミュニティイベント情報（東京・神奈川）および大手ベンダー・大規模カンファレンス」セクションを作成してください。\n\n"
             "【重要】IT 関連のイベント・レポートのみを含めてください。"
             "対象: クラウド（Azure・AWS・GCP）、AI/ML、DevOps/SRE、セキュリティ、プログラミング、"
             "インフラ、データエンジニアリング、AIOps、FinOps、MLOps などの IT コミュニティ。"
+            "また、Microsoft Build・Microsoft Ignite・AWS Summit・AWS re:Invent・Google Cloud Next・"
+            "KubeCon + CloudNativeCon などの大手ベンダー・大規模カンファレンス情報も積極的に含めてください。"
             "除外: スポーツ、料理、音楽、育児、不動産、ゲーム（IT 系除く）、その他 IT 無関係のイベント。\n\n"
-            "先頭に「## 5. コミュニティイベント情報（東京・神奈川）」を出力し、"
+            "先頭に「## 5. コミュニティイベント情報（東京・神奈川）および大手ベンダー・大規模カンファレンス」を出力し、"
             "以下の 2 サブセクション構成で出力してください。\n\n"
             "### 📅 申し込み受付中のイベント\n\n"
             "connpass イベントデータから申し込み可能な近日開催の IT 関連イベントを箇条書きで列挙してください。"
@@ -1560,8 +1576,10 @@ SECTION_DEFINITIONS = [
             "「参加状況（申込数/定員）」を記載してください。"
             "IT 関連イベントがない場合は「現在取得できるイベント情報はありません」と記載してください。\n\n"
             "### 📝 参加レポート・イベント宣伝まとめ\n\n"
-            "参加レポートデータには Zenn・Qiita・はてなブックマーク などで公開された"
+            "参加レポートデータには Zenn・Qiita・はてなブックマーク・Google News などで公開された"
             "IT 系勉強会・コミュニティイベントの参加レポート、開催レポート、イベント告知記事が含まれます。"
+            "大手ベンダー（Microsoft・AWS・Google Cloud 等）の大規模カンファレンス情報や"
+            "KubeCon などのグローバルなコミュニティカンファレンス情報も含まれます。"
             "IT 関連のもののみをまとめ、各記事を次の形式で構成してください"
             "（各項目の間には必ず空行と「---」区切りを入れること）。\n\n"
             "### <見出し>\n\n**要約**: ...\n\n**リンク**: [タイトル](URL)\n\n---\n\n"
@@ -1617,8 +1635,11 @@ def generate_section(
 
 # コミュニティセクション：参加レポート部分の LLM instruction（ハイブリッド生成用）
 _EVENT_REPORTS_LLM_INSTRUCTION = (
-    "以下の参加レポートデータには Zenn・Qiita・はてなブックマーク などで公開された"
+    "以下の参加レポートデータには Zenn・Qiita・はてなブックマーク・Google News などで公開された"
     "IT 系勉強会・コミュニティイベントの参加レポート、開催レポート、イベント告知記事が含まれます。\n"
+    "また、Microsoft Build・Microsoft Ignite・AWS Summit・AWS re:Invent・Google Cloud Next・"
+    "KubeCon + CloudNativeCon などの大手ベンダーや大規模コミュニティが主催するカンファレンスの"
+    "情報・報告記事も含まれます。これらも積極的に取り上げてください。\n"
     "IT 関連のもののみを選定し、先頭に「### 📝 参加レポート・イベント宣伝まとめ」を出力してください。\n"
     "その後、各記事を次の形式で構成してください"
     "（項目と項目の間には必ず空行と「---」区切りを入れること。最後の項目の後には「---」を入れないこと）。\n\n"

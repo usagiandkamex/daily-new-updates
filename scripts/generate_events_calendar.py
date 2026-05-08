@@ -427,8 +427,34 @@ def _fetch_api_events(
             print(f"  connpass API ({label} p{page_num}): 追加取得失敗 ({e})")
             break
 
-        fetched_any_page = True
+        if not isinstance(data, dict):
+            if not fetched_any_page:
+                print(
+                    f"  connpass API ({label}): 応答形式が不正 "
+                    f"({type(data).__name__})"
+                )
+                return collected, False
+            print(
+                f"  connpass API ({label} p{page_num}): 追加取得の応答形式が不正 "
+                f"({type(data).__name__})"
+            )
+            break
+
         events = data.get("events", [])
+        if not isinstance(events, list):
+            if not fetched_any_page:
+                print(
+                    f"  connpass API ({label}): events の形式が不正 "
+                    f"({type(events).__name__})"
+                )
+                return collected, False
+            print(
+                f"  connpass API ({label} p{page_num}): 追加取得の events 形式が不正 "
+                f"({type(events).__name__})"
+            )
+            break
+
+        fetched_any_page = True
         has_returned = "results_returned" in data
         has_available = "results_available" in data
         returned_raw = data.get("results_returned")

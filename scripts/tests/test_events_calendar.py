@@ -797,6 +797,62 @@ class TestFetchEvents(unittest.TestCase):
         self.assertEqual(len(events), 100)
         self.assertEqual(len(requests_calls), 1)
 
+    def test_api_fetch_returns_false_when_first_page_payload_is_not_dict(self):
+        """1ページ目の JSON が dict 以外なら取得失敗として返す。"""
+        response = _make_response()
+        response.json = MagicMock(return_value=["unexpected"])
+
+        with patch("generate_events_calendar.requests.get", return_value=response):
+            events, ok = _fetch_api_events(
+                params={"keyword": "東京都", "ym": "202605"},
+                place="東京都",
+                today_str="2026/05/01",
+                seen_urls=set(),
+                label="東京都 202605",
+                api_key="test-key",
+            )
+
+        self.assertFalse(ok)
+        self.assertEqual(events, [])
+
+    def test_api_fetch_stops_additional_pages_when_events_is_not_list(self):
+        """2ページ目以降の events 型不正は追加取得のみ打ち切る。"""
+        started = "2026-05-20T10:00:00+09:00"
+        requests_calls: list[dict] = []
+
+        first_page = _make_api_response(
+            [{
+                "title": "AWS 東京 1",
+                "url": "https://connpass.com/event/25001/",
+                "catch": "aws",
+                "started_at": started,
+            }],
+            results_returned=1,
+            results_available=2,
+        )
+        second_page = _make_response()
+        second_page.json = MagicMock(return_value={"events": "not-a-list"})
+        responses = iter([first_page, second_page])
+
+        def fake_get(*args, **kwargs):
+            requests_calls.append({"args": args, "kwargs": kwargs})
+            return next(responses)
+
+        with patch("generate_events_calendar.requests.get", side_effect=fake_get), \
+             patch("generate_events_calendar.CONNPASS_API_FETCH_COUNT", 1):
+            events, ok = _fetch_api_events(
+                params={"keyword": "東京都", "ym": "202605"},
+                place="東京都",
+                today_str="2026/05/01",
+                seen_urls=set(),
+                label="東京都 202605",
+                api_key="test-key",
+            )
+
+        self.assertTrue(ok)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(len(requests_calls), 2)
+
     def test_fetch_events_stops_global_api_search_after_limit(self):
         """API 利用時は上限付近到達後に以降の検索を打ち切る。"""
         today = datetime(2026, 5, 15, tzinfo=JST)

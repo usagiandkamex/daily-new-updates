@@ -335,10 +335,20 @@
     const closeBtn = $("#cal-close-panel");
     if (closeBtn) {
       closeBtn.addEventListener("click", () => {
+        const prevSelectedDate = selectedDate;
         selectedDate = null;
         const panel = $("#cal-day-panel");
         if (panel) panel.hidden = true;
         renderDays();
+        if (prevSelectedDate) {
+          const container = $("#cal-days");
+          if (container) {
+            const btn = container.querySelector(
+              `.cal-cell-button[data-date="${prevSelectedDate}"]`
+            );
+            if (btn) btn.focus();
+          }
+        }
       });
     }
   }

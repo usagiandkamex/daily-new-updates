@@ -10,6 +10,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -26,6 +27,8 @@ import requests
 # ---------------------------------------------------------------------------
 
 CONNPASS_RSS_URL = "https://connpass.com/search/"
+CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
+CONNPASS_API_FETCH_COUNT = 100
 
 HTTP_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; daily-new-updates-bot/1.0)",
@@ -281,6 +284,17 @@ def _parse_started_at(entry) -> str:
         return ""
 
 
+def _parse_started_at_api(started_at: str) -> str:
+    """connpass v2 API の started_at を JST 文字列（YYYY/MM/DD HH:MM）に変換する。"""
+    if not started_at:
+        return ""
+    try:
+        dt = datetime.fromisoformat(started_at.replace("Z", "+00:00")).astimezone(JST)
+        return dt.strftime("%Y/%m/%d %H:%M")
+    except (TypeError, ValueError):
+        return ""
+
+
 # ---------------------------------------------------------------------------
 # イベント取得
 # ---------------------------------------------------------------------------
@@ -366,13 +380,70 @@ def _fetch_rss_events(
     return collected, True
 
 
+def _fetch_api_events(
+    params: dict,
+    place: str,
+    today_str: str,
+    seen_urls: set[str],
+    label: str,
+    api_key: str,
+) -> tuple[list[dict], bool]:
+    """connpass v2 API を1回呼び出してイベントリストを返す（APIキー利用）。"""
+    collected: list[dict] = []
+    connpass_headers = {
+        **HTTP_HEADERS,
+        "Accept": "application/json",
+        "X-API-Key": api_key,
+    }
+    try:
+        resp = requests.get(
+            CONNPASS_API_URL,
+            params={**params, "count": CONNPASS_API_FETCH_COUNT, "order": 2},
+            headers=connpass_headers,
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        events = data.get("events", [])
+        for event in events:
+            url = event.get("url") or event.get("event_url", "")
+            if not url or url in seen_urls:
+                continue
+            if not _is_connpass_event_url(url):
+                continue
+            title = (event.get("title") or "").strip()
+            desc = (event.get("catch") or "").strip()
+            if not _is_it_event(title, desc):
+                continue
+            started_at = _parse_started_at_api(event.get("started_at", ""))
+            if not started_at:
+                continue
+            if started_at[:10] < today_str:
+                continue
+            seen_urls.add(url)
+            collected.append({
+                "title": title,
+                "event_url": url,
+                "started_at": started_at,
+                "place": place,
+                "catch": desc[:200],
+            })
+        print(f"  connpass API ({label}): {len(collected)} 件取得")
+    except Exception as e:
+        print(f"  connpass API ({label}): 取得失敗 ({e})")
+        return collected, False
+    return collected, True
+
+
 def fetch_events(today: datetime) -> list[dict]:
-    """今日以降のイベントを connpass RSS から取得する。
+    """今日以降のイベントを connpass から取得する。
 
-    関東（東京都・神奈川県）の pref_id 検索とオンライン（online=1）検索の
-    2 系統で取得し、重複を排除して日時昇順に返す。
+    CONNPASS_API_KEY が設定されている場合は v2 API（X-API-Key）を優先し、
+    未設定時は既存 RSS 検索を使用する。
+    関東（東京都・神奈川県）とオンラインの 2 系統で取得し、重複を排除して
+    日時昇順に返す。
 
-    全 RSS 取得が失敗した場合は :class:`RuntimeError` を送出する
+    全リクエスト失敗時は :class:`RuntimeError` を送出する
     （docs/events.json を空で上書きしないため）。
     """
     today_str = today.strftime("%Y/%m/%d")
@@ -382,17 +453,31 @@ def fetch_events(today: datetime) -> list[dict]:
     seen_urls: set[str] = set()
     attempts = 0
     failures = 0
+    api_key = os.environ.get("CONNPASS_API_KEY", "").strip()
+    use_api = bool(api_key)
+    if use_api:
+        print("  CONNPASS_API_KEY を検出: connpass v2 API を利用します")
 
     # --- 都道府県別検索 ---
     for pref, pref_id in _PREFECTURE_IDS.items():
         for ym in months:
-            collected, ok = _fetch_rss_events(
-                params={"format": "rss", "pref_id": pref_id, "ym": ym},
-                place=pref,
-                today_str=today_str,
-                seen_urls=seen_urls,
-                label=f"{pref} {ym}",
-            )
+            if use_api:
+                collected, ok = _fetch_api_events(
+                    params={"keyword": pref, "ym": ym},
+                    place=pref,
+                    today_str=today_str,
+                    seen_urls=seen_urls,
+                    label=f"{pref} {ym}",
+                    api_key=api_key,
+                )
+            else:
+                collected, ok = _fetch_rss_events(
+                    params={"format": "rss", "pref_id": pref_id, "ym": ym},
+                    place=pref,
+                    today_str=today_str,
+                    seen_urls=seen_urls,
+                    label=f"{pref} {ym}",
+                )
             attempts += 1
             if not ok:
                 failures += 1
@@ -400,13 +485,23 @@ def fetch_events(today: datetime) -> list[dict]:
 
     # --- オンラインイベント検索 ---
     for ym in months:
-        collected, ok = _fetch_rss_events(
-            params={"format": "rss", "online": 1, "ym": ym},
-            place="オンライン",
-            today_str=today_str,
-            seen_urls=seen_urls,
-            label=f"オンライン {ym}",
-        )
+        if use_api:
+            collected, ok = _fetch_api_events(
+                params={"keyword": "オンライン", "ym": ym},
+                place="オンライン",
+                today_str=today_str,
+                seen_urls=seen_urls,
+                label=f"オンライン {ym}",
+                api_key=api_key,
+            )
+        else:
+            collected, ok = _fetch_rss_events(
+                params={"format": "rss", "online": 1, "ym": ym},
+                place="オンライン",
+                today_str=today_str,
+                seen_urls=seen_urls,
+                label=f"オンライン {ym}",
+            )
         attempts += 1
         if not ok:
             failures += 1
@@ -415,7 +510,7 @@ def fetch_events(today: datetime) -> list[dict]:
     # 全リクエスト失敗時は例外（既存 events.json の上書き防止）
     if attempts > 0 and failures == attempts:
         raise RuntimeError(
-            f"connpass RSS 取得が全 {attempts} 件失敗しました。"
+            f"connpass {'API' if use_api else 'RSS'} 取得が全 {attempts} 件失敗しました。"
             "既存の docs/events.json を保持するため処理を中断します。"
         )
 

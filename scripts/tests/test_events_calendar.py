@@ -309,6 +309,12 @@ def _make_response(content: bytes = b"<rss/>") -> MagicMock:
     return resp
 
 
+def _make_api_response(events: list[dict]) -> MagicMock:
+    resp = _make_response()
+    resp.json = MagicMock(return_value={"events": events})
+    return resp
+
+
 def _make_feed(*entries: dict) -> MagicMock:
     """feedparser.parse の戻り値をスタブする。entries は dict のリスト。"""
     feed = MagicMock()
@@ -327,6 +333,10 @@ class TestFetchEvents(unittest.TestCase):
         patcher = patch("generate_events_calendar.CALENDAR_LOOKAHEAD_MONTHS", 0)
         self.addCleanup(patcher.stop)
         patcher.start()
+        # デフォルトは RSS 経路を使う（API キー経路は個別テストで上書き）
+        env_patcher = patch.dict("os.environ", {"CONNPASS_API_KEY": ""})
+        self.addCleanup(env_patcher.stop)
+        env_patcher.start()
         # 説明文取得（HTTP）はスキップ
         enrich_patcher = patch(
             "generate_events_calendar._enrich_descriptions", lambda events: None
@@ -553,10 +563,52 @@ class TestFetchEvents(unittest.TestCase):
             return f
 
         with patch("generate_events_calendar.requests.get", return_value=_make_response()), \
-             patch("generate_events_calendar.feedparser.parse",
+              patch("generate_events_calendar.feedparser.parse",
                    side_effect=lambda c: make_bozo_feed()):
             with self.assertRaises(RuntimeError):
                 fetch_events(today)
+
+    def test_uses_api_with_api_key(self):
+        """CONNPASS_API_KEY が設定されている場合は connpass v2 API を利用する。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        started = "2026-05-20T10:00:00+09:00"
+        captured_requests: list[dict] = []
+        responses = iter([
+            _make_api_response([{
+                "title": "AWS 勉強会",
+                "url": "https://connpass.com/event/200/",
+                "catch": "AWS hands-on",
+                "started_at": started,
+            }]),
+            _make_api_response([{
+                "title": "Kubernetes 勉強会",
+                "url": "https://connpass.com/event/201/",
+                "catch": "k8s",
+                "started_at": started,
+            }]),
+            _make_api_response([{
+                "title": "Python オンライン",
+                "url": "https://connpass.com/event/202/",
+                "catch": "python",
+                "started_at": started,
+            }]),
+        ])
+
+        def fake_get(*args, **kwargs):
+            captured_requests.append({"args": args, "kwargs": kwargs})
+            return next(responses)
+
+        with patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}), \
+             patch("generate_events_calendar.requests.get", side_effect=fake_get), \
+             patch("generate_events_calendar.feedparser.parse") as feedparser_parse:
+            events = fetch_events(today)
+
+        self.assertEqual(len(events), 3)
+        self.assertEqual(captured_requests[0]["args"][0], "https://connpass.com/api/v2/events/")
+        self.assertEqual(captured_requests[0]["kwargs"]["headers"]["X-API-Key"], "test-key")
+        self.assertEqual(captured_requests[0]["kwargs"]["params"]["count"], 100)
+        self.assertEqual(captured_requests[0]["kwargs"]["params"]["order"], 2)
+        feedparser_parse.assert_not_called()
 
 
 if __name__ == "__main__":

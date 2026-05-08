@@ -25,6 +25,8 @@ jobs:
         run: pip install -r scripts/requirements.txt
 
       - name: イベントカレンダーデータ生成
+        env:
+          CONNPASS_API_KEY: ${{ secrets.CONNPASS_API_KEY }}
         run: python scripts/generate_events_calendar.py
 
       - name: 変更をコミット & プッシュ

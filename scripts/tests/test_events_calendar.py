@@ -283,9 +283,9 @@ class TestHTMLTextExtractor(unittest.TestCase):
         self.assertIn("text1", result)
         self.assertIn("text2", result)
 
-    def test_empty_string_input_returns_empty(self):
-        """空文字列は空文字列を返す。"""
-        self.assertEqual(_extract_text_from_html(""), "")
+    def test_only_tags_returns_empty(self):
+        """テキストコンテンツがない HTML タグのみの文字列は空文字列を返す。"""
+        self.assertEqual(_extract_text_from_html("<br/><hr/>"), "")
 
 
 # ---------------------------------------------------------------------------
@@ -1061,14 +1061,28 @@ class TestFetchEvents(unittest.TestCase):
 class TestApiDescriptionExtraction(unittest.TestCase):
     """connpass v2 API の description フィールド取得に関するテスト"""
 
-    def _make_api_event(self, title, url, catch="", description="", started_at="2026-05-20T10:00:00+09:00"):
-        return {
+    def setUp(self):
+        # テスト中の RSS 取得回数を抑えるため lookahead を 0 か月にする
+        lookahead_patcher = patch("generate_events_calendar.CALENDAR_LOOKAHEAD_MONTHS", 0)
+        self.addCleanup(lookahead_patcher.stop)
+        lookahead_patcher.start()
+        # ベンダーイベント取得はスキップ
+        vendor_patcher = patch(
+            "generate_events_calendar.fetch_vendor_news_events", return_value=[]
+        )
+        self.addCleanup(vendor_patcher.stop)
+        vendor_patcher.start()
+
+    def _make_api_event(self, title, url, catch="", description=None, started_at="2026-05-20T10:00:00+09:00"):
+        ev: dict = {
             "title": title,
             "url": url,
             "catch": catch,
-            "description": description,
             "started_at": started_at,
         }
+        if description is not None:
+            ev["description"] = description
+        return ev
 
     def test_api_description_stored_in_event(self):
         """API レスポンスの description フィールドが event dict に保存される。"""

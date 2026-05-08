@@ -465,7 +465,7 @@ def _fetch_rss_events(
 def _fetch_one_vendor_feed(feed_info: dict) -> list[dict]:
     """単一のベンダーイベント RSS フィードを取得し、イベントリストを返す。
 
-    取得失敗時は空リストを返す（fetch_vendor_news_events でのログ出力のため例外は握り潰す）。
+    取得失敗時は空リストを返す（fetch_vendor_news_events でのログ出力のため例外を抑制する）。
     """
     name = feed_info["name"]
     url = feed_info["url"]
@@ -525,7 +525,7 @@ def fetch_vendor_news_events(today: datetime) -> list[dict]:
     events: list[dict] = []
     seen_urls: set[str] = set()
 
-    with ThreadPoolExecutor(max_workers=len(VENDOR_EVENT_NEWS_FEEDS)) as executor:
+    with ThreadPoolExecutor(max_workers=min(len(VENDOR_EVENT_NEWS_FEEDS), 8)) as executor:
         futures = {
             executor.submit(_fetch_one_vendor_feed, feed_info): feed_info
             for feed_info in VENDOR_EVENT_NEWS_FEEDS

@@ -808,7 +808,10 @@ mark.hl {
   .btn-read { display: block; padding: .5rem 2rem; }
   .search-input { max-width: 100%; }
   .cal-cell { min-height: 1.8rem; padding: .15rem .2rem; }
-  .cal-event-count { display: none; }
+  .cal-event-count {
+    font-size: .56rem;
+    padding: 0 .22rem;
+  }
 }
 
 @media (max-width: 480px) {

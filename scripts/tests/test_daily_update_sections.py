@@ -2045,8 +2045,11 @@ class TestVerifyContentDailyUpdate(unittest.TestCase):
 
     def test_community_subsection_headings_skip_summary_check(self):
         """コミュニティセクションの📅/📝サブセクションでは要約チェックをスキップする。"""
+        community_def = next(
+            s for s in du.SECTION_DEFINITIONS if s["key"] == "community"
+        )
         md = (
-            "## 5. コミュニティイベント情報（東京・神奈川）\n\n"
+            f"{community_def['header']}\n\n"
             "### 📅 申し込み受付中のイベント\n\n"
             "- イベントA\n- イベントB\n\n"
             "### 📝 参加レポート・イベント宣伝まとめ\n\n"
@@ -2432,7 +2435,7 @@ class TestGenerateCommunitySectionHybrid(unittest.TestCase):
         """LLM が誤って ## ヘッダーを出力した場合は除去される。"""
         section_def = self._get_community_def()
         event_reports = [{"title": "レポート", "url": "https://zenn.dev/1"}]
-        llm_output = "## 5. コミュニティイベント情報（東京・神奈川）\n\n### 📝 参加レポート・イベント宣伝まとめ\n内容"
+        llm_output = f"{section_def['header']}\n\n### 📝 参加レポート・イベント宣伝まとめ\n内容"
         client = self._make_client(llm_output)
 
         result = du._generate_community_section(client, "gpt-4o", section_def, [], event_reports)

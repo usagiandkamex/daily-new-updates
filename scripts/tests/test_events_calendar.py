@@ -21,6 +21,8 @@ from generate_events_calendar import (
     _fetch_api_events,
     _truncate_description,
     fetch_events,
+    fetch_vendor_news_events,
+    VENDOR_EVENT_NEWS_FEEDS,
     main,
     MAX_DESCRIPTION_CHARS,
     JST,
@@ -374,6 +376,12 @@ class TestFetchEvents(unittest.TestCase):
         )
         self.addCleanup(enrich_patcher.stop)
         enrich_patcher.start()
+        # ベンダーイベント取得はスキップ（TestFetchVendorNewsEvents で個別テスト）
+        vendor_patcher = patch(
+            "generate_events_calendar.fetch_vendor_news_events", return_value=[]
+        )
+        self.addCleanup(vendor_patcher.stop)
+        vendor_patcher.start()
 
     def _restore_connpass_api_key(self):
         if self._orig_connpass_api_key is None:
@@ -1017,6 +1025,175 @@ class TestMain(unittest.TestCase):
         write_text.assert_called_once()
         written = write_text.call_args.args[0]
         self.assertIn('"events": []', written)
+
+
+# ---------------------------------------------------------------------------
+# fetch_vendor_news_events
+# ---------------------------------------------------------------------------
+
+class TestFetchVendorNewsEvents(unittest.TestCase):
+    """fetch_vendor_news_events() のテスト（requests / feedparser はモック）"""
+
+    def _entry(self, title: str, link: str, summary: str = "カンファレンス情報",
+               published_dt: datetime | None = None) -> dict:
+        e: dict = {"title": title, "link": link, "summary": summary}
+        if published_dt is not None:
+            utc = published_dt.astimezone(timezone.utc)
+            e["published_parsed"] = (
+                utc.year, utc.month, utc.day, utc.hour, utc.minute, utc.second, 0, 0, 0
+            )
+        return e
+
+    def test_returns_vendor_events_with_correct_fields(self):
+        """ベンダーイベントが title / event_url / started_at / place / vendor_event フィールドを持つ。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        pub = datetime(2026, 5, 10, 9, 0, tzinfo=JST)
+        feed = _make_feed(
+            self._entry("Microsoft Build 2026 開催", "https://news.google.com/article/1", published_dt=pub),
+        )
+
+        with patch("generate_events_calendar.VENDOR_EVENT_NEWS_FEEDS", [
+            {"name": "Microsoft Build", "url": "https://news.google.com/rss/dummy", "place": "Seattle / オンライン"},
+        ]), \
+             patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", return_value=feed):
+            events = fetch_vendor_news_events(today)
+
+        self.assertEqual(len(events), 1)
+        ev = events[0]
+        self.assertIn("Microsoft Build", ev["title"])
+        self.assertEqual(ev["event_url"], "https://news.google.com/article/1")
+        self.assertTrue(ev["started_at"].startswith("2026/05/10"))
+        self.assertEqual(ev["place"], "Seattle / オンライン")
+        self.assertTrue(ev.get("vendor_event"))
+
+    def test_skips_entries_without_published_date(self):
+        """published_parsed がないエントリはスキップされる。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        feed = _make_feed(
+            # published_dt なし → started_at が空 → スキップ
+            {"title": "AWS Summit Japan 2026 開催決定", "link": "https://news.google.com/article/2", "summary": "AWS"},
+        )
+
+        with patch("generate_events_calendar.VENDOR_EVENT_NEWS_FEEDS", [
+            {"name": "AWS Summit Japan", "url": "https://news.google.com/rss/dummy", "place": "東京"},
+        ]), \
+             patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", return_value=feed):
+            events = fetch_vendor_news_events(today)
+
+        self.assertEqual(events, [])
+
+    def test_deduplicates_urls_across_feeds(self):
+        """同一 URL が複数フィードで現れた場合、2 件目以降はスキップされる。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        pub = datetime(2026, 5, 12, 10, 0, tzinfo=JST)
+        shared_url = "https://news.google.com/article/dup"
+        feed = _make_feed(
+            self._entry("重複記事", shared_url, published_dt=pub),
+        )
+
+        with patch("generate_events_calendar.VENDOR_EVENT_NEWS_FEEDS", [
+            {"name": "Feed A", "url": "https://news.google.com/rss/a", "place": "オンライン"},
+            {"name": "Feed B", "url": "https://news.google.com/rss/b", "place": "オンライン"},
+        ]), \
+             patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", return_value=feed):
+            events = fetch_vendor_news_events(today)
+
+        urls = [e["event_url"] for e in events]
+        self.assertEqual(urls.count(shared_url), 1)
+
+    def test_continues_on_request_failure(self):
+        """1 つのフィード取得が失敗しても他フィードの取得を継続する。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        pub = datetime(2026, 5, 14, 9, 0, tzinfo=JST)
+
+        def fake_get(url, *args, **kwargs):
+            if "fail" in url:
+                raise RuntimeError("simulated failure")
+            return _make_response()
+
+        feed = _make_feed(
+            self._entry("KubeCon 2026", "https://news.google.com/article/k", published_dt=pub),
+        )
+
+        with patch("generate_events_calendar.VENDOR_EVENT_NEWS_FEEDS", [
+            {"name": "Fail Feed", "url": "https://news.google.com/rss/fail", "place": "現地"},
+            {"name": "KubeCon", "url": "https://news.google.com/rss/kubecon", "place": "現地 / オンライン"},
+        ]), \
+             patch("generate_events_calendar.requests.get", side_effect=fake_get), \
+             patch("generate_events_calendar.feedparser.parse", return_value=feed):
+            events = fetch_vendor_news_events(today)
+
+        # 2 つ目のフィードから 1 件取得できていること
+        self.assertEqual(len(events), 1)
+        self.assertIn("KubeCon", events[0]["title"])
+
+    def test_respects_max_entries_per_feed(self):
+        """フィードごとの最大取得件数（_VENDOR_EVENT_MAX_ENTRIES_PER_FEED）を超えない。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        pub = datetime(2026, 5, 10, tzinfo=JST)
+        # 最大件数 + 2 件のエントリを用意
+        from generate_events_calendar import _VENDOR_EVENT_MAX_ENTRIES_PER_FEED
+        entries = [
+            self._entry(f"Article {i}", f"https://news.google.com/article/{i}", published_dt=pub)
+            for i in range(_VENDOR_EVENT_MAX_ENTRIES_PER_FEED + 2)
+        ]
+        feed = _make_feed(*entries)
+
+        with patch("generate_events_calendar.VENDOR_EVENT_NEWS_FEEDS", [
+            {"name": "Google Cloud Next", "url": "https://news.google.com/rss/gcn", "place": "オンライン"},
+        ]), \
+             patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", return_value=feed):
+            events = fetch_vendor_news_events(today)
+
+        self.assertLessEqual(len(events), _VENDOR_EVENT_MAX_ENTRIES_PER_FEED)
+
+    def test_vendor_events_included_in_fetch_events(self):
+        """fetch_events() がベンダーイベントを含む結果を返す。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        future = datetime(2026, 5, 20, 19, 0, tzinfo=JST)
+        pub = datetime(2026, 5, 14, 9, 0, tzinfo=JST)
+
+        connpass_feed = _make_feed(
+            self._entry("AWS 勉強会", "https://connpass.com/event/99/",
+                        summary="AWS hands-on", published_dt=future),
+        )
+        vendor_event = {
+            "title": "[Microsoft Build] Build 2026 発表",
+            "event_url": "https://news.google.com/article/build",
+            "started_at": "2026/05/14 09:00",
+            "place": "Seattle / オンライン",
+            "catch": "新発表",
+            "vendor_event": True,
+        }
+
+        with patch("generate_events_calendar.CALENDAR_LOOKAHEAD_MONTHS", 0), \
+             patch("generate_events_calendar._enrich_descriptions", lambda ev: None), \
+             patch("generate_events_calendar.fetch_vendor_news_events", return_value=[vendor_event]), \
+             patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", return_value=connpass_feed):
+            events = fetch_events(today)
+
+        urls = [e["event_url"] for e in events]
+        self.assertIn("https://connpass.com/event/99/", urls)
+        self.assertIn("https://news.google.com/article/build", urls)
+        # ベンダーイベントに vendor_event フラグが付いていること
+        vendor = next(e for e in events if e["event_url"] == "https://news.google.com/article/build")
+        self.assertTrue(vendor.get("vendor_event"))
+
+    def test_vendor_events_list_not_empty(self):
+        """VENDOR_EVENT_NEWS_FEEDS が空でないこと（設定漏れ防止）。"""
+        self.assertGreater(len(VENDOR_EVENT_NEWS_FEEDS), 0)
+
+    def test_vendor_events_feeds_have_required_keys(self):
+        """各フィードエントリに name / url / place が含まれること。"""
+        for feed in VENDOR_EVENT_NEWS_FEEDS:
+            self.assertIn("name", feed, f"{feed} に 'name' がない")
+            self.assertIn("url", feed, f"{feed} に 'url' がない")
+            self.assertIn("place", feed, f"{feed} に 'place' がない")
 
 
 if __name__ == "__main__":

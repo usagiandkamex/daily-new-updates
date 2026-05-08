@@ -54,6 +54,48 @@
     return parsed.pathname.startsWith("/event/");
   }
 
+  /** 大手ベンダー・大規模カンファレンスおよびニュースサイトの HTTPS URL を許可。
+   *  events.json の vendor_event フラグが付いたエントリに使用する。 */
+  const _TRUSTED_VENDOR_HOSTS = new Set([
+    "news.google.com",
+    "microsoft.com", "build.microsoft.com", "ignite.microsoft.com",
+    "techcommunity.microsoft.com", "azure.microsoft.com",
+    "aws.amazon.com", "awsevents.com", "reinvent.awsevents.com",
+    "cloud.google.com", "next.google.com",
+    "cncf.io", "events.linuxfoundation.org", "linuxfoundation.org",
+    "github.com", "githubuniverse.com",
+    "redhat.com", "summit.redhat.com",
+    "hashicorp.com", "hashiconf.com",
+    "vmware.com", "explore.vmware.com",
+    "databricks.com", "dataaisummit.com",
+    "openai.com",
+    "nvidia.com", "gtc.nvidia.com",
+    "io.google", "events.google.com",
+  ]);
+
+  function isTrustedVendorUrl(url) {
+    if (typeof url !== "string") return false;
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch (_) {
+      return false;
+    }
+    if (parsed.protocol !== "https:") return false;
+    const host = (parsed.hostname || "").toLowerCase();
+    // 完全一致またはサブドメイン一致（e.g. "foo.aws.amazon.com"）
+    for (const trusted of _TRUSTED_VENDOR_HOSTS) {
+      if (host === trusted || host.endsWith("." + trusted)) return true;
+    }
+    return false;
+  }
+
+  /** イベント URL が安全かどうかを判定する（connpass または信頼できるベンダー URL）。 */
+  function isSafeEventUrl(url, isVendorEvent) {
+    if (isVendorEvent) return isTrustedVendorUrl(url);
+    return isConnpassEventUrl(url);
+  }
+
   /** "2026/05/15 19:00" → "2026-05-15" */
   function startedAtToDate(startedAt) {
     if (!startedAt) return null;
@@ -204,7 +246,7 @@
           const meta = (timeHtml || placeHtml)
             ? `<div class="cal-event-meta">${timeHtml}${placeHtml}</div>`
             : "";
-          const safeUrl = isConnpassEventUrl(ev.event_url) ? ev.event_url : "#";
+          const safeUrl = isSafeEventUrl(ev.event_url, !!ev.vendor_event) ? ev.event_url : "#";
           return `
 <li class="cal-event-item">
   <a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" class="cal-event-link">

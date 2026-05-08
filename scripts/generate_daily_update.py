@@ -177,6 +177,10 @@ FEEDS = {
         {"name": "Google News Data + AI Summit", "url": "https://news.google.com/rss/search?q=Databricks+Data+AI+Summit+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja"},
         # OpenAI
         {"name": "Google News OpenAI DevDay", "url": "https://news.google.com/rss/search?q=OpenAI+DevDay+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja"},
+        # NVIDIA
+        {"name": "Google News NVIDIA GTC", "url": "https://news.google.com/rss/search?q=NVIDIA+GTC+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja"},
+        # Google
+        {"name": "Google News Google I/O", "url": "https://news.google.com/rss/search?q=Google+IO+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja"},
     ],
 }
 

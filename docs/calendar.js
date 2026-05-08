@@ -69,6 +69,8 @@
     "vmware.com", "explore.vmware.com",
     "databricks.com", "dataaisummit.com",
     "openai.com",
+    "nvidia.com", "gtc.nvidia.com",
+    "io.google",
   ]);
 
   function isTrustedVendorUrl(url) {

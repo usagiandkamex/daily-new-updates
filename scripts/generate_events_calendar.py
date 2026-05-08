@@ -137,6 +137,18 @@ VENDOR_EVENT_NEWS_FEEDS: list[dict] = [
         "url": "https://news.google.com/rss/search?q=OpenAI+DevDay+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
         "place": "San Francisco / オンライン",
     },
+    # NVIDIA
+    {
+        "name": "NVIDIA GTC",
+        "url": "https://news.google.com/rss/search?q=NVIDIA+GTC+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E5%A0%B1%E5%91%8A&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "San Jose / オンライン",
+    },
+    # Google
+    {
+        "name": "Google I/O",
+        "url": "https://news.google.com/rss/search?q=Google+IO+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Mountain View / オンライン",
+    },
 ]
 
 # ベンダーイベントニュース：フィードごとの最大取得記事数

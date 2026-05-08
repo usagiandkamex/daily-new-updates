@@ -30,6 +30,7 @@ CONNPASS_RSS_URL = "https://connpass.com/search/"
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
 CONNPASS_API_FETCH_COUNT = 100
 CONNPASS_API_MAX_PAGES = 10
+CONNPASS_API_EARLY_STOP_BUFFER = 100
 
 HTTP_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; daily-new-updates-bot/1.0)",
@@ -432,19 +433,16 @@ def _fetch_api_events(
         available_raw = data.get("results_available")
         returned = returned_raw if isinstance(returned_raw, int) else len(events)
         available = available_raw if isinstance(available_raw, int) else 0
-        metadata_invalid = False
         if not isinstance(returned_raw, int):
             print(
                 f"  警告: connpass API ({label}): results_returned の形式が不正 "
                 f"({type(returned_raw).__name__})"
             )
-            metadata_invalid = True
         if not isinstance(available_raw, int):
             print(
                 f"  警告: connpass API ({label}): results_available の形式が不正 "
                 f"({type(available_raw).__name__})"
             )
-            metadata_invalid = True
         for event in events:
             url = event.get("url") or event.get("event_url", "")
             if not url or url in seen_urls:
@@ -469,7 +467,11 @@ def _fetch_api_events(
                 "catch": desc[:200],
             })
 
-        if metadata_invalid:
+        if len(seen_urls) >= MAX_CALENDAR_EVENTS + CONNPASS_API_EARLY_STOP_BUFFER:
+            print(
+                f"  connpass API ({label}): 取得件数が上限付近のため追加ページ取得を終了 "
+                f"({len(seen_urls)} 件)"
+            )
             break
 
         next_start = start + returned

@@ -17,6 +17,7 @@ from generate_events_calendar import (
     _is_it_event,
     _ConnpassEventPageParser,
     _is_connpass_event_url,
+    _fetch_api_events,
     _truncate_description,
     fetch_events,
     main,
@@ -683,6 +684,91 @@ class TestFetchEvents(unittest.TestCase):
             [req["kwargs"]["params"].get("start") for req in tokyo_requests],
             [1, 101],
         )
+
+    def test_api_fetch_keeps_pagination_when_metadata_is_missing(self):
+        """results_* が欠落していても count 到達時は次ページを取得する。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        started = "2026-05-20T10:00:00+09:00"
+        captured_requests: list[dict] = []
+        first_page_events = [
+            {
+                "title": f"AWS 東京 {i}",
+                "url": f"https://connpass.com/event/{22000 + i}/",
+                "catch": "aws",
+                "started_at": started,
+            }
+            for i in range(100)
+        ]
+
+        def fake_get(*args, **kwargs):
+            captured_requests.append({"args": args, "kwargs": kwargs})
+            params = kwargs["params"]
+            keyword = params.get("keyword")
+            start = params.get("start")
+            if keyword == "東京都" and start == 1:
+                return _make_api_response(first_page_events)
+            if keyword == "東京都" and start == 101:
+                return _make_api_response([{
+                    "title": "AWS 東京 101",
+                    "url": "https://connpass.com/event/22101/",
+                    "catch": "aws",
+                    "started_at": started,
+                }])
+            if keyword in ("神奈川県", "オンライン"):
+                return _make_api_response([])
+            raise AssertionError(f"unexpected params: {params}")
+
+        with patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}), \
+             patch("generate_events_calendar.requests.get", side_effect=fake_get):
+            events = fetch_events(today)
+
+        self.assertEqual(len(events), 101)
+        tokyo_requests = [
+            req for req in captured_requests
+            if req["kwargs"]["params"].get("keyword") == "東京都"
+        ]
+        self.assertEqual(
+            [req["kwargs"]["params"].get("start") for req in tokyo_requests],
+            [1, 101],
+        )
+
+    def test_api_fetch_stops_early_when_event_limit_nearby(self):
+        """収集件数が上限付近なら追加ページ取得を打ち切る。"""
+        started = "2026-05-20T10:00:00+09:00"
+        requests_calls: list[dict] = []
+        page_events = [
+            {
+                "title": f"AWS 東京 {i}",
+                "url": f"https://connpass.com/event/{23000 + i}/",
+                "catch": "aws",
+                "started_at": started,
+            }
+            for i in range(100)
+        ]
+
+        def fake_get(*args, **kwargs):
+            requests_calls.append({"args": args, "kwargs": kwargs})
+            return _make_api_response(
+                page_events,
+                results_returned=100,
+                results_available=300,
+            )
+
+        with patch("generate_events_calendar.requests.get", side_effect=fake_get), \
+             patch("generate_events_calendar.MAX_CALENDAR_EVENTS", 50), \
+             patch("generate_events_calendar.CONNPASS_API_EARLY_STOP_BUFFER", 10):
+            events, ok = _fetch_api_events(
+                params={"keyword": "東京都", "ym": "202605"},
+                place="東京都",
+                today_str="2026/05/01",
+                seen_urls=set(),
+                label="東京都 202605",
+                api_key="test-key",
+            )
+
+        self.assertTrue(ok)
+        self.assertEqual(len(events), 100)
+        self.assertEqual(len(requests_calls), 1)
 
 
 class TestMain(unittest.TestCase):

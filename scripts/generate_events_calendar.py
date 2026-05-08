@@ -204,8 +204,24 @@ def _fetch_event_description(url: str) -> str:
     取得に失敗した場合は空文字列を返す。
     """
     try:
-        resp = requests.get(url, headers=_PAGE_HEADERS, timeout=_PAGE_FETCH_TIMEOUT)
+        resp = requests.get(
+            url,
+            headers=_PAGE_HEADERS,
+            timeout=_PAGE_FETCH_TIMEOUT,
+            allow_redirects=False,
+        )
+        # SSRF 対策: リダイレクトに追従しない。3xx は connpass 外への遷移
+        # 可能性があるため失敗扱いとする。
+        if resp.is_redirect or resp.is_permanent_redirect:
+            print(
+                f"  connpass: 説明文取得スキップ (リダイレクト {resp.status_code}): {url}"
+            )
+            return ""
         resp.raise_for_status()
+        # 念のため最終到達 URL も connpass の /event/ 配下であることを再確認
+        if not _is_connpass_event_url(resp.url):
+            print(f"  connpass: 説明文取得スキップ (想定外URL): {resp.url}")
+            return ""
         parser = _ConnpassEventPageParser()
         parser.feed(resp.text)
         # 余分な空白を正規化して返す

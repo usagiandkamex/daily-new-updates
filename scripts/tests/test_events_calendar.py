@@ -7,7 +7,7 @@ generate_events_calendar.py の純粋ロジックの単体テスト
 import sys
 import os
 import unittest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

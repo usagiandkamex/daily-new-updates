@@ -19,6 +19,7 @@ from generate_events_calendar import (
     _is_connpass_event_url,
     _truncate_description,
     fetch_events,
+    main,
     MAX_DESCRIPTION_CHARS,
     JST,
 )
@@ -617,6 +618,26 @@ class TestFetchEvents(unittest.TestCase):
         self.assertEqual(first_request["kwargs"]["params"].get("count"), 100)
         self.assertEqual(first_request["kwargs"]["params"].get("order"), 2)
         feedparser_parse.assert_not_called()
+
+
+class TestMain(unittest.TestCase):
+    """main() のテスト"""
+
+    def test_main_does_not_fail_workflow_on_fetch_runtime_error(self):
+        """fetch_events が RuntimeError の場合でも非 0 終了しない。"""
+        with patch("generate_events_calendar.fetch_events", side_effect=RuntimeError("total failure")), \
+             patch("generate_events_calendar.Path.write_text") as write_text:
+            main()
+        write_text.assert_not_called()
+
+    def test_main_writes_empty_events_without_error(self):
+        """イベント0件でも events.json を正常に書き出す。"""
+        with patch("generate_events_calendar.fetch_events", return_value=[]), \
+             patch("generate_events_calendar.Path.write_text") as write_text:
+            main()
+        write_text.assert_called_once()
+        written = write_text.call_args.args[0]
+        self.assertIn('"events": []', written)
 
 
 if __name__ == "__main__":

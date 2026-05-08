@@ -549,10 +549,11 @@ def main() -> None:
     try:
         events = fetch_events(today)
     except RuntimeError as e:
-        # 全 RSS 取得失敗時は events.json を上書きせず非 0 終了
-        # （前回データを保持しサイト上のイベント表示が消えないようにする）
-        print(f"エラー: {e}", file=sys.stderr)
-        sys.exit(1)
+        # 全取得失敗時は events.json を上書きせず終了する。
+        # ワークフロー自体は失敗にせず、前回データを保持する。
+        print(f"警告: {e}", file=sys.stderr)
+        print("イベント取得に失敗したため、events.json の更新をスキップします。")
+        return
     print(f"取得イベント数: {len(events)}")
 
     data = {

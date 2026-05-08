@@ -415,13 +415,17 @@ def fetch_vendor_news_events(today: datetime) -> list[dict]:
     AWS Summit / re:Invent、Google Cloud Next、KubeCon 等）の最新ニュース記事を取得し、
     記事の公開日をカレンダー表示日として events.json に追加する。
 
+    connpass イベントと異なり、ベンダーイベントニュースは公開日が今日より前の記事も
+    収集対象とする（直近のカンファレンス情報や参加レポートも含めたいため）。
+
     これにより、カレンダー上でベンダーイベント関連の最新情報が公開された日付を
     ひと目で確認できるようになる。各エントリには「ベンダーイベント情報」であることを
-    示す place フィールドが設定される。
+    示す place フィールドおよび vendor_event フラグが設定される。
 
     取得失敗は警告のみでスキップし、connpass 系の取得には影響しない。
     """
-    today_str = today.strftime("%Y/%m/%d")
+    # today は将来の拡張（例: 取得日時のログ出力）のために保持する
+    _ = today
     events: list[dict] = []
     seen_urls: set[str] = set()
 
@@ -446,7 +450,7 @@ def fetch_vendor_news_events(today: datetime) -> list[dict]:
                 if not title:
                     continue
                 started_at = _parse_started_at(entry)
-                # 公開日が今日より前の記事も含める（直近情報として有用）
+                # 公開日（started_at）が取得できない場合はカレンダーに表示できないためスキップ
                 if not started_at:
                     continue
                 seen_urls.add(article_url)

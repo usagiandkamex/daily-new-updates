@@ -53,6 +53,9 @@ MAX_DESCRIPTION_CHARS = 400
 # 説明取得の並列数
 _ENRICH_WORKERS = 5
 
+# イベントページ取得タイムアウト（秒）
+_PAGE_FETCH_TIMEOUT = 10
+
 # ---------------------------------------------------------------------------
 # IT 関連イベント判定
 # ---------------------------------------------------------------------------
@@ -163,13 +166,17 @@ def _fetch_event_description(url: str) -> str:
     取得に失敗した場合は空文字列を返す。
     """
     try:
-        resp = requests.get(url, headers=_PAGE_HEADERS, timeout=10)
+        resp = requests.get(url, headers=_PAGE_HEADERS, timeout=_PAGE_FETCH_TIMEOUT)
         resp.raise_for_status()
         parser = _ConnpassEventPageParser()
         parser.feed(resp.text)
         # 余分な空白を正規化して返す
         return " ".join(parser.get_text().split())
-    except Exception:
+    except requests.RequestException as exc:
+        print(f"  connpass: 説明文取得失敗 ({url}): {type(exc).__name__}")
+        return ""
+    except Exception as exc:
+        print(f"  connpass: 説明文取得で予期しないエラー ({url}): {type(exc).__name__}")
         return ""
 
 
@@ -200,8 +207,8 @@ def _enrich_descriptions(events: list[dict]) -> None:
                         # 単語境界で切り詰め
                         text = text[:MAX_DESCRIPTION_CHARS].rsplit(" ", 1)[0] + "…"
                     ev["description"] = text
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"  connpass: 説明文補完で予期しないエラー: {type(exc).__name__}")
             done += 1
             if done % 20 == 0:
                 print(f"    {done}/{len(targets)} 件完了")

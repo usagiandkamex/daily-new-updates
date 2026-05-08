@@ -759,6 +759,72 @@ class TestFetchEvents(unittest.TestCase):
             [1, 101],
         )
 
+    def test_api_fetch_keeps_pagination_when_metadata_is_bool(self):
+        """results_* が bool でも不正値として扱い、count 到達時は次ページを取得する。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        started = "2026-05-20T10:00:00+09:00"
+        captured_requests: list[dict] = []
+        first_page_events = [
+            {
+                "title": f"AWS 東京 {i}",
+                "url": f"https://connpass.com/event/{22500 + i}/",
+                "catch": "aws",
+                "started_at": started,
+            }
+            for i in range(100)
+        ]
+
+        def fake_get(*args, **kwargs):
+            captured_requests.append({"args": args, "kwargs": kwargs})
+            params = kwargs["params"]
+            keyword = params.get("keyword")
+            start = params.get("start")
+            if keyword == "東京都" and start == 1:
+                return _make_api_response(
+                    first_page_events,
+                    results_returned=True,
+                    results_available=True,
+                )
+            if keyword == "東京都" and start == 101:
+                return _make_api_response([{
+                    "title": "AWS 東京 101",
+                    "url": "https://connpass.com/event/22601/",
+                    "catch": "aws",
+                    "started_at": started,
+                }])
+            if keyword in ("神奈川県", "オンライン"):
+                return _make_api_response([])
+            raise AssertionError(f"unexpected params: {params}")
+
+        with patch.dict("os.environ", {"CONNPASS_API_KEY": "test-key"}), \
+             patch("generate_events_calendar.requests.get", side_effect=fake_get), \
+             patch("builtins.print") as mock_print:
+            events = fetch_events(today)
+
+        self.assertEqual(len(events), 101)
+        tokyo_requests = [
+            req for req in captured_requests
+            if req["kwargs"]["params"].get("keyword") == "東京都"
+        ]
+        self.assertEqual(
+            [req["kwargs"]["params"].get("start") for req in tokyo_requests],
+            [1, 101],
+        )
+        self.assertTrue(
+            any(
+                "results_returned の形式が不正 (bool)"
+                in (call.args[0] if call.args else "")
+                for call in mock_print.call_args_list
+            )
+        )
+        self.assertTrue(
+            any(
+                "results_available の形式が不正 (bool)"
+                in (call.args[0] if call.args else "")
+                for call in mock_print.call_args_list
+            )
+        )
+
     def test_api_fetch_stops_early_when_event_limit_nearby(self):
         """収集件数が上限付近なら追加ページ取得を打ち切る。"""
         started = "2026-05-20T10:00:00+09:00"

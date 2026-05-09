@@ -197,6 +197,14 @@
     });
   }
 
+  function focusDayButton(dateStr) {
+    if (!dateStr) return;
+    const container = $("#cal-days");
+    if (!container) return;
+    const btn = container.querySelector(`.cal-cell-button[data-date="${dateStr}"]`);
+    if (btn) btn.focus();
+  }
+
   function selectDate(dateStr) {
     selectedDate = dateStr;
 
@@ -206,13 +214,7 @@
     // Restore focus to the same day's button after re-render so that
     // keyboard / screen-reader users don't lose their place when the
     // grid's innerHTML is rebuilt.
-    const container = $("#cal-days");
-    if (container) {
-      const btn = container.querySelector(
-        `.cal-cell-button[data-date="${dateStr}"]`
-      );
-      if (btn) btn.focus();
-    }
+    focusDayButton(dateStr);
 
     // Render event list panel
     renderDayPanel(dateStr);
@@ -340,15 +342,7 @@
         const panel = $("#cal-day-panel");
         if (panel) panel.hidden = true;
         renderDays();
-        if (prevSelectedDate) {
-          const container = $("#cal-days");
-          if (container) {
-            const btn = container.querySelector(
-              `.cal-cell-button[data-date="${prevSelectedDate}"]`
-            );
-            if (btn) btn.focus();
-          }
-        }
+        focusDayButton(prevSelectedDate);
       });
     }
   }

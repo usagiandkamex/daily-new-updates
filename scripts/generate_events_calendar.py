@@ -538,7 +538,8 @@ def _fetch_one_vendor_feed(feed_info: dict) -> list[dict]:
         feed = feedparser.parse(resp.content)
         if getattr(feed, "bozo", False) and not feed.entries:
             bozo_exc = getattr(feed, "bozo_exception", None)
-            print(f"  ベンダーイベント RSS ({name}): RSS パース失敗 ({bozo_exc})")
+            detail = f" ({bozo_exc})" if bozo_exc is not None else ""
+            print(f"  ベンダーイベント RSS ({name}): RSS パース失敗{detail}")
             return results
         for entry in feed.entries[:_VENDOR_EVENT_MAX_ENTRIES_PER_FEED]:
             article_url = entry.get("link", "")

@@ -10,6 +10,10 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: events-calendar
+  cancel-in-progress: false
+
 jobs:
   update-events:
     runs-on: ubuntu-latest

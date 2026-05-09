@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-08T22:28:54Z",
+  "generated_at": "2026-05-09T00:24:57Z",
   "events": [
     {
       "title": "[AWS Summit Japan] AWS Summit Japan 2026 - Amazon Web Services (AWS)",
@@ -15,6 +15,22 @@
       "started_at": "2026/04/14 16:00",
       "place": "Las Vegas / オンライン",
       "catch": "<a href=\"https://news.google.com/rss/articles/CBMivAFBVV95cUxQbmNVQjA2d1llTTVUUTlDbmhLZUpFNzBwa3RZLUFmOE5qeEJ1YnAtUUxidlRBT0o2YW16a21KbHNMdmpXNG04ellvVHZyOGJhRENPcFdGRFdEeU1EM3lwZFR6a2VVSG9uVl9keldFd1",
+      "vendor_event": true
+    },
+    {
+      "title": "[Microsoft Ignite] Microsoft 365 E5 Security 最新情報: ブログ04 - Microsoft",
+      "event_url": "https://news.google.com/rss/articles/CBMia0FVX3lxTFA2aWRQRF9RaDl3ZTdITlBTUU0wTW5HOWgwS1VuSEk3SDl4TW8zTk9OQnpZejNINDlGMGhLTmRfMnhGS1RKVWNCY0ZMcXd2QXhsanVHTFFrd00wMl9zdVI4YjRjZFh6a0paOFpn?oc=5",
+      "started_at": "2026/04/18 00:59",
+      "place": "Chicago / オンライン",
+      "catch": "<a href=\"https://news.google.com/rss/articles/CBMia0FVX3lxTFA2aWRQRF9RaDl3ZTdITlBTUU0wTW5HOWgwS1VuSEk3SDl4TW8zTk9OQnpZejNINDlGMGhLTmRfMnhGS1RKVWNCY0ZMcXd2QXhsanVHTFFrd00wMl9zdVI4YjRjZFh6a0paOFpn?oc=5\"",
+      "vendor_event": true
+    },
+    {
+      "title": "[AWS Summit Japan] AWS Summit Japan 2026 - shiftinc.jp",
+      "event_url": "https://news.google.com/rss/articles/CBMiTEFVX3lxTFAyMjkxS21PWmNNMzd0bmpvMWhFSUttSktwak9Sb2FYTm5VOUxnX3dTLWdYdmplWDVhWE1mMWVnd0ZjbWo4dUJBWi02WGk?oc=5",
+      "started_at": "2026/04/21 16:39",
+      "place": "東京 / オンライン",
+      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiTEFVX3lxTFAyMjkxS21PWmNNMzd0bmpvMWhFSUttSktwak9Sb2FYTm5VOUxnX3dTLWdYdmplWDVhWE1mMWVnd0ZjbWo4dUJBWi02WGk?oc=5\" target=\"_blank\">AWS Summit Japan 2026</a",
       "vendor_event": true
     },
     {
@@ -1685,7 +1701,7 @@
       "title": "第71回 CoderDojo武蔵小杉 ※初めての方歓迎",
       "event_url": "https://coderdojo-musashikosugi.connpass.com/event/392851/",
       "started_at": "2026/06/06 13:30",
-      "place": "神奈川県",
+      "place": "オンライン",
       "catch": "2026年のテーマ：ロボットプログラミングをやってみよう！※初回の方向け説明を含みます",
       "description": "※今回は13:15開場・13:30開始です！時間にご注意ください。 CoderDojoって？ CoderDojo とは、7〜17歳の子どもを対象にした非営利のプログラミング道場です。 CoderDojo の活動は2011年にアイルランドで始まり、世界では112カ国・2,200の道場、日本では全国に200以上の道場があります。 CoderDojo https://coderdojo.com CoderDojo Japan https://coderdojo.jp 「CoderDojo武蔵小杉」は、活動内容が公益的であることの確認を経て、（公財）かわさき市民活動センターに登録を承認されている市民活動（ボランティア）団体です。…"
     },
@@ -1694,7 +1710,7 @@
       "event_url": "https://sqlserver.connpass.com/event/392976/",
       "started_at": "2026/06/06 14:00",
       "place": "オンライン",
-      "catch": "68th SQL Beginners Day",
+      "catch": "69th SQL Beginners Day",
       "description": "本イベントについて 本イベントでは、SQLserverについての基礎を学ぶイベントです。 毎回テーマを選定し、テーマにそって学習を進めていきます。 Microsoft 社のコミュニティ運営側へ参加者の情報を共有させていただくため、イベントお申し込み時に、お名前と所属会社名のご入力をお願いしております。 今回の内容 Jsonの配列に対するアクセスに注目します イベントへの参加方法 本イベントは、 Microsoft Teams を使用したオンライン開催を予定しています。 Microsoft Teams アプリをまだインストールしていない方は、以下のリンクより、 インストーラーをダウンロードの上、インストールをお願いいたします。 Microsoft Teams インストーラーのダウンロード なお、当日の参加リンクは、該当イベントに登録された方のみ掲示しています Slack への参加…"
     },
     {
@@ -1752,14 +1768,6 @@
       "place": "オンライン",
       "catch": "ストリートファイター6を題材にしたAIプレイ分析",
       "description": "📝本イベントについて 本イベントは、Azureによるクラウドネイティブなアプリケーション開発に関するノウハウを、世界一わかりみ深い解説でお届けするオンライン配信セッション 「世界一わかりみの深いクラウドネイティブ on Azure」 です。 第38回では、AIがゲームのプレイをコーチングする仕組みを作ってみたお話をします。 近年、生成AIの進化により、さまざまな分野で「人の判断や思考を支援する仕組み」が実現されつつあります。では、ゲームのようなリアルタイム性と複雑な判断が求められる領域において、AIはどこまで踏み込めるかを試してみました。 本セッションでは、格闘ゲーム(ストリートファイター6)のプレイ動画を題材に、AIがプレイ内容を分析し、改善点を提示する仕組みを実際に構築し、その中身を解説します。 ゲームのプレイを分析する、と一言で言っても、やることは意外と多いです。 -…"
-    },
-    {
-      "title": "kamakura.go #9",
-      "event_url": "https://kamakurago.connpass.com/event/386016/",
-      "started_at": "2026/06/12 19:30",
-      "place": "神奈川県",
-      "catch": "定期的にやるぞ",
-      "description": "kamakura.goって何？ 鎌倉・湘南地域のGo言語を使う人、興味がある人、そうでなくてもなんだか良さそうだから来る人、ただただ近くに住んでいるだけの人などが集まって、Goに関するトークを肴に花を咲かせる感じの会です。 前回: https://kamakurago.connpass.com/event/336353/ トークテーマ: 「Goと他のプログラミング言語の違い」 テーマは無視しても大丈夫です。自分が話したいことを話しましょう kamakura.goはGoの勉強会と言いつつ、普段は別の言語を使っている方も来られます。そんな人たちから比較や、ある言語ではこうやることをGoではどうやるの？みたいに質問する話などを聞きたいなと思いました。いかがでしょうか。 募集枠 発表枠 質問・休憩込み20分のトーク枠です。喋るのは15分ぐらいがオススメです。 LT枠…"
     },
     {
       "title": "筋肉エンジニアのもくもく会 ~ 立って筋トレする… 私にとってはそれだけで奇跡だ ~ #33",
@@ -1999,14 +2007,6 @@
       "place": "東京都",
       "catch": "小中学生がプログラミングを無料で楽しむ場を提供しています",
       "description": "CoderDojo新代田（しんだいた）を開催します。小中学生を対象にした自習型の「プログラミング道場」です。 自主的に学習したり作品づくりをして、疑問点や質問があればメンターがアドバイスをしてくれます。 概要 参加対象：小学生〜中学生 定員：6名 + 保護者 ※保護者同伴の元でご参加ください。 場所：まもりやまテラス 2階 守山地区会館 第3会議室 図工室（住所：東京都世田谷区代田6丁目21番5号） 日程：2026年6月20日（土）13：00〜14：00（受付開始12：45） 参加費用：無料 アクセス： 【電車】京王井の頭線「新代田駅」徒歩5分 【バス】東急バス（森91 「大森操車場」～「新代田駅前」）「新代田駅前」徒歩5分 都営バス（宿91 「新宿駅西口」～「新代田駅前」）「代田六丁目」徒歩2分 【自転車】駐輪場があります。…"
-    },
-    {
-      "title": "yidev 横浜iPhone開発者勉強会 第4部 - 第31回勉強会",
-      "event_url": "https://yidev4.connpass.com/event/391446/",
-      "started_at": "2026/06/20 13:00",
-      "place": "神奈川県",
-      "catch": "",
-      "description": "#yidev 横浜 iPhone 開発者勉強会 #yidev 横浜 iPhone 開発者勉強会とは、iOSやmacOSソフトウェア開発に関わるこんな楽しいこと見つけた！やここまで頑張って調べてみた！という内容を登壇し、参加者みんなで談笑する勉強会です。 2009年9月26日に#yidev 横浜 iPhone 開発者勉強会 第１部が始まり、参加者みんなで談笑して登壇を作り上げる#yidevの勉強会の雰囲気がとても好きで、#yidev 第４部を引き継ぐことにしました。 勉強会 今回はWWDC26現地参加直後の Masayuki Iwai さんに登壇してもらいます。WWDC26の熱気を感じられる登壇になると思います。 参加者の中から発表者を募ります。みんなで日々の成果を持ち寄って、議論しながら学びを深める勉強会にしましょう。…"
     },
     {
       "title": "【運動不足も解消】もくもく勉強会",

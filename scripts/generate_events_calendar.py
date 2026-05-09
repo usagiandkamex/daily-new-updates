@@ -541,7 +541,9 @@ def _fetch_one_vendor_feed(feed_info: dict, cutoff_str: str) -> list[dict]:
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
         if getattr(feed, "bozo", False) and not feed.entries:
-            print(f"  ベンダーイベント RSS ({name}): RSS パース失敗")
+            bozo_exc = getattr(feed, "bozo_exception", None)
+            detail = f" ({bozo_exc})" if bozo_exc is not None else ""
+            print(f"  ベンダーイベント RSS ({name}): RSS パース失敗{detail}")
             return results
         for entry in feed.entries[:_VENDOR_EVENT_MAX_ENTRIES_PER_FEED]:
             article_url = entry.get("link", "")
@@ -882,7 +884,7 @@ def fetch_events(today: datetime) -> list[dict]:
     # --- 大手ベンダー・大規模カンファレンス情報 ---
     print("  ベンダーイベント情報を取得中...")
     vendor_events = fetch_vendor_news_events(today)
-    # connpass と URL の重複がなければ追加（seen_urls は connpass 側のみ管理）
+    # connpass と URL の重複がなければ追加（seen_urls は connpass・ベンダーイベント共通で管理）
     added_vendor_count = 0
     for ev in vendor_events:
         if ev["event_url"] not in seen_urls:

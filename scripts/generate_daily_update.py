@@ -341,6 +341,9 @@ EXTENDED_LOOKBACK_DAYS = 30
 # Microsoft 等の一部フィードが数年前の古い情報（SB 等）を返すことがあるため設定している。
 MAX_ARTICLE_AGE_DAYS = 30
 
+# event_reports カテゴリは多数のフィードを逐次取得するため、フィードあたり取得件数を抑えてレイテンシを削減する。
+_EVENT_REPORTS_MAX_ITEMS_PER_FEED = 3
+
 
 def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
     """単一の RSS/Atom フィードを取得し、since 以降の記事を返す。
@@ -354,7 +357,7 @@ def _fetch_feed(url: str, since: datetime, max_items: int = 10) -> list[dict]:
 def fetch_category(category: str, since: datetime) -> list[dict]:
     """カテゴリに属する全フィードから記事を収集する。"""
     # event_reports は多数のフィードで逐次取得するため max_items_per_feed を抑えてレイテンシを削減
-    max_items = 3 if category == "event_reports" else 10
+    max_items = _EVENT_REPORTS_MAX_ITEMS_PER_FEED if category == "event_reports" else 10
     return _ags.fetch_category(
         FEEDS, category, since, max_age_days=MAX_ARTICLE_AGE_DAYS,
         max_items_per_feed=max_items,

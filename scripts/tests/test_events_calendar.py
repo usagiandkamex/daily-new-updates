@@ -26,6 +26,7 @@ from generate_events_calendar import (
     fetch_vendor_news_events,
     VENDOR_EVENT_NEWS_FEEDS,
     VENDOR_EVENT_LOOKBACK_DAYS,
+    VENDOR_REPORT_LOOKBACK_DAYS,
     main,
     MAX_DESCRIPTION_CHARS,
     JST,
@@ -1352,7 +1353,7 @@ class TestFetchVendorNewsEvents(unittest.TestCase):
         self.assertTrue(vendor.get("vendor_event"))
 
     def test_skips_articles_older_than_lookback(self):
-        """VENDOR_EVENT_LOOKBACK_DAYS より前の記事（参加レポート等）はカレンダーから除外される。"""
+        """VENDOR_EVENT_LOOKBACK_DAYS より前の記事はデフォルトフィードから除外される。"""
         today = datetime(2026, 5, 15, tzinfo=JST)
         # ルックバック期間より 1 日前 → 除外されるべき
         old_pub = today - timedelta(days=VENDOR_EVENT_LOOKBACK_DAYS + 1)
@@ -1376,6 +1377,80 @@ class TestFetchVendorNewsEvents(unittest.TestCase):
                          "ルックバック期間より前の記事はカレンダーに含まれてはいけない")
         self.assertIn("https://news.google.com/article/recent", urls,
                       "ルックバック期間内の記事はカレンダーに含まれるべき")
+
+    def test_per_feed_lookback_days_includes_older_articles(self):
+        """lookback_days が設定されたフィードはその日数内の記事を含む。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        # VENDOR_EVENT_LOOKBACK_DAYS(30日)より前だが VENDOR_REPORT_LOOKBACK_DAYS(90日)以内
+        old_pub = today - timedelta(days=VENDOR_EVENT_LOOKBACK_DAYS + 10)  # 40日前
+
+        feed = _make_feed(
+            self._entry(
+                "AWS re:Invent 参加レポート",
+                "https://news.google.com/article/report",
+                published_dt=old_pub,
+            ),
+        )
+
+        with patch("generate_events_calendar.VENDOR_EVENT_NEWS_FEEDS", [
+            {
+                "name": "AWS re:Invent 参加レポート",
+                "url": "https://news.google.com/rss/test",
+                "place": "Las Vegas / オンライン",
+                "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+            },
+        ]), \
+             patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", return_value=feed):
+            events = fetch_vendor_news_events(today)
+
+        urls = [e["event_url"] for e in events]
+        self.assertIn("https://news.google.com/article/report", urls,
+                      "lookback_days 内の記事はカレンダーに含まれるべき")
+
+    def test_per_feed_lookback_days_excludes_articles_beyond_custom_window(self):
+        """lookback_days を超えた記事はフィード個別の設定でも除外される。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        # VENDOR_REPORT_LOOKBACK_DAYS(90日)より 1 日前 → 除外されるべき
+        too_old_pub = today - timedelta(days=VENDOR_REPORT_LOOKBACK_DAYS + 1)
+
+        feed = _make_feed(
+            self._entry(
+                "Google I/O 2025 参加レポート",
+                "https://news.google.com/article/old_report",
+                published_dt=too_old_pub,
+            ),
+        )
+
+        with patch("generate_events_calendar.VENDOR_EVENT_NEWS_FEEDS", [
+            {
+                "name": "Google I/O 参加レポート",
+                "url": "https://news.google.com/rss/test",
+                "place": "Mountain View / オンライン",
+                "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+            },
+        ]), \
+             patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+             patch("generate_events_calendar.feedparser.parse", return_value=feed):
+            events = fetch_vendor_news_events(today)
+
+        urls = [e["event_url"] for e in events]
+        self.assertNotIn("https://news.google.com/article/old_report", urls,
+                         "lookback_days を超えた記事はカレンダーに含まれてはいけない")
+
+    def test_vendor_report_lookback_days_is_greater_than_default(self):
+        """VENDOR_REPORT_LOOKBACK_DAYS は VENDOR_EVENT_LOOKBACK_DAYS より大きい。"""
+        self.assertGreater(VENDOR_REPORT_LOOKBACK_DAYS, VENDOR_EVENT_LOOKBACK_DAYS)
+
+    def test_participation_report_feeds_have_lookback_days(self):
+        """参加レポートフィードには lookback_days が設定されていること。"""
+        report_feeds = [f for f in VENDOR_EVENT_NEWS_FEEDS if "参加レポート" in f["name"]]
+        self.assertGreater(len(report_feeds), 0, "参加レポートフィードが 1 件以上あること")
+        for feed in report_feeds:
+            self.assertIn("lookback_days", feed,
+                          f"{feed['name']} に 'lookback_days' がない")
+            self.assertEqual(feed["lookback_days"], VENDOR_REPORT_LOOKBACK_DAYS,
+                             f"{feed['name']} の lookback_days が VENDOR_REPORT_LOOKBACK_DAYS と一致しない")
 
     def test_vendor_events_list_not_empty(self):
         """VENDOR_EVENT_NEWS_FEEDS が空でないこと（設定漏れ防止）。"""

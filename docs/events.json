@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-25T19:26:00Z",
+  "generated_at": "2026-05-26T20:06:23Z",
   "events": [
     {
       "title": "[Red Hat Summit] 日産、次世代の車載OSにレッドハットを採用 - ZDNET Japan",
@@ -7,6 +7,14 @@
       "started_at": "2026/05/14 16:00",
       "place": "Boston / オンライン",
       "catch": "<a href=\"https://news.google.com/rss/articles/CBMiU0FVX3lxTE5PTEI5VkcyQk44d1ZQV0VLbU9mcHotc2JBVmdURHctTF9qdkpMVXY1RWE2WDdBWkhTZUxCa0lySUlzNElSWElnMUpubmMzV0g1bnNj?oc=5\" target=\"_blank\">日産、次世代の車載OSにレッド",
+      "vendor_event": true
+    },
+    {
+      "title": "[Data + AI Summit] 【スポンサー募集開始】前回1,200名超の申込実績！データエンジニアリングの未来を語る「Data Engineering Summit 2026」開催決定、DAMA木山会長・データ基盤大手3社が登壇！ - PR TIMES",
+      "event_url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE00a3NXZFQwQkNmTDNqc1lqNGdKbFp2cGFJZklxZHp4czhBWlNmX0V3cVhsZVo3b1V0LUhjM3VzR1NpdGJUSW5oeXg0SWFJZVZVcVZCVENrdG5CYWxEVnlvNzZGMDhsZkZYNFE?oc=5",
+      "started_at": "2026/05/14 16:00",
+      "place": "San Francisco / オンライン",
+      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiakFVX3lxTE00a3NXZFQwQkNmTDNqc1lqNGdKbFp2cGFJZklxZHp4czhBWlNmX0V3cVhsZVo3b1V0LUhjM3VzR1NpdGJUSW5oeXg0SWFJZVZVcVZCVENrdG5CYWxEVnlvNzZGMDhsZkZYNFE?oc=5\" ",
       "vendor_event": true
     },
     {
@@ -18,19 +26,11 @@
       "vendor_event": true
     },
     {
-      "title": "[Open Source Summit Japan] OpenSSFアニュアルレポート日本語版を公開 - Linux Foundation",
-      "event_url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxOamdYellSTWFOWl9zTzhiRk93dnplNzUzUkZGUFlIRFdqdXc2RmJxRlAwanAwM2lNS1MzdGJuSk8xX1cyQUdPbEtHbHJQaXRuVjZpajUta1JNU29kdU9FY0tidmNrSEFsTmhlTXFLQ3F1TUNmOGVzbkZjM09JTUpnR1UzLUJFRHg4NHBlVkZxT3BneFHSAaMBQVVfeXFMUFJvazhCczA3NFFkSnI2d1V6OXlRTFpreFppRjVQZlBYWVBOM0dhbzE1YWxDUjhVM1BEc3FCeTNiMktFb2FrZzlzc3JIME5VVXRWUmgtWDY3WGdQUnRyX0RiRHNCMDBDX2lzM2Z5bDhOcEU3Qmx2SUR4cXU0bGVlX01Bb3IzVkNuMnJSVG5FVUxwY2MxbFgxSHBidi1hNlVqaG1yRQ?oc=5",
-      "started_at": "2026/05/14 21:19",
+      "title": "[Open Source Summit Japan] LF Japan Community Days 2025 プログラムを公開 - Linux Foundation",
+      "event_url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxNZUo0QklZQm9lLVFNSGRDc3FLY2Z2bEFMUTdhMDJCU1loT1l1NWFUOHdEa2xZSUpKd3V6RnNyNnZJbElybmstQTlVMzNDSkd2cmxEOFFGS1RZNkx6eEYyQS1VWGhobEdlTnZFX1g0Mm0zS0dDT0xobWxvcmd6NGY5cVVXeV8xeldlakZ3eGFDLXM1UWU0SThKaEN3TUd5RzJGNmRlRlRBdExoQdIBugFBVV95cUxQa01JMFJ0dWZCZGdBY0J6VzNQNHNLTVZoNkJIQVVUajRxbk9GVmdVTWM2ME5QUG1ib0RoekItT2o3aTRrYUdvaWxjVmJoZERBRmRLLWtkY0laa2I3VlNNblQ2X3B2c2pZejJXSExlRmxaNk9RT2h1RzdIeHlNU1B6RXNERV8xa2pCRWVsM2pRMmJCdm95WmZVblpmamtvTWxYSklOSjFKVXEyS240OFp6U0Y4cmxkYzhEeEE?oc=5",
+      "started_at": "2026/05/15 13:01",
       "place": "東京 / オンライン",
-      "catch": "<a href=\"https://news.google.com/rss/articles/CBMikwFBVV95cUxOamdYellSTWFOWl9zTzhiRk93dnplNzUzUkZGUFlIRFdqdXc2RmJxRlAwanAwM2lNS1MzdGJuSk8xX1cyQUdPbEtHbHJQaXRuVjZpajUta1JNU29kdU9FY0tidmNrSEFsTmhlTXFLQ3",
-      "vendor_event": true
-    },
-    {
-      "title": "[Data + AI Summit] ちゅらデータ、ファインディ株式会社主催「AI Engineering Summit Tokyo 2026」に登壇・データブリックス・ジャパンとの特別セッションも実施 - PR TIMES",
-      "event_url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE04M2lmTGNSYWIwellRS1dkQWNGeVlIeXBrQW1weGFuTHVwUVRqalhpN1RVRlI4d0ZaREw4V0VnSTRGRUJraGUyV3cyYWZjZUloZ1dSMlJIRUNoaWtOT2lHeWdnTjE1WFZHSkE?oc=5",
-      "started_at": "2026/05/15 12:00",
-      "place": "San Francisco / オンライン",
-      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiakFVX3lxTE04M2lmTGNSYWIwellRS1dkQWNGeVlIeXBrQW1weGFuTHVwUVRqalhpN1RVRlI4d0ZaREw4V0VnSTRGRUJraGUyV3cyYWZjZUloZ1dSMlJIRUNoaWtOT2lHeWdnTjE1WFZHSkE?oc=5\" ",
+      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiqgFBVV95cUxNZUo0QklZQm9lLVFNSGRDc3FLY2Z2bEFMUTdhMDJCU1loT1l1NWFUOHdEa2xZSUpKd3V6RnNyNnZJbElybmstQTlVMzNDSkd2cmxEOFFGS1RZNkx6eEYyQS1VWGhobEdlTnZFX1g0Mm",
       "vendor_event": true
     },
     {
@@ -42,19 +42,19 @@
       "vendor_event": true
     },
     {
+      "title": "[Data + AI Summit] ちゅらデータ、ファインディ株式会社主催「AI Engineering Summit Tokyo - ニコニコニュース",
+      "event_url": "https://news.google.com/rss/articles/CBMiVEFVX3lxTFBPVkNlaWNieklNX0tBLTBnc2VnWk41ZHFkQmtWbUhoMXM0cC1lWkplY2dUOEtmY3gzc3hPVWRFaDl5T0E4TkdHeHRKTDRDRjNJTVBVcA?oc=5",
+      "started_at": "2026/05/15 18:48",
+      "place": "San Francisco / オンライン",
+      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiVEFVX3lxTFBPVkNlaWNieklNX0tBLTBnc2VnWk41ZHFkQmtWbUhoMXM0cC1lWkplY2dUOEtmY3gzc3hPVWRFaDl5T0E4TkdHeHRKTDRDRjNJTVBVcA?oc=5\" target=\"_blank\">ちゅらデータ、ファインディ",
+      "vendor_event": true
+    },
+    {
       "title": "[Red Hat Summit] BCカードはオープンソース技術カンファレンスである「Red Hat Summit 2026」で「Agentic人工知能(AI)運営プラットフォーム」事例を発表したと18日明らかにした。 - 매일경제",
       "event_url": "https://news.google.com/rss/articles/CBMiTkFVX3lxTFB5WXdIZjF0VFJoYUp5UXIxb0s3aDFNTk5tQ1hza3R3Vi1jS2lqLXhycXJ6UUEwWmxFQ0dZeDlYZjlFem93RnQwb09kNU9Vdw?oc=5",
       "started_at": "2026/05/18 15:33",
       "place": "Boston / オンライン",
       "catch": "<a href=\"https://news.google.com/rss/articles/CBMiTkFVX3lxTFB5WXdIZjF0VFJoYUp5UXIxb0s3aDFNTk5tQ1hza3R3Vi1jS2lqLXhycXJ6UUEwWmxFQ0dZeDlYZjlFem93RnQwb09kNU9Vdw?oc=5\" target=\"_blank\">BCカードはオープンソース技術カンファレン",
-      "vendor_event": true
-    },
-    {
-      "title": "[Google Cloud Next] Google I/O: GPU時代以降におけるグーグルの次の大型AI投資戦略 - Moomoo",
-      "event_url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxQRTRhVFBEblRHUUtTbUdrNl8yUTlEcHdfVjFrRjZyZTc3SXFqVVUya1NlS19vSVZBUW82akIyRHd5UkRZMlhybEk4TzNBeEUyajYzZDY1eEVoY3BVUElMM0J3UTNib3oxNmtKZ0NweEI1ai1MbG9XM0dQVnR4Z1A2Vnp3b3puS3dpUENrTmlvWEY1bmoyNlVaT2VZcw?oc=5",
-      "started_at": "2026/05/19 17:09",
-      "place": "Las Vegas / オンライン",
-      "catch": "<a href=\"https://news.google.com/rss/articles/CBMimwFBVV95cUxQRTRhVFBEblRHUUtTbUdrNl8yUTlEcHdfVjFrRjZyZTc3SXFqVVUya1NlS19vSVZBUW82akIyRHd5UkRZMlhybEk4TzNBeEUyajYzZDY1eEVoY3BVUElMM0J3UTNib3oxNmtKZ0NweE",
       "vendor_event": true
     },
     {
@@ -98,19 +98,11 @@
       "vendor_event": true
     },
     {
-      "title": "[Google Cloud Next] 【吉積情報株式会社】Google Cloud Next '26 現地レポートを公開。Google Workspace における AI エージェント活用と導入の鉄則を解説 - PR TIMES",
-      "event_url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE1YMVRvN0R6RU1LZlhKX0JqMFVaWkIzcWNRWFZiUlNDVzl6MDVXcUZoUlR2NHpIUVdmUWRwTkRqcUxYcVdPM1JzX1BLeXFKUDBsSWE3RmExUEJtZnVWcXBmNm8zOU5KOHRFemc?oc=5",
-      "started_at": "2026/05/22 11:01",
+      "title": "[Google Cloud Next] 【吉積情報株式会社】Google Cloud Next '26 現地レポートを公開。Google Workspace - ニコニコニュース",
+      "event_url": "https://news.google.com/rss/articles/CBMie0FVX3lxTE1VN0w2Ti12YmtmRWZtTXprbXdOM0Z0MXFadTBldFBubTZkcXNHX0cxcmNkUk9qLVN4RUxSOFZLRjJfSTU2X2FzS0hUaExwUkZzQUR5WElEUDFvMnBWTmpYdG9zQVZ4UVpkV1lycUttU3lfc2RwWk1oNGJsdw?oc=5",
+      "started_at": "2026/05/22 16:18",
       "place": "Las Vegas / オンライン",
-      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiakFVX3lxTE1YMVRvN0R6RU1LZlhKX0JqMFVaWkIzcWNRWFZiUlNDVzl6MDVXcUZoUlR2NHpIUVdmUWRwTkRqcUxYcVdPM1JzX1BLeXFKUDBsSWE3RmExUEJtZnVWcXBmNm8zOU5KOHRFemc?oc=5\" ",
-      "vendor_event": true
-    },
-    {
-      "title": "[KubeCon + CloudNativeCon] プレスリリース PRTIMES記事詳細 | さんにちEye 山梨日日新聞デジタル - sannichi.co.jp",
-      "event_url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE55M2RSLW41RXhJVFhoSWZCaWNyN2p0ZHdiVGVNakRqMk10R0paMERWU3BTNlJzRG1RczFKRl9PUjk3cVZjVE9MT1Z5a0tkejBLbEpvbUJ5b3Y2X3VhWW1vaHhKMA?oc=5",
-      "started_at": "2026/05/22 13:30",
-      "place": "現地開催 / オンライン",
-      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiY0FVX3lxTE55M2RSLW41RXhJVFhoSWZCaWNyN2p0ZHdiVGVNakRqMk10R0paMERWU3BTNlJzRG1RczFKRl9PUjk3cVZjVE9MT1Z5a0tkejBLbEpvbUJ5b3Y2X3VhWW1vaHhKMA?oc=5\" target=\"_",
+      "catch": "<a href=\"https://news.google.com/rss/articles/CBMie0FVX3lxTE1VN0w2Ti12YmtmRWZtTXprbXdOM0Z0MXFadTBldFBubTZkcXNHX0cxcmNkUk9qLVN4RUxSOFZLRjJfSTU2X2FzS0hUaExwUkZzQUR5WElEUDFvMnBWTmpYdG9zQVZ4UVpkV1lycUttU3",
       "vendor_event": true
     },
     {
@@ -130,14 +122,6 @@
       "vendor_event": true
     },
     {
-      "title": "[AWS Summit Japan] NRIネットコム、国内最大級のAWSイベント「AWS Summit Japan 2026」にシルバースポンサーとして出展・登壇 | チバテレ＋プラス - 千葉テレビ放送",
-      "event_url": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE1HMXFwdGJENGxyNFBwZjZsTExTWGwzWEk4V0JhcEtoX0FhU0dCbE5WbkQ1WDBEanpod2dFYnlyWVN4bk9iUW51bFB5Z2tzSWdaSU8yNmNqRkZ2Qm9kSHljc21nQmnSAWRBVV95cUxNRzFxcHRiRDRscjRQcGY2bExMU1hsM1hJOFdCYXBLaF9BYVNHQmxOVm5ENVgwRGp6aHdnRWJ5cllTeG5PYlFudWxQeWdrc0lnWklPMjZjakZGdkJvZEh5Y3NtZ0Jp?oc=5",
-      "started_at": "2026/05/25 13:08",
-      "place": "東京 / オンライン",
-      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiZEFVX3lxTE1HMXFwdGJENGxyNFBwZjZsTExTWGwzWEk4V0JhcEtoX0FhU0dCbE5WbkQ1WDBEanpod2dFYnlyWVN4bk9iUW51bFB5Z2tzSWdaSU8yNmNqRkZ2Qm9kSHljc21nQmnSAWRBVV95cUxNRz",
-      "vendor_event": true
-    },
-    {
       "title": "[Microsoft Build] 【日本マイクロソフト社 来札】北海道AIxIoTビジネス共創ラボイベント開催のお知らせ - エコモット株式会社",
       "event_url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE5oQ3A2ekpNSnlqOWZyOWdyWU9Dc0FJMVRxd1BVcFpPbF96Tkg2RnNfZklMMnNMMjlreVRibWNfUUVXTUt0THRHSnJrNGNuZWNWNkcySjhn?oc=5",
       "started_at": "2026/05/25 14:06",
@@ -146,156 +130,20 @@
       "vendor_event": true
     },
     {
-      "title": "Laravel Live Japan 2026",
-      "event_url": "https://laravel-live-jp.connpass.com/event/378150/",
-      "started_at": "2026/05/26 09:00",
-      "place": "東京都",
-      "catch": "日本初開催！Laravel公式カンファレンス",
-      "description": "Laravel Live Japan 2026 とは Laravel Live Japanは、日本で初開催される公式のLaravelコミュニティカンファレンスです。 日本国内はもちろん、海外のエンジニア、Laravelフレームワークおよび周辺エコシステムを作っているエンジニアたちが東京に集まり、ともに学び、交流し、つながる2日間。 急速に進化を続ける Laravel エコシステムの「今」と「これから」を肌で感じ、熱意のあるコミュニティと繋がれる場所。それが Laravel Live Japan です。 公式サイト： https://laravellive.jp 公式X（Twitter）： https://x.com/laravellivejp イベントコンセプト： https://note.com/avosalmon/n/n25fadb9e65df 開催概要 日時 2026年5月26日…"
+      "title": "[Data + AI Summit] インフォマティカ、セールスフォース傘下初の年次カンファレンスで「ヘッドレス」の製品戦略を発表 - EnterpriseZine",
+      "event_url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE5LanpTQkI2eEhNMk1taE1OaWtVMXY4TXc5eVlUOGg2aXY1LWIwOW5GamVaVFU0bkQwUmN4OWFGNUVsRDNKSTc1WUFiUmZBT2otYTZXazdR?oc=5",
+      "started_at": "2026/05/26 15:02",
+      "place": "San Francisco / オンライン",
+      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiVkFVX3lxTE5LanpTQkI2eEhNMk1taE1OaWtVMXY4TXc5eVlUOGg2aXY1LWIwOW5GamVaVFU0bkQwUmN4OWFGNUVsRDNKSTc1WUFiUmZBT2otYTZXazdR?oc=5\" target=\"_blank\">インフォマティカ、セー",
+      "vendor_event": true
     },
     {
-      "title": "Japan VMUG + VMware + Ubuntu コラボイベント",
-      "event_url": "https://vmug-jp.connpass.com/event/392214/",
-      "started_at": "2026/05/26 15:30",
-      "place": "東京都",
-      "catch": "～ Japan VMUG + Broadcom + Canonical ～",
-      "description": "Japan VMUG + VMware + Ubuntu コラボイベントを開催します！ Japan VMUG から、今回もアツいコラボイベントのお知らせです！ 今回のテーマは 「VMware by Broadcom × Ubuntu@Canonical」。仮想化基盤と Linux ディストリビューションの定番中の定番、そのタッグが実現するイベントを、ヴイエムウェア本社にて開催いたします。 ヴイエムウェア様 からは最新の 「VCF 9.x Technical Update」 を、Ubuntu (Canonical様) からは 「アプリケーション OS としてのパートナーシップ」 と題して、普段なかなか聴くことのできない両社のリアルな取り組みをお届けします。 VCF の「今」と、その上で動く OS…"
-    },
-    {
-      "title": "AI時代のField CTO・FDE",
-      "event_url": "https://tokyoai.connpass.com/event/394190/",
-      "started_at": "2026/05/26 18:00",
-      "place": "東京都",
-      "catch": "顧客と開発をつなぐ新しいエンジニアリング職とは",
-      "description": "Introduction AIプロダクトの導入・運用が進む中で、Field CTO、Forward Deployed Engineer（FDE）、Solutions Architectといった「顧客と開発をつなぐ技術職」の役割が急速に変化しています。 特に生成AI・LLM領域では、単なる技術導入支援ではなく、 顧客課題の発見 PoCから本番運用への移行 AIシステム設計 社内外ステークホルダーとの調整 プロダクトへのフィードバック までを横断する、新しいタイプのエンジニアリング職が求められています。 本イベントでは、グローバルおよび国内の最先端AI企業から実践者を迎え、リアルな知見を共有します。 Speakers Declan Clowry (CTO, Foundry Labs) PalantirでのFDEおよびEnterprise Lead経験を経て、現在はFoundry Labs…"
-    },
-    {
-      "title": "SALT2 MEETUP #2 論文解説イベント【現地開催】",
-      "event_url": "https://salt2.connpass.com/event/394271/",
-      "started_at": "2026/05/26 18:00",
-      "place": "東京都",
-      "catch": "論文解説（東野）",
-      "description": "SALT2 MEETUP #2 論文解説イベント【現地開催】 概要 SALT2による論文解説イベントです。 本イベントでは、AI・機械学習・深層学習・LLM・データサイエンスに関する論文や技術トピックを取り上げ、登壇者が背景・主要な考え方・技術的なポイントをわかりやすく解説します。 第2回のテーマは 時系列予測 です。ARIMAのような統計的手法からDLベースの最新アーキテクチャ、Foundation Modelsまでの系譜を追いながら、「どの手法をどの状況で選ぶか」という実務での意思決定の考え方を紹介します。 後半では、参加者からの質問を受けながら、登壇者・参加者同士で自由に議論できる時間を設ける予定です。 申し込み方法 本ページよりお申し込みください。 参加者多数の場合は、参加枠の調整または抽選を行う場合があります。 日時・場所 日時： 2026 年 5 月 26 日（火）…"
-    },
-    {
-      "title": "JAWS-UG Sales #6 はじめてのBuilderCards",
-      "event_url": "https://jawsug-sales.connpass.com/event/381691/",
-      "started_at": "2026/05/26 18:30",
-      "place": "東京都",
-      "catch": "Salesも 楽しみたいの BuilderCards（詠み人知らず）",
-      "description": "【重要】参加枠（オフライン）につきまして 手続きの都合上、5/25（月）9時30分をもって締め切ります。 オフライン枠にお申し込みをされましても、入館証が発行されないため、ご来場いただくことができません。 あらかじめご了承願います。 はじめてのBuilderCards！ 営業職・ビジネス職・クラウド初心者の方でも楽しみながら学べる BuilderCards の体験会 と、 参加者 LT（2〜3枠） を組み合わせた交流イベントです。 「AWS 学習に興味はあるけど、どこから始めれば…？」 「BuilderCards を体験してみたい！」 そんな方向けのライト＆カジュアルな会です。 エンジニアの方ももちろん歓迎！ 対象者 営業・ビジネス職で AWS に関わり始めた初心者の方 BuilderCards に興味をお持ちの方 コミュニティで LT に挑戦してみたい方 本会の後は懇親会…"
-    },
-    {
-      "title": "Agent Frameworkによるマルチエージェント実装体験ハンズオン",
-      "event_url": "https://hack-everything.connpass.com/event/389635/",
-      "started_at": "2026/05/26 18:30",
-      "place": "東京都",
-      "catch": "Durable Agentで実践！今すぐ体験するマルチエージェント開発",
-      "description": "🚀先着30名限定・現地開催のみのハンズオンワークショップ 本ハンズオンは、日本マイクロソフト株式会社 (品川本社) 現地開催のみとなります。 配信やアーカイブはございません。 ※1月に開催したものと重複する内容になっています 参加方法 日本マイクロソフトでの現地開催のみとなります。 5/26 (火) 18時00分開場、18時30分開始となります。 先着30名となりますので、こちらのConnpassイベントページからお申し込みください。 イベント概要 本イベントは、マルチエージェントを開発する方法を学ぶハンズオンワークショップです。Microsoft Agent Framework と Durable Functions を利用して、実際に手を動かしながらマルチエージェントの開発の流れを体験します。…"
-    },
-    {
-      "title": "さわって学ぶ！Gemini Enterprise Agent Platform ワークショップ",
-      "event_url": "https://cloud-gde-jp.connpass.com/event/394135/",
-      "started_at": "2026/05/26 18:30",
-      "place": "東京都",
-      "catch": "Led by Cloud GDE with Jagu'e'r AI/ML分科会",
-      "description": "さわって学ぶ！Gemini Enterprise Agent Platform ワークショップ Google Cloud Next '26 で発表（リブランディング）されたばかりの「Gemini Enterprise Agent Platform」 、もう触りましたか？ AI エージェント開発が一般化し、個人レベルでも\"動くエージェントApp\"を作れる時代になりました。一方で、 「作ったエージェントを、どうやって組織のメンバーに共有する？」 「業務に組み込むには、どうセキュアにデプロイすればいい？」 「Cloud Run と Agent Runtime、結局どっちに載せるべき？」 ——こうした 「作った後」の壁 にぶつかっている方も多いのではないでしょうか。 本ワークショップでは、Google Cloud の最新エージェント基盤である Agent Runtime および Cloud…"
-    },
-    {
-      "title": "AI Agent時代を生き残るエンジニアの条件＠初台",
-      "event_url": "https://aiinnovation.connpass.com/event/379994/",
-      "started_at": "2026/05/26 19:00",
-      "place": "東京都",
-      "catch": "～Claude Code・Cursor・AI Agentで変わる開発現場のリアル～＋交流会",
-      "description": "概要 生成AIやAI Agentの進化により、エンジニアを取り巻く環境は急速に変化しています。 Claude Code・Cursor・AI Agentなどの登場によって、「コードを書く」という行為そのものの価値や、エンジニアに求められる役割も大きく変わり始めています。 これからの時代において重要になるのは、単純な実装力だけではありません。 AIをどう使いこなすか 何を設計し、何を判断するか どのように価値を生み出すか AIとどう共存していくか こうした視点が、今後のエンジニアの市場価値に大きく影響していくと考えています。 本イベントでは、 AI Agent時代の開発現場で起きている変化 Claude Code / Cursor の実践的な活用 AI時代に価値が高まるエンジニアとは何か 若手エンジニアは何を学ぶべきか “技術だけでは戦えない時代”への向き合い方…"
-    },
-    {
-      "title": "STORES Data Lounge「事業と伴走するデータ活用組織」",
-      "event_url": "https://hey.connpass.com/event/390162/",
-      "started_at": "2026/05/26 19:00",
-      "place": "東京都",
-      "catch": "",
-      "description": "STORES_Data_Lounge「事業と伴走するデータ活用組織」 事業成長のために、データチームは現場とどう連携し、どう支援していくべきか？ 「データ基盤はできたけれど、現場での活用がなかなか進まない」「データを抽出して終わりになってしまっている」といった課題は、多くのデータ組織が直面する壁ではないでしょうか。 データチームに真に求められるのは、単にデータを出すことではなく、データチーム以外の人たちがデータを活用して事業成長に繋げられるよう、自ら現場に入り込んでサポートし、協力体制を築いていくことです。 本イベントでは、「事業と伴走するデータ活用組織」をテーマに、以下のような現場のリアルな取り組みについてお話しします。 事業成長のために、データを使ってどういう活動をしているのか？ データチーム以外の人たちがデータ活用するために、どういうサポートをしているのか？…"
-    },
-    {
-      "title": "AI時代のリーダーシップ：生成AIが変える意思決定と組織戦略",
-      "event_url": "https://connpass.com/event/390566/",
-      "started_at": "2026/05/26 19:00",
-      "place": "東京都",
-      "catch": "",
-      "description": "「AIをどう使うか」の話は、もう終わりにしませんか？ 多くの組織が生成AIの「ツールとしての利便性」に目を奪われる一方で、真に差がつくのは、AIを意思決定の仕組みそのものに組み込み、組織のあり方を変えられるかどうかという点にあります。属人的な経験則に頼る時代は終わり、膨大なデータから精緻な市場予測を導き出し、一歩先の戦略を打つための「武器」としてのAI活用が、現代のリーダーには求められています。 本イベントでは、FLUXとFELO AIが培ってきた実践知を体系化し、その核心を紐解きます。 単なる導入事例の紹介に留まらず、CxOが直面する「AI導入を成功させるための組織づくり」や「データドリブンな意思決定の具体的手法」など、現場のリアリティに根ざした戦略を提示します。 現在すでに18名の方が参加予定です。AI時代におけるリーダーシップの最適解を模索中の方はこの機会に、ぜひご参加ください。…"
-    },
-    {
-      "title": "筋肉エンジニアのLT会【オフライン】 ~オフラインでLTしﾏｯｽﾙ~",
-      "event_url": "https://noukin-engineer.connpass.com/event/390704/",
-      "started_at": "2026/05/26 19:00",
-      "place": "東京都",
-      "catch": "",
-      "description": "✍️ イベント概要 Web業界で働く筋肉エンジニアたちが、自分の学びたいプログラミングや語学をモクモク勉強する至って真面目な勉強会だ。 今回はオフラインLT会で、筋肉と技術の両方の知見を手に入れるチャンスかも？LTを聞くだけだから、まだ筋肉エンジニアの会に参加したことのない君も軽い負荷から始められるぞ！さあ、今すぐ参加受付を済ませて、筋肉の扉を開けよう！！ そして、登壇して自分の知見をアウトプットしたい筋肉エンジニアも大募集中だ！ 技術ネタはもちろん、筋トレ・プロテイン・減量・大会出場記録など、筋肉に関するLTも大歓迎。発表時間は1人5分。インプットだけじゃなくアウトプットで筋肉（と登壇力）に追い込みをかけたい君、ぜひエントリーしてくれ！ 過去LT会① 過去LT会② 🗓️スケジュール 時間 内容 登壇者 18:50-19:00 受付 - 19:00-19:10 会の説明 運営チーム…"
-    },
-    {
-      "title": "毎週火曜にやってる！プログラミング&ITなんでも勉強部屋（5月第4週）",
-      "event_url": "https://hfs.connpass.com/event/390996/",
-      "started_at": "2026/05/26 19:00",
-      "place": "東京都",
-      "catch": "毎週火曜にやってる、もくもく勉強部屋！！",
-      "description": "#プログラミング勉強部屋 #eLV勉強会 毎週火曜やってます!! ※その他の火曜も参加希望の場合は このリンク からお願いします！ どんなイベント？ 一人だと、自宅だと、だらけちゃって自分に負けちゃう！やる気はあるのに進まない......心配ありません、人間そんなものです（笑）そこで、以下の環境を用意しております！！ なんとなく学習モードに切り替わることのできる「場」 一人ではなく同じような学習テーマをもった「仲間」 毎週火曜日開催！ 無言、途中参加、途中退出、ちょっと抜けてまた戻ってくる、などなど自由です。 ゆる〜くやっているので、お気軽にご参加ください。 参加者ってどんなことやっているの？ ・プログラミングの勉強 ・ネットワークやCloudの勉強 ・書籍を読む ・会社の仕事を仕上げる ・各種資料を作成する ・ブログなどの記事を書く ・統計や数学など基礎的な勉強 ・その他なんでも！…"
-    },
-    {
-      "title": "AI時代に、品質エンジニアとして何者になるか - セッションとパネルトークで語る各社の現在地",
-      "event_url": "https://bitkey.connpass.com/event/391877/",
-      "started_at": "2026/05/26 19:00",
-      "place": "東京都",
-      "catch": "",
-      "description": "💭 イベント概要 品質エンジニアが AI時代のキャリアと仕事の変化を、前向きに話す勉強会です。 テーマは、「AIと共に働くようになった今、品質エンジニアとして何者になるか」。 テスト自動化、CI/CD、テスト設計…。 自分たちがやってきた仕事を、AIが肩代わりし始めています。 「AIと働くようになってから、自分の仕事の何が変わり、何が変わらなかったか」 「AIに任せること・任せないことの線引きを、今どこで引いているか」 答えはまだ誰も持っていません。 このイベントで意見交換し、みんなで一歩前に進みましょう。 💁 こんな方におすすめ！ 従来の仕事をAIに委譲できつつあり、品質エンジニアとして何に向き合うかを再考している方 他社の品質エンジニア・SETと前向きに対話し、前進していきたい方 🕒 タイムテーブル 時間 内容 登壇者 18:45 開場・受付 - 19:00 オープニング -…"
-    },
-    {
-      "title": "AI 時代のプロダクト開発を問い直す Meetup",
-      "event_url": "https://layerx.connpass.com/event/392455/",
-      "started_at": "2026/05/26 19:00",
-      "place": "東京都",
-      "catch": "AI エージェント前提のプロダクトチームを考える",
-      "description": "イベント概要 生成AIやAIエージェントの普及により、プロダクト開発の前提が大きく変わりつつあります。 コードを書く速度だけでなく、仕様の定義やレビュー、検証、役割分担、組織設計まで含めて、これからのプロダクトチームのあり方を見直す必要が出てきています。 LayerX でも、AI を前提にしたプロダクト開発や組織づくりについて日々試行錯誤を続けています。 本イベントでは、株式会社メルカリ VP of Engineering Cross Border の @deeeet さん、 fukabori.fm ホストの @iwashi86 さんをゲストに迎え、LayerX CTO 松本（ @y_matsuwitter ）を交え、AI 時代のソフトウェアエンジニアリングとプロダクト開発について議論します。 deeeet さんが Pragmatic Summit…"
-    },
-    {
-      "title": "【秋葉原】もくもく会",
-      "event_url": "https://fffff.connpass.com/event/394293/",
-      "started_at": "2026/05/26 19:00",
-      "place": "東京都",
-      "catch": "内容自由のゆるい、もくもく会です",
-      "description": "概要 テーマ自由なオフラインもくもく会です。 秋葉原のコワーキングスペース FFFFF Cafe （ https://fffff-cafe.com/ ） に集まり、各々やりたいことを作業する会です。 作業内容は勉強、読書、開発、雑談なんでもOK！ ソフトウェアエンジニアの参加者が多いですが、どなたでも参加可能です。 Vol. 119 もくもく会とは？ もくもく会とは、参加者が集まって各自やりたい作業に集中する会です。 名前の通り、「もくもく」と静かに作業するのが基本スタイルですが、雑談や交流もOKです。 こんな人におすすめ 家だと集中できないけどカフェだと作業しづらい 同じ時間帯に作業する仲間がほしい ITやデザイン、ものづくりなど好きなことに没頭したい 他の参加者とゆるく交流したい 作業内容の例 プログラミングや勉強 読書や執筆 資格の勉強やポートフォリオ作成 趣味の作業や副業…"
-    },
-    {
-      "title": "一般社団法人PyCon JP Association運営会議 #81",
-      "event_url": "https://pyconjp-staff.connpass.com/event/387756/",
-      "started_at": "2026/05/26 19:30",
-      "place": "東京都",
-      "catch": "",
-      "description": "概要 2〜3ヶ月に一回ほど開催している 一般社団法人PyCon JP Association の運営会議です 毎年開催しているPyCon JPイベントの他にも以下のようなことについて議論しています Python Boot Camp PyLadies Caravan Python Boot Camp Caravan その他コミュニティ支援など 過去の議事録は 一般社団法人PyCon JP Associaion運営会議 から参照できます 一般社団法人PyCon JP Associationの活動に興味がある人はぜひ「オブザーバー枠」で参加して、会議に参加してください(会議での発言もご自由にどうぞ) リモート参加も可能です。ZoomのURLを事前にconnpass経由でメールでお知らせします。 会場へのアクセス オンラインとオフラインのハイブリッドです"
-    },
-    {
-      "title": "UV Study : 現場のRustaceanに聞く！Rust実戦投入のリアル",
-      "event_url": "https://uniquevision.connpass.com/event/392069/",
-      "started_at": "2026/05/26 19:30",
-      "place": "東京都",
-      "catch": "",
-      "description": "概要 Rustを「書いてみたい」から「現場で使う」へ。 本LT会は、実際にRustを現場で使っているRustaceanたちによる、リアルな体験談を共有する場です。 「このライブラリを使ってみてハマった／助かった」「本番で動かしてみたらこんな挙動だった」「エラーハンドリングをこう書いたら読みやすくなった」といった手を動かして得た生々しい知見から、「なぜRustを選んだのか」「チームはどうキャッチアップしたか」「導入してみて組織にどんな変化があったか」といった導入・運用まわりの話まで、切り口は幅広くOK。 技術的なディープダイブも、運用してみた率直な感想も、どちらも歓迎するLT会です。Rustに興味のある方、導入を検討中の方、すでに業務で触れている方同士の交流の場としてぜひご参加ください。 登壇者募集 登壇者を募集します 登壇時間は１枠 10分 です。…"
-    },
-    {
-      "title": "ハーネスエンジニアリング勉強会",
-      "event_url": "https://aibuilderstokyo.connpass.com/event/393039/",
-      "started_at": "2026/05/26 19:30",
-      "place": "東京都",
-      "catch": "",
-      "description": "【ハーネスエンジニア勉強会】AIハーネスエンジニアリング入門 〜モデルの\"周辺\"を設計するという仕事〜 📣 はじめに：エンジニアでない方も、ぜひご参加ください 「ハーネスエンジニア勉強会」は、AIモデルそのものではなく、 モデルを取り巻く\"周辺装置\"をどう設計するか を考えるコミュニティです。 入門回となる今回は、これからAIハーネスに取り組む若手エンジニアを主な対象としつつ、 コードを書かない方にも理解いただける構成 を意識しています。ハーネスエンジニアリングは、突き詰めると「AIに何を見せ、何をさせ、どう振る舞わせるか」という設計の話であり、業務設計・運用ルールづくりに通じるテーマでもあります。エンジニア以外の方も、安心してご参加ください。 開催形式 オフライン会場 ＋ YouTubeライブ配信のハイブリッド開催 です。 🏢 オフライン参加…"
-    },
-    {
-      "title": "AI×動画編集のLT会 〜AIで変わるクリエイティブと自動化の最前線〜",
-      "event_url": "https://cryptocafenbar.connpass.com/event/392758/",
-      "started_at": "2026/05/26 20:00",
-      "place": "東京都",
-      "catch": "",
-      "description": "急速に進化を続ける生成AI。その波は動画クリエイティブの現場にも大きな変化をもたらしています。 本イベントは、「AI×動画編集」をテーマにしたLT（ライトニングトーク）＆交流会です。 最新のAIツールを活用した編集ワークフローの効率化から、生成AIを用いた独自ツールのプロトタイプ開発など、動画制作の新しいアプローチについてLT形式で知見を共有しましょう！ ドリンクを片手に、クリエイターやエンジニア同士で気軽に語り合える場です。 こんな方におすすめ ・AIを活用して動画編集の作業を自動化・効率化したい方 ・Premiere Proなどの主要ソフトとAIを組み合わせた最新ワークフローに興味がある方 ・コミュニティメディアを立ち上げる予定の方 日時 2026年5月26日（火）20:00〜22:00（19:45受付開始） 会場 Crypto Cafe & Bar（恵比寿・代官山）…"
+      "title": "[AWS Summit Japan] シンプレクス、AWS Summit Japan 2026にゴールドスポンサーとして協賛 - Digital PR Platform",
+      "event_url": "https://news.google.com/rss/articles/CBMiQ0FVX3lxTE1LbFZ5WVdqUUFUYmdzVmhYWl9KUm9yMHQ0SldpdTFIeEVnLUtrX29uMWR6V002bmxmbHJqV3kyclRKbGM?oc=5",
+      "started_at": "2026/05/26 15:34",
+      "place": "東京 / オンライン",
+      "catch": "<a href=\"https://news.google.com/rss/articles/CBMiQ0FVX3lxTE1LbFZ5WVdqUUFUYmdzVmhYWl9KUm9yMHQ0SldpdTFIeEVnLUtrX29uMWR6V002bmxmbHJqV3kyclRKbGM?oc=5\" target=\"_blank\">シンプレクス、AWS Summit Japan 2026にゴールドスポン",
+      "vendor_event": true
     },
     {
       "title": "安野さんご登壇！〜エンジニアチームの開発体制や技術選定の背景と展望〜",
@@ -602,52 +450,12 @@
       "description": "💡 開催の背景：なぜ今、この本なのか？ AIが瞬時にコードを生成する時代。エンジニアの真価は、技術そのもの以上に 「いかに人を巻き込み、チームとして成果を出すか」 という人間らしい活動にシフトしています。 今回は、Googleのエンジニアが執筆した名著 『Team Geek ―Googleのギークたちはいかにしてチームを作るのか』 を題材に、チームビルディングの不変の原理原則である 「HRT（謙虚・尊敬・信頼）」 について語り合います。 普段は社内で開催している輪読会ですが、今回は 「オープン勉強会」 として社外の皆様も招待いたします。 所属の垣根を越えて、「現場のリアルな悩み」や「HRTの実践例」を語り合える越境学習の場を目指しています。 📚 題材・参加条件 対象書籍： 『Team Geek ―Googleのギークたちはいかにしてチームを作るのか』 （Brian W.…"
     },
     {
-      "title": "Drupal Meetup 羽田 #84【オンライン開催】",
-      "event_url": "https://drupal-meetup-haneda.connpass.com/event/392679/",
-      "started_at": "2026/05/28 20:00",
-      "place": "オンライン",
-      "catch": "高機能CMS（コンテンツ管理システム） Drupalについて勉強しよう！",
-      "description": "概要 Drupal Meetup 羽田は、オープンソースCMS（コンテンツ管理システム）であるDrupalに興味がある人達を中心としたグループです。 さらにDrupal（ドルーパル）普及を目的とした交流の場所です。Drupal（ドルーパル）は、CX（カスタマーエクスペリエンス）・DX（デジタルエクスペリエンス）のプラットフォームとして、多くのグローバル企業や機関に採用されています。API志向のアーキテクチャで、IOTやAI（人工知能）といったシステムとの連携事例も出てきています。またAngularやREACT等のJavaScriptフレームワークを使ってスマホアプリを開発し、バックエンドのプラットフォームとして、Drupal（ドルーパル）を利用する事も可能です。…"
-    },
-    {
-      "title": "【配信】.NET 11 Preview 4！ C# Tokyo イベント",
-      "event_url": "https://csharp-tokyo.connpass.com/event/394060/",
-      "started_at": "2026/05/28 20:00",
-      "place": "オンライン",
-      "catch": "",
-      "description": ".NET 11 Preview 4 https://devblogs.microsoft.com/dotnet/dotnet-11-preview-4/ ダウンロード https://dotnet.microsoft.com/ja-jp/download/dotnet/11.0 早いもので、もう .NET 11 の Preview 4 の季節です。しかし日本の IT エンジニアは忙しい！ そこで C# Tokyo メンバーがそれらの情報をチェックする様またはチェックした内容について話す配信することで皆さんと一緒に学んでいこうと思います。 ようは特に事前にコンテンツを用意せず好きに話す配信です。 イベント概要 主催メンバーが .NET 11 の発表内容をテーマに好きに話す様子を配信します。 いろいろとつたないかもしれませんが暖かく応援してください。 開催プラットフォーム 視聴者向けに…"
-    },
-    {
-      "title": "【PA45 第12回】「式」アレルギー、今日で卒業｜申請から3営業日後に自動リマインド",
-      "event_url": "https://powerautomate-create.connpass.com/event/394484/",
-      "started_at": "2026/05/28 20:15",
-      "place": "オンライン",
-      "catch": "Forms × SharePoint × Approvals × Teamsを1本につなげる",
-      "description": "Power Automate をこれから触る方、 「申請フォームの回答を、承認者が確認してから自動で記録したい」という方向けの 45分ハンズオンです。 🧩 PowerAutomate45（PA45）とは？ 毎回 45分 毎回 1テーマを軸に構成 自分の手で作って、動かすところまでを一緒にやる 初心者にやさしい「手を動かすミニ講座」シリーズです。 プログラミング経験ゼロ・Power Automate初めて、でも大丈夫です。 🎧 参加方法（オンライン） 本イベントは Microsoft Teams を利用して実施します。 参加者向けTeams URLは、connpassの「参加者への情報」欄に記載しています。 ✅ こんな方におすすめ PowerAutomateを業務で使ってみたい -業務自動化・効率化に興味がある 🔰 準備するもの Microsoft 365…"
-    },
-    {
       "title": "「TCP/IPソケットプログラミング C言語編」読書会11",
       "event_url": "https://yuruora.connpass.com/event/394710/",
       "started_at": "2026/05/28 20:30",
       "place": "オンライン",
       "catch": "ひたすら本を読みます！途中入退出OKなので気軽にきてください",
       "description": "C言語本の「TCP/IPソケットプログラミング (C言語編)」の読書会です！！ 参加者で順番に音読していきましょう 本は各々でご購入しておいてください C言語が全然わからない人から詳しい人まで誰でも大歓迎です ドタキャンや途中入退出は自由です。気軽にやりましょう 入門者向けの会ですので、質問等はどんどんしてください 答えられる人がいるかは謎です 日付 進捗 02/12 P.1～ 02/19 P.23 1.3 クライアントとサーバ～ 02/26 P.31 2.3 TCP クライアント～ 03/05 P.38 2.4 TCP サーバ～ 03/12 P.43 ・接続先クライアントの表示(59行目)～ 03/19 P.46 3. サーバは、長時間停止せずに動作することが要求されます。～ 03/26 P.46 5. １秒間待機を入れてみたけど送受信両方で１秒ごとに…"
-    },
-    {
-      "title": "スッキリわかるJava入門 第4版（木２０：３０）",
-      "event_url": "https://engineeringskype.connpass.com/event/394711/",
-      "started_at": "2026/05/28 20:30",
-      "place": "オンライン",
-      "catch": "木曜日２０：３０から開始します！",
-      "description": "概要 「スッキリわかるJava入門 第4版 (スッキリわかる入門シリーズ)」読書会を開催します 教科書は以下のものを使用します。 「スッキリわかるJava入門 第4版 (スッキリわかる入門シリーズ)」 https://amzn.asia/d/9gsagiU WebカメラはOffでOK。主催者もOffにします Discordの画面共有とボイスチャットで読んでいきます 二回目からconnpassで登録は必要ありません お気軽にどうぞ！！ 日時 毎週木曜日２０：３０ 参加方法 参加されたい場合は以下のDiscordサーバよりご入室ください。 Discordサーバ ↓ https://discord.gg/GuqNAD5whH"
-    },
-    {
-      "title": "CCNA向けシミュレーション対策のハンズオン会",
-      "event_url": "https://connpass.com/event/395108/",
-      "started_at": "2026/05/28 20:30",
-      "place": "オンライン",
-      "catch": "",
-      "description": "開催概要 日時：5月28日（木）20:30-21:30 場所：オンライン（Zoom予定） 参加費：無料 ハンズオンの内容と必要な物 ハンズオンの内容 : VLAN、VTP、LAG 必要な物 : Cisco Packet TracerをインストールしたPC"
     },
     {
       "title": "Nano BananaとGemini Omniで作る！オリジナルフォト＆ムービー体験",
@@ -704,6 +512,14 @@
       "place": "オンライン",
       "catch": "あなたの「一歩フミダシ」、私たちが後押しします！！",
       "description": "✨新しいことにチャレンジしたり、がんばっている人（＝ フミダシ さん）を お呼びして、今までのキャリアやこれからの目標をあーちゃん＆らむだがお聞きします。 🍴本日のメニュー 時間 内容 備考 21:20 開店 21:30 オープニング フミダシさん紹介 おしゃべり① ※テーマ：～一歩フミダシ前まで おしゃべり② ※テーマ：一歩フミダシ後～未来へ向けて エンディング 22:30 閉店 お話しする人 🦶第27話の フミダシ さん🦶は… さのちひろ さん！！！ あーちゃん&Λ（らむだ）からの紹介文 「AI任せ」にできる時代に、私たちが考え、語る意味とは何なのか？ AIに潜む差別・偏見との 闘いを描いた話題作「AIの仮面を剥いでやる」の翻訳者であり、現役AIプラットフォーム会社の 社員でもある、さのちひろさん。AIと倫理について、行動しながら考えてきた、その想いに迫ります！ 🎤MC あーちゃん…"
+    },
+    {
+      "title": "【オンライン】ゆるっと もくもく会 for Women (第 235 回)",
+      "event_url": "https://yurumoku-for-women.connpass.com/event/395268/",
+      "started_at": "2026/05/28 22:00",
+      "place": "オンライン",
+      "catch": "女性限定の気軽に日常参加できる「もくもく会」",
+      "description": "コンセプト がんばりすぎない、作業時間。 ふらっと入って、あなたのペースで。 エンジニアも、デザイナーも、学生さんも、お休み中の方も。 女性のための、ゆるい作業部屋。 🧶「がんばらなくていい」そんな場が、ここにはあります。 あなたの日常に、ちょっとした居場所ができたら嬉しいです。 ※ 管理人が持病の都合でかなりゆるい感じですが、放置したり投げ出すことはないので、同じようにゆるい感じで気軽にご利用ください。 🌿 ゆるっと もくもく会 for Women へようこそ！ このコミュニティは、女性限定の「気軽に日常参加できる作業スペース」の提供を目的としています。 プログラミング・デザイン・読書・家事…どんな作業でもOK！ あなたのペースで、ゆるっと参加してください。 ✔️ 出入り自由・会話自由・ROM OK ✔️ 雑談も歓迎、無言作業も歓迎 ✔️ オンラインの勉強会や読書会などの開催 歓迎…"
     },
     {
       "title": "IT系&誰でも参加OK！もくもく会_朝活_5/29(金)",
@@ -776,6 +592,14 @@
       "place": "オンライン",
       "catch": "",
       "description": "「 PostgreSQL エンタープライズ・コンソーシアム（略称：PGECons） 」 2025年度活動成果発表会を開催します！ PostgreSQLの技術検証・評価結果（WG1、WG2）、PostgreSQL開発コミュニティへの機能開発提言を目指すCR部会の活動報告、ならびにPGECons全体の活動をご紹介します。 2012年4月に発足した「PostgreSQLエンタープライズ・コンソーシアム（略称：PGECons）」は、2026年をもちまして活動15年目を迎えます。2026年4月現在、正会員16社、一般会員68社と、多くの企業様にご参加いただき、PostgreSQLをエンタープライズ利用するための技術検証や、その成果のプロモーション等を行っております。…"
+    },
+    {
+      "title": "SCS評価制度 × SOC 2 | 中小企業のための、2つのセキュリティ評価制度の使い分けと併用戦略",
+      "event_url": "https://connpass.com/event/395151/",
+      "started_at": "2026/05/29 14:00",
+      "place": "オンライン",
+      "catch": "",
+      "description": "SCS評価制度 × SOC 2 中小企業のための「使い分け・併用戦略」セミナー ▼ 「どちらを取るべきか？」ではなく「どう組み合わせるか？」 2026年度下期、経産省のSCS評価制度がいよいよ始動します。 同時に、海外取引・SaaS事業を展開する中小企業ではSOC 2レポートの取得依頼も急増中。 この2つの制度は目的も評価項目も異なるため、単純な比較ではなく「自社の取引構造に合わせた組み合わせ方」が問われます。 本セミナーでは、両制度の最新動向を整理した上で、限られたリソースで現実的に進められる併用戦略を、監査・コンサルの実務経験豊富な2名の登壇者が解説します。 ▼ こんな課題を感じている方におすすめ ・取引先からセキュリティ要求が増えているが、何から手をつければ良いかわからない ・顧客からSOC 2レポートの提示を求められた（または将来求められそう）…"
     },
     {
       "title": "オープンハードテラス ハイブリッド  #0b1111110 (第254回)",
@@ -871,7 +695,7 @@
       "started_at": "2026/05/29 19:00",
       "place": "東京都",
       "catch": "",
-      "description": "Claude Code 実践型勉強会 AIビジネス実践コミュニティ 「AI Business Lab（AIBL）」 が主催する、Claude Codeに特化した実践型勉強会です。 主催・パートナー 主催 AI Business Lab（AIBL） X： https://x.com/AI_Biz_Labs パートナー JANCTION 公式サイト： https://www.janction.ai/home 「JANCTION」は、生成AIの開発・運用に必要な計算資源を提供し、研究機関やスタートアップ、事業開発の現場を支援するプロジェクトです。 分散型GPUクラウド 「JANCTION GPU Pool」 を通じて、高性能GPUを活用しやすい環境を提供し、生成AI製品の品質向上や開発コストの最適化を支援しています。…"
+      "description": "Claude Code 実践型勉強会 AIビジネス実践コミュニティ 「AI Business Lab（AIBL）」 が主催する、Claude Codeに特化した実践型勉強会です。 https://luma.com/xi04ffhc 主催・パートナー 主催 AI Business Lab（AIBL） X： https://x.com/AI_Biz_Labs パートナー JANCTION 公式サイト： https://www.janction.ai/home 「JANCTION」は、生成AIの開発・運用に必要な計算資源を提供し、研究機関やスタートアップ、事業開発の現場を支援するプロジェクトです。 分散型GPUクラウド 「JANCTION GPU Pool」 を通じて、高性能GPUを活用しやすい環境を提供し、生成AI製品の品質向上や開発コストの最適化を支援しています。…"
     },
     {
       "title": "JPmoxs勉強会#10",
@@ -1000,6 +824,14 @@
       "place": "オンライン",
       "catch": "C#読書会第241回",
       "description": "概要 なぜ依存を注入するのか DIの原理・原則とパターン の読書会です。「P.278 7.2.3 UWPアプリケーションにおける合成基点の実装」あたりから始めます。 読書会中も読む時間はあるので、きっちり読み込んでくる必要はありません！ 自分の興味のある切り口で、C#について盛り上がりましょう！ C#の小話、雑談は大歓迎です！積極的にお願いします。 対象 何かしらのプログラミング言語の経験のある方 必要なもの 「 なぜ依存を注入するのか DIの原理・原則とパターン 」の本 オンライン ↓↓↓↓↓↓↓↓↓↓↓↓当日↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓ オンラインは特に連絡などはありません。時間になったら コチラ からご参加下さい。（時間前でも入室可能です）。 カメラはオン推奨ですが、オンオフ自由です。"
+    },
+    {
+      "title": "【オンライン】ゆるっと もくもく会 for Women (第 236 回)",
+      "event_url": "https://yurumoku-for-women.connpass.com/event/395269/",
+      "started_at": "2026/05/29 22:00",
+      "place": "オンライン",
+      "catch": "女性限定の気軽に日常参加できる「もくもく会」",
+      "description": "コンセプト がんばりすぎない、作業時間。 ふらっと入って、あなたのペースで。 エンジニアも、デザイナーも、学生さんも、お休み中の方も。 女性のための、ゆるい作業部屋。 🧶「がんばらなくていい」そんな場が、ここにはあります。 あなたの日常に、ちょっとした居場所ができたら嬉しいです。 ※ 管理人が持病の都合でかなりゆるい感じですが、放置したり投げ出すことはないので、同じようにゆるい感じで気軽にご利用ください。 🌿 ゆるっと もくもく会 for Women へようこそ！ このコミュニティは、女性限定の「気軽に日常参加できる作業スペース」の提供を目的としています。 プログラミング・デザイン・読書・家事…どんな作業でもOK！ あなたのペースで、ゆるっと参加してください。 ✔️ 出入り自由・会話自由・ROM OK ✔️ 雑談も歓迎、無言作業も歓迎 ✔️ オンラインの勉強会や読書会などの開催 歓迎…"
     },
     {
       "title": "朝のモクモク読書会オンライン Page122",
@@ -1415,7 +1247,7 @@
       "started_at": "2026/05/31 13:00",
       "place": "東京都",
       "catch": "",
-      "description": "Cocoa/Swift勉強会2026/5/31 ■参加者 参加：成田丞 欠席： ■Cocoa勉強会関東 2026/04/29のご案内 日時：2026/05/31(日) 13:00から17:00 場所： 貸会議室マイ・スペース 池袋パルコ横店[1号室] 〒170-0013 東京都豊島区東池袋1-42-8 第一イン池袋ビル地下1階 集合：現地 会費：2000円から3000円くらい 備品： フリーWifiとプロジェクターあります ■ スケジュール 13:00 自己紹介 13:30 検討中 成田丞 14:30 画像の空白判定 Piyomaru 15:45 休憩 15分 16:00 検討中 村上幸雄 16:30 発表 16:45 次回日程の決定、片づけ 17:00 解散 ■参加者へのお願い 現場にフリーWifiがあります。各種資料は現場でダウンロードできます。"
+      "description": "Cocoa/Swift勉強会2026/5/31 ■参加者 参加：成田丞 欠席： ■Cocoa勉強会関東 2026/04/29のご案内 日時：2026/05/31(日) 13:00から17:00 場所： 貸会議室マイ・スペース 池袋パルコ横店[1号室] 〒170-0013 東京都豊島区東池袋1-42-8 第一イン池袋ビル地下1階 集合：現地 会費：2000円から3000円くらい 備品： フリーWifiとプロジェクターあります ■ スケジュール 13:00 自己紹介 13:30 人工知能に25年前の文書を食わせてみた 成田丞 14:30 画像の空白判定 Piyomaru 15:45 休憩 15分 16:00 検討中 募集中 16:30 発表 16:45 次回日程の決定、片づけ 17:00 解散 ■参加者へのお願い 現場にフリーWifiがあります。各種資料は現場でダウンロードできます。"
     },
     {
       "title": "ゲーム開発 もくゆる会 #53",
@@ -1498,6 +1330,14 @@
       "description": "沖縄マイクラ & Scratch・Python・AI・動画編集教室、参加者募集中 沖縄マイクラ部では、教育版マインクラフトを利用して小学生から高校生にプログラミング教育やマインクラフト上での作品作りを体験してもらっているスクールです。 一緒にマインクラフトを楽しんだりプログラミングの勉強をしていきたいという仲間を募集しています。子供たちへのプログラミング教育を目指して「Scratch」「MakeCode」「Python」「JavaScript」「Roblox（Lua）」「Unity」「PICO-8」「プチコン（Smile BASIC）」や「RPGツクール」「RPG Developer Bakin」の勉強会も開始しました。…"
     },
     {
+      "title": "【大阪】スマートグラス体験会_2026/05/31",
+      "event_url": "https://osaka-driven-dev.connpass.com/event/395200/",
+      "started_at": "2026/05/31 14:30",
+      "place": "オンライン",
+      "catch": "様々なスマートグラスデバイスを体験して、理解を深めよう",
+      "description": "概要 いくつかのスマートグラスデバイスの体験や比較ができます。 また、様々なスマートグラスデバイスに関して普段からスマートグラスデバイスに触れている人に直接話を聞くこともできます。 その他、自身が持っている関連デバイスやコンテンツを持参して一緒に体験してもらうこともできます。 ※デバイスやコンテンツについて、一定のスペースや会場側での準備等が必要な場合は事前にメールかXかオンラインコミュニティにてお問合せください。 参加可能な方 ・色んなスマートグラス関連デバイスを体験してみたい方 ・スマートグラス分野に興味のある方 ・複数のスマートグラスデバイスを体験しながら比較してみたい方 ・持参デバイスやコンテンツを体験してもらうことができます ・他の参加者の持参デバイスやコンテンツを体験することができます 体験可能予定の機材 Even G2 GUIDE01 Rokid スマートAIグラス…"
+    },
+    {
       "title": "『Functional Programming in Lean』輪読会 #6",
       "event_url": "https://lambda-kansai.connpass.com/event/395008/",
       "started_at": "2026/05/31 20:30",
@@ -1512,6 +1352,14 @@
       "place": "オンライン",
       "catch": "初心者のための勉強会「ゼロキンカス道場」のもくもく雑談会です。１人以上参加者がいればやります。",
       "description": "ゼロキンカス道場 kintoneカスタマイズ初心者のための、ゼロから始める実践コミュニティ kintoneは使える。でも、カスタマイズはまだこれから。 そんな方のための、 学び・実践・仲間づくり を目的とした初心者向けコミュニティです。 勉強会申込み時の注意 参加人数の把握のため、参加される方はお一人ずつ申込みしていただくようお願いします。 参加登録後、参加者への情報欄にZoomミーティングのURLが表示されます。当日はそのURLから参加してください。 このコミュニティについて ゼロキンカス道場 は、 kintoneカスタマイズを基礎から学び、 「業務改善を実践できる力」を身につけるための学習コミュニティです。 プログラミング未経験OK JavaScript初心者歓迎 kintoneカスタマイズをゼロから学べる 一人では挫折しがちな学習を、仲間と一緒に継続できる…"
+    },
+    {
+      "title": "JAWS-UG 栃木 オンラインもくもく会 # 16",
+      "event_url": "https://jawsug-tochigi.connpass.com/event/395143/",
+      "started_at": "2026/05/31 21:00",
+      "place": "オンライン",
+      "catch": "毎月どこかでゆるく開催 -新年度初開催-",
+      "description": "イベントについて JAWS-UG 栃木は、地元企業、学生、エンジニアなど、AWSを愛する方々やこれから学びたい方々を対象に、技術レベルを問わず交流や勉強会を非営利で行っている有志のコミュニティです。 AWSに興味があれば、初心者から経験豊富なエンジニアまでどなたでも参加いただけます。例えば、「AWSを業務にどう活用するか知りたい方」や「初めて触れるクラウドサービスに挑戦したい方」も大歓迎です！ 地域の仲間とつながり、AWSをテーマにしたディスカッションや情報交換を通じて、新たな知見を得たり、自分の経験をシェアしてみませんか？ コミュニティに参加したことない方、AWSを触ったことがない方も歓迎です！ お気軽にご参加いただけますと幸いです！ ご支援のお願い（スポンサー登録） JAWS-UG…"
     },
     {
       "title": "【横浜開催／初心者向け】はじめてのClaude実演＆異業種交流会",
@@ -1546,68 +1394,12 @@
       "description": "kamakura.goって何？ 鎌倉・湘南地域のGo言語を使う人、興味がある人、そうでなくてもなんだか良さそうだから来る人、ただただ近くに住んでいるだけの人などが集まって、Goに関するトークを肴に花を咲かせる感じの会です。 前回: https://kamakurago.connpass.com/event/336353/ トークテーマ: 「Goと他のプログラミング言語の違い」 テーマは無視しても大丈夫です。自分が話したいことを話しましょう kamakura.goはGoの勉強会と言いつつ、普段は別の言語を使っている方も来られます。そんな人たちから比較や、ある言語ではこうやることをGoではどうやるの？みたいに質問する話などを聞きたいなと思いました。いかがでしょうか。 募集枠 2026/5/18更新: LT枠を増やしました。LT登壇応募の多さで発表枠の方を増減させます 発表枠…"
     },
     {
-      "title": "Microsoft Build //localhost:tokyo/Azureわいがや会",
-      "event_url": "https://azure-waigaya.connpass.com/event/394047/",
-      "started_at": "2026/06/14 14:00",
-      "place": "東京都",
-      "catch": "Microsoft Build 2026 をわいがや Recap!",
-      "description": "Microsoft Build 2026 の熱気をそのままに、 Recap イベントを Azureわいがや会 主催で開催します！ Keynote をみんなで視聴 → 気になったキーワードをその場で集めて、野生の Microsoft MVP や詳しい参加者がリアルタイムでわいがや解説・検証・デモ with DJ！ Build //localhost とは Build //localhost は、Microsoft Build の技術コンテンツを地域コミュニティに展開する取り組みです。2026年6月9日〜26日の期間中、世界各地でMVPおよびコミュニティリーダーが対面型の技術イベントを開催し、Microsoft Build の最新コンテンツを活用したハンズオン体験を提供します。 参加にあたって 形式 現地参加のみ 会場スポンサー 会場はアララ株式会社様にご提供いただきます。 本編の説明…"
-    },
-    {
-      "title": "第52回 CoderDojo麹町",
-      "event_url": "https://coderdojo-kojimachi.connpass.com/event/394229/",
-      "started_at": "2026/06/14 14:00",
-      "place": "東京都",
-      "catch": "初めてのScratchプログラミング（主に初めての方・Scratch初心者の方向け）",
-      "description": "📆 日程 📌 2026年6月14日（日） ⏰ 14:00～16:00（13:45受付開始） 📍 場所 🏢 株式会社アドバンスト・ソフト 🌆 東京都千代田区麹町3-1 麹町昭文社HDビル7階 💻 プログラミングテーマ 🏕️ 「何か季節や流行りに繋がるテーマで計画中」共通テーマに楽しく学びながらプログラミング！ 👦👧 ニンジャ（参加する子ども）の定員 👫 定員：10～15名 💸 参加費 ✨ 無料 ✨ 🎓 参加資格 👶 7～17歳（小学生以下は保護者同伴） 🎨 Scratchで一緒に作れる方、初めての方も大歓迎！ 👨‍👩‍👧‍👦 保護者の方へ 🤝 お子様が他の参加者やメンターと良い関係を築けるよう、ご協力をお願いします。 ※お子様が他のニンジャやメンターに対して不快な行動をとる場合、 それを制止できない場合は今後の参加をお断りする場合がございます。 🎒 用意するもの 🚫 なし -…"
-    },
-    {
-      "title": "Tenstorrent Tech Talk #8",
-      "event_url": "https://tenstorrent.connpass.com/event/393924/",
-      "started_at": "2026/06/15 17:55",
-      "place": "東京都",
-      "catch": "TT-Deploy Followup 回",
-      "description": "Tenstorrent Tech Talk #8 イベント概要 本イベントは、AIアクセラレータを開発するTenstorrent社のハードウェア・ソフトウェア技術について、Tenstorrent社員による技術解説を交えながら学ぶ開発者向けの技術交流会です。 今回のTech Talkは、Tenstorrent US本社で開催された大規模発表イベント TT-Deploy のフォローアップ をテーマに実施します。TT-Deployでは、Blackholeベースの新しいGalaxyサーバーとSuperCluster、それらを支えるNetworked AIアーキテクチャ、業界最速クラスのAI Video生成やLLM推論ベンチマークなど、Tenstorrentのスケールアウト戦略を一気に公開しました。 TT-Deploy : https://tenstorrent.com/deploy…"
-    },
-    {
-      "title": "UXってなに？ - インタビューから学ぶユーザー体験設計のプロセス",
-      "event_url": "https://sun.connpass.com/event/393675/",
-      "started_at": "2026/06/15 19:30",
-      "place": "東京都",
-      "catch": "",
-      "description": "UXデザイン体験ワークショップ Sun*の​勉強会コミュニティ​「SOLA​（Sun Open Learning Arena）」​初のイベントを​開催します！​ SOLAは、​デザイン・エンジニアリング・プロダクトづくりに​関わる​人た​ちが、​職種や​会社を​越えて​学び合う​ための​オープンな​学習コミュニティです。​ ​その​第一歩と​して​今回は、​UXデザインの​体験ワークショップを​実施します。​ テーマは​「日常に​ある​課題を​見つけ、​体験から​解決策を​考える」。​ 参加者同士で​インタビューを​行いながら​身近な​体験を​深掘りし、​カスタマージャーニーマップで​課題を​整理。​その後、​アイデアを​コンセプトボードと​して​まとめ、​解決策と​して​提案まで​行う​一連の​UXプロセスを、​チームで​実際に​手を​動かしながら​体験します。​…"
-    },
-    {
-      "title": "第37回ステアラボ人工知能セミナー",
-      "event_url": "https://stair.connpass.com/event/393942/",
-      "started_at": "2026/06/16 15:00",
-      "place": "東京都",
-      "catch": "千葉工業大学 入江清先生：深層強化学習による脚型・脚車輪型ロボットの身体制御と実環境ナビゲーション",
-      "description": "第37回ステアラボ人工知能セミナー 千葉工業大学 人工知能・ソフトウェア技術研究センター (ステアラボ) では、機械学習・自然言語処理・画像処理等の人工知能分野の研究者をお招きし、最先端の研究についてご講演していただく「ステアラボ人工知能セミナー」を定期的に開催しています。 今回は千葉工業大学 未来ロボット技術研究センター（fuRo） 入江清 先生に「深層強化学習による脚型・脚車輪型ロボットの身体制御と実環境ナビゲーション」というタイトルでご講演いただきます。 どなたでも無料でご参加いただけます。 参加申し込みをして頂くと具体的なアクセス情報が表示されます。 座席は申込みの先着順となっています。ご了承ください。 今回は 千葉工業大学 スカイツリータウンキャンパスのセミナールームでの現地開催のみ となります。 オンライン配信、録画公開の予定はございませんので、ご注意ください。 日時…"
-    },
-    {
       "title": "AIと踏み出した！活用共有LT会",
       "event_url": "https://hello-output.connpass.com/event/393225/",
       "started_at": "2026/06/16 19:00",
       "place": "東京都",
       "catch": "",
       "description": "📍開催概要 AIの活用を始める時の知見！を共有✨ 職業関係なく、多くの人が活用しているAI。そんなみんなのAI活用体験を共有しあい知見を深めましょう！ AIを使い始める時、こんなこと意識している！AIのこの始め方良かった！これからこんな使い方を試す！ 使い方に正解がないからこそ、自由に気軽に楽しくシェアしましょう！ 👤こんな人におすすめ 他の人のAIの活用方法を知りたい方 おすすめのAIの活用方法を共有したい方 LT（ライトニングトーク）に挑戦してみたい方 同世代のエンジニアと話したい方 ⏳タイムスケジュール 時間 詳細 19:00-19:15 開場・受付 19:15-19:20 オープニング 19:20-19:30 LT① 19:30-19:40 LT② 19:40-19:50 LT③ 19:50-20:00 LT④ 20:00-20:10 LT⑤ 20:15-20:45 交流会…"
-    },
-    {
-      "title": "OCIjp #72 Oracle Cloud Infrastructure ユーザーグループ",
-      "event_url": "https://fullenergy-oci.connpass.com/event/394025/",
-      "started_at": "2026/06/16 19:00",
-      "place": "東京都",
-      "catch": "【オフライン開催！！】OCI AI活用＆開発最前線",
-      "description": "【開催概要】 今回は「オフライン開催」となりますのでご注意ください!! 日時：2026年6月16日(火) 19:00-20:30 現地参加：日本オラクル社 本社オフィス( 東京都港区北青山2-5-8 オラクル青山センター ) 名刺の持参をお願いします。 【タイムテーブル】（暫定・変更になる可能性もございます） 時間 内容 登壇者・備考 19:00-19:10 オープニング OCIjp運営 19:10-19:40 Oracle AI Database Private Agent FactoryとAPEXの連携による次世代アプリ 株式会社野村総合研究所Shinichiro Otsuka（Oracle ACE Director） 19:40-20:00 AI時代におくる平成時代延長型Webフレームワーク「Hinoki」の紹介 日本オラクル株式会社 鈴木様 20:00-20:25 LT大会…"
-    },
-    {
-      "title": "Agentic Tokyo #1",
-      "event_url": "https://aibuilders.connpass.com/event/394175/",
-      "started_at": "2026/06/16 19:00",
-      "place": "東京都",
-      "catch": "AIエージェントのエコシステム知見を楽しく学ぼう！",
-      "description": "AIエージェントのエコシステム知見を共有しあおう！ 2026年はAIエージェントを「構築・運用」する年！ さらに今、エージェントの機能を拡張するエコシステムやプロトコルが熱くなっています。 世界でその動きの中心にあるのが、12月にLinux Foundation傘下に設立された Agentic AI Foundation (AAIF) です。 なんと9月には、世界初のAAIF主催の大型カンファレンス「AGNTCon + MCPCon Japan」が日本で開催決定！ https://events.linuxfoundation.org/agntcon-mcpcon-japan/ この機運を国内で盛り上げるべく、コミュニティミートアップを開催します。 製品に縛られず、次世代エージェントの技術スタックをみんなで先取りしてワイワイ語り合いましょう！ アジェンダ 18:30 開場 19:00…"
     },
     {
       "title": "Kubernetes祭り #1",
@@ -1674,76 +1466,12 @@
       "description": "イベントについて Web、アプリ、インフラ、AI、はたまたこだわりの開発環境やガジェットまで。tech.stmn は、領域の垣根をすべて取っ払った、オープンな勉強会です。 「何でもアリ」だからこそ、思わぬ技術との出会いや、新しいインスピレーションが生まれるはず…✨ あなたが今一番熱量を注いでいる「Tech」を、ぜひここに持ち寄ってください！少しでもTechにまつわるものであれば何でも大歓迎です！ 本イベントは オフライン（会場参加） のLT会になりますのでご注意ください。 交流会も予定していますので、日頃の開発のあれこれなどについてお話ししましょう！ 会場について 会場は株式会社スタメン 東京オフィス（wework麹町）になります。受付はwework 5Fの共用ラウンジにて行いますので、エレベーターで5Fまでお越しください。 住所 〒102-0083…"
     },
     {
-      "title": "オブザーバビリティアンチパターン by NRUG Vol.18",
-      "event_url": "https://nrug.connpass.com/event/393724/",
-      "started_at": "2026/06/17 19:00",
-      "place": "オンライン",
-      "catch": "〜やらかし供養祭り〜",
-      "description": "開催概要 日時：2026年6月17日 （水） 19:00 〜 場所：Google Meet / YouTube 書籍 「 New Relicに詳しい人達が書いた本 Vol.2 オブザーバービリティアンチパターン 」の発売を記念して、Trailblazerの皆様をお呼びし、オブザーバビリティのアンチパターンについて語っていただきます。 対象 どれかに該当すればOK！ New Relic に興味がある方 New Relic を使っている方も使っていない方も大歓迎 オブザーバビリティ(o11y)に興味がある方 SRE、インフラエンジニアの方 ソフトウェアエンジニアの方 技術コミュニティが好きな方 タイムテーブル 時間 内容 登壇者 19:00 - 19:05 開会、ご挨拶、諸注意 NRUG運営一同 19:05 - 19:30 New Relic Advance 新機能速報 New Relic…"
-    },
-    {
-      "title": "AI駆動開発勉強会 神戸支部 第006回 オンライン勉強会",
-      "event_url": "https://aid.connpass.com/event/394195/",
-      "started_at": "2026/06/17 19:00",
-      "place": "オンライン",
-      "catch": "",
-      "description": "概要 2026年1月にAI駆動開発勉強会 神戸支部が立ち上がりました。6月もオンラインでイベントを開催します！ 初心者からベテランまで、AIと共に何かを作るすべての方の参加をお待ちしています！ AI駆動開発勉強会🗼神戸支部のインスタ もぜひフォローをお願いします！ AI 駆動開発勉強会とは？ 生成AI・LLMの登場により、コードの自動生成・自動補完などアプリケーション・プログラミングの開発スタイルは大きく変わりつつあります。 またコーディングのみならず、仕様整理、デザイン、設計、テスト、ドキュメント作成においても、AIを利用した開発ツールが多数出てきており、開発スタイルそのものが大きく変わっていくと予想されます。 AI駆動開発(AI-Driven Development) 勉強会では、AI技術を使った開発に興味を持つ方々向けに、ChatGPTやGitHub…"
-    },
-    {
       "title": "Go Connect #14",
       "event_url": "https://gotalk.connpass.com/event/388086/",
       "started_at": "2026/06/17 19:30",
       "place": "東京都",
       "catch": "",
-      "description": "Go Connect Go Connect は「Go言語の勉強と交流」を目的としたgopherのための勉強会です。 LT会形式での発表を行いつつ、参加者同士で交流し、仲を深めることを目的とします。 タイムテーブル 時間 内容 19:00~19:30 開場 19:30~20:00 オープニング・自己紹介・会場案内 20:00~20:30 発表 スポンサーLT 5分 「(TBD) go mod vendor の話」おーたかこーたろー さん 10分 20:30~21:00 懇親会 21:00~21:40 発表 21:40~21:55 クロージング・撤収 発表テーマについて Go言語に関連するテーマはもちろん、gopherのためになるテーマであれば何でもOKです。 他の人が知らないテーマに絞る必要はありません。最近勉強したことをぜひ共有してください。 テーマ例： Go言語の仕様…"
-    },
-    {
-      "title": "【北海道オンライン会場】XRミーティング 2026/6/17 #XRMTG 【zoom接続】",
-      "event_url": "https://connpass.com/event/394571/",
-      "started_at": "2026/06/17 19:30",
-      "place": "オンライン",
-      "catch": "6拠点連携開催　知見や活動の共有を通じて輪を広げましょう",
-      "description": "2026年もオンラインとSNSで将来の仲間を繋ぎます 概要 XR（AR/CR/MR/SR/VRの近未来技術）に関する情報共有や自作アプリのお披露目ができる場 としてイベントを開催します。 ある程度顔の見える人数でXR技術についての情報発信や意見交換をしませんか？ 登壇者の話を聞きつつ気軽に会話しながらXR技術についての知見を深めましょう。 #大阪駆動開発 主催の「XRミーティング」と中継でつなぎ、関西・関東・北海道・福岡・神戸の５拠点を中心に、距離を超えて知り合いになる事が出来ます。 クリエイター・エンジニア・デザイナーはもちろんのこと、それ以外の方や初めてお越しになる方も、お気軽にご参加下さい。 参加するメリット 中継により、全国各地のXR（AR/CR/MR/SR/VR等の近未来技術）に関心を持つ者同士で情報を一斉共有できます。…"
-    },
-    {
-      "title": "制作現場で使えるクリエイティブ生成AIの最新ワークフロー！| Firefly Camp",
-      "event_url": "https://firefly-camp.connpass.com/event/391063/",
-      "started_at": "2026/06/17 20:00",
-      "place": "オンライン",
-      "catch": "Fireflyを業務で本格的に使いこなしたい人のために、様々なヒントを紹介するオンライン番組です。",
-      "description": "Adobe Firefly の実践的な使い方が学べるオンラインイベントを開催します！ 今回は生成 AI 機能を活用した 2 つのクリエイティブワークフローを紹介します。1 つは Adobe Photoshop に実装された待望の新機能「オブジェクトを回転」活用した動画生成のヒントと注意点、もう 1 つはムードボードに AI を融合させたクリエイティブツール Adobe Firefly ボードでプロンプトからアイデアを素早く形にする具体的な活用例です。 Firefly Camp はセミナー形式です。講師のプレゼンやデモでわからないことがあれば、その場で Q&A パネルに質問できます。ライブで参加して、思い切り学んでください。デモに使用するサンプルファイルは事前公開の予定です。 出演者に、日々の悩みを相談できる「Firefly…"
-    },
-    {
-      "title": "【大阪-ハイブリッド開催】XRミーティング 2026/06/17 #Xグラス #XRMTG",
-      "event_url": "https://osaka-driven-dev.connpass.com/event/394570/",
-      "started_at": "2026/06/17 20:00",
-      "place": "オンライン",
-      "catch": "XR（AR/VR/MR）関連の「調べてみた」「作ってみた」「やってみた」を共有するLTイベント！",
-      "description": "概要 各地の参加者とZoomで接続しながら、XRに関する情報共有やご自身の取り組み、 自作アプリのお披露目ができる場としてイベントを開催します。 登壇者の話を聞きつつ気軽に会話しながらXRについての知見を深めましょう。 開発者・研究者・起業家のみなさまはもちろんのこと、初学者の方もお気軽にご参加下さい！ 参加するメリット 各地域のXRに関心を持つ者同士で関係が構築できます。 前回のイベントの雰囲気（X） 前回のイベントのオンライン上の雰囲気（YouTube） 参加可能な方 XR（AR/CR/MR/SR/VR等の近未来技術）に関心をお持ちの方 参加費 無料 発表について 発表については、XRに関連する内容であれば何でもOKです。 Zoomにお入りいただき、マイクON＆画面共有していただくことで、YouTubeや全国各地の現地会場に向けて発表していただくことができます。 〇〇作ってみた。…"
-    },
-    {
-      "title": "山梨ITコミュニティ合同イベント 準備ミーティング #5",
-      "event_url": "https://techmujin.connpass.com/event/394573/",
-      "started_at": "2026/06/17 20:00",
-      "place": "オンライン",
-      "catch": "11月の合同イベント「テック無尽」に向けた、次の一歩を考える準備ミーティング",
-      "description": "イベント概要 2026年11月22日（日） に開催予定の 山梨ITコミュニティ合同イベント「 テック無尽 」 に向けた、 オンライン準備ミーティングです。 前回の 山梨ITコミュニティ合同イベント 準備ミーティング で出たアイデアや反応をもとに、 イベント全体の方向性や構成を少しずつ具体化していくことを目的としています。 今後につなげるための材料を整理し、共有できる形にして持ち帰る ことを目指します。 どんな雰囲気の会か 発言しなくてもOKです 聞くだけの参加も歓迎します 途中参加・途中退出も問題ありません 「イベント、なんか面白そうだな」「少し関われるかも」 くらいの温度感での参加、大歓迎です。 こんな方におすすめ 山梨ITコミュニティ合同イベントに興味がある方 これまでのミーティングに参加できなかった方 コミュニティ運営やイベントづくりに少し関心がある方…"
-    },
-    {
-      "title": "明日から会議で使えるデータドリブン超入門－感覚ではなく“データで語る”人になる－",
-      "event_url": "https://numtr.connpass.com/event/392488/",
-      "started_at": "2026/06/17 21:00",
-      "place": "オンライン",
-      "catch": "参加者全員に「ダメKPI・良いKPI改善事例集」PDFプレゼント",
-      "description": "データドリブンの最初の一歩がわかる 「データドリブンにやりましょう。」 そう言われても、何から変えればいいかがよくわかりませんよね。結局、会議は「●●をやった方がよい気がする！」といった“感覚のぶつかり合い”になりがちです。声が大きい人の意見が通ることもあります。 データドリブンは、決して難しい分析をすることではありません。まずは「データで語る型」を持つことです。事実と意見を分けることです。比較と基準を置くことです。数字の意味を言葉にすることです。やることはシンプルではあるもののほとんどの人・組織ができていません。 本セミナーは“超入門”として設計しています。統計や数学が苦手でも問題ありません。もちろん、Excelの関数が得意でなくても参加できます。目的は、データで議論の土台を作れるようになることです。そして、納得感のある判断につなげます。…"
-    },
-    {
-      "title": "【止められないサービスを止めずに作り直す】大規模モバイルアプリ リアーキテクチャの最前線",
-      "event_url": "https://aeon.connpass.com/event/393490/",
-      "started_at": "2026/06/18 12:00",
-      "place": "オンライン",
-      "catch": "現場の移行戦略から学ぶモバイルアプリ刷新｜AEON TECH HUB #26",
-      "description": "開催概要 数千万ユーザーが利用するモバイルアプリを、サービスを止めることなく作り変える。 多くの企業が向き合いながらも、簡単には着手できないテーマです。 今回のAEON TECH HUBでは、Ionic/CordovaからNative+ミニプログラムへの段階的移行を進める企業と、10年以上運用されてきたAndroidアプリにClean Architectureを導入し、AI活用にも取り組む企業が登壇します。 技術的負債との向き合い方、移行戦略の立て方、サービスを止めずに基盤を入れ替える難しさ。 各社にそれぞれ異なる環境や課題に向き合いながら進めてきた、リアルな試行錯誤をお話しいただきます。 こんな方におすすめ モバイルアプリの技術的負債に課題を感じている方 アプリのリアーキテクチャやリプレイスを検討・推進している方 サービスを止めずに技術基盤を刷新する進め方に関心がある方…"
+      "description": "Go Connect Go Connect は「Go言語の勉強と交流」を目的としたgopherのための勉強会です。 LT会形式での発表を行いつつ、参加者同士で交流し、仲を深めることを目的とします。 タイムテーブル 時間 内容 19:00~19:30 開場 19:30~20:00 オープニング・自己紹介・会場案内 20:00~20:30 発表 スポンサーLT 5分 「(TBD) go mod vendor の話」おーたかこーたろー さん 10分 「脆弱性対策の話」パンダム/rymiyamoto さん 10分 20:30~21:00 懇親会 21:00~21:40 発表 21:40~21:55 クロージング・撤収 発表テーマについて Go言語に関連するテーマはもちろん、gopherのためになるテーマであれば何でもOKです。…"
     },
     {
       "title": "祝10周年・AIxIoTビジネス共創ラボ　第5回勉強会",
@@ -1768,14 +1496,6 @@
       "place": "東京都",
       "catch": "第3木曜LT会 #30",
       "description": "🍻 第3木曜LT会 本イベントは、技術に関わる知見や経験をカジュアルに共有し、参加者同士が交流を深めることを目的としています。 交流を目的として、会場では ビール🍺や、お茶🍵、かんたんなおつまみ🍕 などをご用意しております。 📝 LT登壇テーマ エンジニアリング、マネジメントなど、 技術領域に関わるライトニングトーク（LT） を広く募集しております。皆さまの学びや挑戦をぜひ共有してください！ ℹ️ イベント概要 日時 | 2026年6月18日 木曜日 18:00〜20:00 開場 | WeWork 渋谷スクランブルスクエア 45F 共有スペース 料金 | 無料 参加資格 | エンジニアの皆様 📆 タイムテーブル ※1LTは5〜10分を想定しています。 ※下記のタイムテーブルの時間は目安です。 時間 内容 17:45 開場・受付開始 18:00 イベント開始 ＆ 自己紹介タイム…"
-    },
-    {
-      "title": "【山口県の学生限定】山口から、未来をハックしよう。（KDDIアジャイル開発センター）",
-      "event_url": "https://connpass.com/event/394595/",
-      "started_at": "2026/06/18 18:00",
-      "place": "オンライン",
-      "catch": "〜プロダクト開発やサービスデザインにおいて重要なユーザー視点を、身近なテーマで実践しよう！〜",
-      "description": "はじめに 「これからの就活、何から始めればいいんだろう？」 「最先端のITやデザインの仕事はやっぱり東京にしかないのかな…」 そんなモヤモヤや不安を、ワクワクに変える90分です！ 本イベントは、東京に本社を置きながら、リモートワークを中心とした柔軟な働き方を実践するIT企業「KDDIアジャイル開発センター（KAG）」の社員と、山口の他校の仲間と一緒に、ミニワークを通して「これからの暮らしと就活」をポジティブに考えるオンライン体験型ワークショップです。 「まだスキルに自信がない」「インターンに参加したことがない」という方でも、まだ就活を検討する前の1,2年生の参加も大歓迎！気軽な作戦会議に参加する感覚で、未来の選択肢を一緒に広げてみませんか？ なぜ東京のIT企業が「山口限定」でイベントをやるのか？…"
     },
     {
       "title": "白金鉱業 Meetup Vol.24@六本木（若手データサイエンティスト交流編）",
@@ -1830,7 +1550,7 @@
       "event_url": "https://soracomug-tokyo.connpass.com/event/393846/",
       "started_at": "2026/06/18 19:00",
       "place": "オンライン",
-      "catch": "LTE-M(Cat‑M1)について学んでマイコンで体験しよう",
+      "catch": "LTE Cat.1について学んでマイコンで体験しよう",
       "description": "SORACOM User Group 九州 ＃17 SORACOM User Group行動規範 – Code of Conduct – SORACOM UGでは行動規範(Code of Conduct)を規定しています。参加される皆様はご一読ください。 SORACOM User Group行動規範 – Code of Conduct – SORACOM とは SORACOM は、IoT向けの無線通信をグローバルに提供するプラットフォームです。1回線から、誰でも簡単に IoT に必要なセキュアな通信、クラウド連携、データの可視化といった機能をお使いいただけます SORACOM UG とは SORACOM User Groupとは、業種・職業問わず、SORACOMを知りたい人、使ってみたい人、使っている人、より良い使い方を知りたい人は誰でも参加出来るコミュニティです。SORACOM…"
     },
     {
@@ -1856,6 +1576,14 @@
       "place": "オンライン",
       "catch": "論文等紹介LT大会その99",
       "description": "機械学習 名古屋 研究会 注意 COVID-19対策にしばらく オンラインイベント とします。 「参加者への情報」に記載したURL から参加してください。「参加者への情報」はイベントに申し込んだ人のみ見ることができます。 概要 機械学習に関する論文・技術ブログを読み、情報共有のLTをする勉強会です。 【発表者・事前に】 論文・技術ブログのまとめ作成（ 研究会の GitHub リポジトリ にプルリク） 【当日】 発表・質疑応答・不明点の解明 【その他】機械学習名古屋のDiscordでのコミュニケーションも https://discord.gg/NqyhtTfC3r 対象 機械学習を業務・趣味で用いている人 チュートリアルや基本的な技術書をある程度読み終え、次のステップへ進みたい人 機械学習を使ったサービスのネタを探している人 目的…"
+    },
+    {
+      "title": "Hack Azure #22 - Build 2026 Serverless Re-cap!",
+      "event_url": "https://hack-everything.connpass.com/event/395247/",
+      "started_at": "2026/06/18 19:00",
+      "place": "オンライン",
+      "catch": "今年の Microsoft Build も Serverless 系アップデートがアツい！",
+      "description": "Hack Azure #22 - Microsoft Build 2026 Serverless Re-cap! 今回の Hack Azure では Microsoft Build 2026 の Serverless 系アップデートを中心に Recap します。今年の Build も AI Agent や AI Coding 系の発表やアップデートが注目されそうですが、Hack Azure ではそれらを支える Serverless 系のアップデートについてサンフランシスコの会場に直接足を運んだ Geek 達が、現地で得た情報を交えながらお届けします。 みなさまからの Q&A も随時受付けています。イベント中にいただいた質問に Geek たちが答えていきます。ぜひ、X（旧Twitter）で #hackazure のタグをつけて質問を投稿ください！ ⌚ タイムスケジュール 時間 内容…"
     },
     {
       "title": "エンジニア英語キャリア Meetup #2",
@@ -1995,7 +1723,7 @@
     },
     {
       "title": "Simplex Tech Gathering vol.5　～AI時代のシン・育成論～",
-      "event_url": "https://connpass.com/event/395068/",
+      "event_url": "https://simplexinc.connpass.com/event/395068/",
       "started_at": "2026/06/19 19:00",
       "place": "東京都",
       "catch": "メンターの葛藤とメンティーの本音",
@@ -2007,7 +1735,7 @@
       "started_at": "2026/06/19 19:00",
       "place": "オンライン",
       "catch": "c++とその周辺に関する勉強会",
-      "description": "概要 「C++ breaktime」はいつも読書会をしている大阪C++読書会が開催する聴講スタイルの勉強会です。 普段行っている仕事の手をちょっと止めて、様々な技術に関する知見を深めてみませんか？ テーマ (c++ || game) C++に関係する話が中心ですが、ゲームが絡んでいればグラフィックやAIなどもOKとします。 参加費 無料 スケジュール 時間 内容 発表者 18:30～ 開場 19:00～19:10 オープニング 19:10～19:30 RAIIと所有権の話 @zbdk 19:30～19:50 昔作ったゲームのご紹介 風岡 19:50～20:00 休憩 20:00～20:20 TBW @decimalbloat 20:20～20:40 TBW @hr_sao 20:40～20:45 LT枠1 20:45～20:50 LT枠2 20:50～21:00 クロージング…"
+      "description": "概要 「C++ breaktime」はいつも読書会をしている大阪C++読書会が開催する聴講スタイルの勉強会です。 普段行っている仕事の手をちょっと止めて、様々な技術に関する知見を深めてみませんか？ テーマ (c++ || game) C++に関係する話が中心ですが、ゲームが絡んでいればグラフィックやAIなどもOKとします。 参加費 無料 スケジュール 時間 内容 発表者 18:30～ 開場 19:00～19:10 オープニング 19:10～19:30 RAIIと所有権の話 @zbdk 19:30～19:50 昔作ったゲームのご紹介 風岡 19:50～20:00 休憩 20:00～20:20 リフレクションの話 @decimalbloat 20:20～20:40 TBW @hr_sao 20:40～20:45 LT枠1 20:45～20:50 LT枠2 20:50～21:00…"
     },
     {
       "title": "Sendai Frontend Meetup #22",
@@ -2016,6 +1744,14 @@
       "place": "オンライン",
       "catch": "フロントエンドの話題で盛り上がりましょう！",
       "description": "イベント概要 仙台で行うWebフロントエンド全般の勉強会です。 オンライン配信の予定はありません。 技術だけでなくUXやデザインの話もしていければと考えています！ Webのフロントエンドに興味のある方でしたらどなたでもお気軽にご参加ください！ エンジニアはもちろん、デザイナーやディレクターさんも大歓迎！ 初心者の方やこれからやっていきたい方も大歓迎です！ 参加枠について 参加枠・LT枠共に、決定は申込みの先着順です。 LT枠 / はじめてLT枠 LTを発表したい方は、LT枠でお申し込みください。 内容はフロントエンドに関わる内容であれば、技術・UX・デザイン・設計の話などなんでもOK。 はじめてLT枠はこういったイベントでLTするのが初めての人の枠です。 初心者の方やLTやってみたいけど敷居が高いと思ってた方 など、ぜひチャレンジしてみてください！…"
+    },
+    {
+      "title": "PM・コンサルタント養成講座 無料体験説明会",
+      "event_url": "https://connpass.com/event/395227/",
+      "started_at": "2026/06/19 19:00",
+      "place": "オンライン",
+      "catch": "AIスキル × あなたの経験で、最強のキャリアを手に入れる。",
+      "description": "✓ AI活用の推進を任されているが、プロジェクトとして動かせていない。 ✓ ChatGPTは使いこなしている。しかし、組織としてのAI活用は手つかずのままだ。 ✓ AIベンダーの提案を受けても、技術的な妥当性を自分の言葉で評価できない。 ✓ 技術部門との会議で、専門用語に押されて判断を先送りにしてしまう。 ✓ 「AI人材」になりたいが、今からプログラミングを学ぶのは現実的ではない──。 もし一つでも心当たりがあるなら、 足りないのは「技術力」ではありません。 ビジネス課題をAI技術の要件に変換し、プロジェクトとして推進する力── 「技術翻訳力」です。 この力をあなたのキャリアに加えることで、 AIプロジェクトを企画し、設計し、動かせる人材になれます。 コードを書く必要はありません。 本説明会では、JAXA・防衛省をはじめとする政府機関や大手企業のAIプロジェクトを手がけてきた…"
     },
     {
       "title": "CA11Y #4 〜 Accessibility Maniacs 〜",
@@ -2064,6 +1800,14 @@
       "place": "東京都",
       "catch": "Zennのトップページを日比谷に再現する。技術知見の共有と交流の日です。",
       "description": "補欠について オフライン参加 の補欠の方はconnpassのレギュレーション通り、繰り上がり参加となった場合にご来場いただけます。ビル管理の関係で入館証届がいていない可能性がありますが、繰り上がりであることが確認できれば入場いただけますので、日比谷フォートタワー11階へお越しください。 🌸 Zennfes Spring 2026 オフラインイベント 日比谷 「Zennのトレンドを日比谷で再現する」をテーマに、Zennfes Spring 2026の関連オフラインイベントを開催します。 執筆や学び、そしてコミュニケーションを楽しむすべての人を歓迎します。ここで、あなたの技術とアイデアが新たな可能性を広げる第一歩を踏み出しましょう。…"
+    },
+    {
+      "title": "OSのしくみ井戸端 #8",
+      "event_url": "https://idobata-dev.connpass.com/event/395276/",
+      "started_at": "2026/06/20 12:30",
+      "place": "東京都",
+      "catch": "",
+      "description": "※ このイベントは有志がただただ集まって勉強会をしている非公式のイベントになります。 「OSのしくみ」についてみんなで勉強しませんか？ 下記本を参考にOSのしくみについて勉強します。 https://gihyo.jp/book/2025/978-4-297-14859-1 参加にあたり本の購入をお願いします。 次回は「第５章USBコントローラ（xHCI）のドライバを実装する」から開始します。（最初に復習の時間はとります） 「井戸端.dev」とは みんなである技術についてわいわい話しながら勉強するイベントです。 ○: ホワイトボートとか使ってみんなで議論する形式 x: もくもく会の形式 x: セッションとかLTの形式"
     },
     {
       "title": "小中学生向けプログラミング道場 CoderDojo新代田第32回（無料）",
@@ -2258,6 +2002,14 @@
       "description": "これは何？ 育児とエンジニアリングを両立する人々のための勉強会です。 リモートワークが一般化してきた現在、育児をしながら働いていると社会とのつながりが失われたように感じませんか？ 私は育児が始まってからIT勉強会やその後の懇親会への参加が難しくなり、家族以外とのコミュニケーションが急速に減りました。周囲の話を聞く限り、似た状況にある人が少なからずいるようです。…"
     },
     {
+      "title": "牛尾さん、酒井さんに聞く！アメリカ開発現場の最前線",
+      "event_url": "https://levtechlab.connpass.com/event/394384/",
+      "started_at": "2026/06/22 12:15",
+      "place": "オンライン",
+      "catch": "サバイブし続けるエンジニアの思考法を探る",
+      "description": "イベント概要 高い給与や自由な働き方、グローバルな活躍…。そんなアメリカの「光」に憧れつつも、昨今の海外テック企業の大規模な組織再編のニュースやAIの急速な進化を前に、 「これからのエンジニアはどうなるのか？」「自分たちのキャリアはどう変わっていくのか？」と、どこか漠然とした不安や興味 を抱えていませんか。 ニュースが報じる断片的な情報だけでは、 現地のリアルな雇用の実態や、AIが変えてしまった現場のマインドセット までを掴むことは困難です。情報の波に飲まれ、「実際のところ、現場はどうなっているんだろう？」と、海の向こうのリアルな変化が気になっている方も少なくないのではないでしょうか…？ 本イベントでは、アメリカの開発現場の最前線で「サバイブ」し続ける、 牛尾さんと酒井さんのお二人をお招きします！…"
+    },
+    {
       "title": "HR×AIマニアNight #1 〜人事データ活用のリアルを語る夜〜",
       "event_url": "https://moneyforward.connpass.com/event/390073/",
       "started_at": "2026/06/22 19:00",
@@ -2272,6 +2024,14 @@
       "place": "東京都",
       "catch": "",
       "description": "wakate.rb #7 イベント概要 🐉 対象: 若手Rubyist（学生・新卒3年目まで） 先輩Rubyist（新卒4年目以降） 目的: 「若手のRubyist同士が繋がり、Rubyを盛り上げる」を目的としています。 先輩Rubyistの方にもご参加いただき、一緒にRubyを盛り上げたいと考えています！ LTでは、RubyKaigi 2026の振り返りも大歓迎です! LT会の後は懇親会も予定しており、若手・先輩Rubyistが気軽に交流できる場となっています。 RubyKaigiをきっかけに仲間をつくりたい方、勉強会ミートアップに参加してみたい方は、ぜひお気軽にご参加ください。 形式: オフライン（対面）イベント Discord: 普段はDiscordでコミュニケーションをしています。 Discord招待リンク 会場📍 ラクスル株式会社 麻布台オフィス…"
+    },
+    {
+      "title": "42,000社に選ばれるkintone、ダッシュボード開発の“ベストな設計”は1年後どう変わったか",
+      "event_url": "https://cybozu.connpass.com/event/394341/",
+      "started_at": "2026/06/22 19:00",
+      "place": "東京都",
+      "catch": "フロントエンド・バックエンド開発で見えてきたもの",
+      "description": "イベント概要 kintoneのダッシュボード開発について、前回イベントの続編として、設計・実装を更新し続ける中で見えてきた変化と、その判断の背景を共有します。 一度は“これがベストだ”と考えて選んだ設計が、時間の経過や要件の変化によって揺らぐ──そうした場面に直面したことはないでしょうか。本イベントでは、1年前の判断を振り返って見えてきた気づきや教訓、そしてダッシュボードが増えていく前提でフロントエンドの構成をどう見直すかを、具体的な事例をもとに掘り下げます。 さらに、単なる技術の話に留まらず、「なぜその判断をしたのか」「どのタイミングで手を打つのか」といった進め方や意思決定の考え方にも踏み込みます。 セッション後の交流会も予定しています。日々感じている違和感や判断の悩みを持ち寄り、ぜひ一緒にお話ししましょう！ ※前回イベントの内容はこちら（動画あり）： 【参考】 2026/04/08…"
     },
     {
       "title": "AI駆動開発 × アジャイル開発",
@@ -2304,6 +2064,14 @@
       "place": "オンライン",
       "catch": "アジャイル開発手法やその周辺のさまざまな知見を職場で活かすための勉強会です。",
       "description": "★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★ 名古屋アジャイル勉強会 Re:boot！OST（オープン・スペース・テクノロジー）スペシャル 🎉 ★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★☆★ あの名古屋アジャイル勉強会がリブートして帰ってきた！ かつて、「名古屋アジャイル勉強会」というコミュニティがこの名古屋の地で活動を続けていました。アジャイルを愛する仲間たちが集い、学び、語り合う場所が——しかしコロナ禍という未曾有の事態が、その活動に大きな変化を与え、幕を引いてしまいました。 転機は、 スクラムフェス名古屋 でした。「名古屋でアジャイルのコミュニティを立ち上げたい！」という想いを持った有志たちが、偶然にも同じ場所に集まったのです。 そこでメンバーから一つの提案が上がりました。 「名古屋アジャイル勉強会の名前を借りて、リブートできないか？」…"
+    },
+    {
+      "title": "Encraft #25 生成AI時代の検索設計",
+      "event_url": "https://knowledgework.connpass.com/event/393625/",
+      "started_at": "2026/06/23 19:00",
+      "place": "東京都",
+      "catch": "検索におけるAIの現在地を知ることができるイベントです！",
+      "description": "Encraft #25 生成AI時代の検索設計 生成AIが実用フェーズへ入り、プロダクトにおける検索の役割は大きく変わりつつあります。 RAGやベクトル検索、LLMを使ったクエリ拡張など手法は急速に広がりましたが、「何を選べば自社のプロダクトに効くか」は現場が一から判断しなければならない問いです。実装してみて初めてわかること、設計段階で考慮すべきことなど、その知見はまだ十分に共有されていません。 そこで今回のEncraftは、検索の設計における現在地を深掘りする特集回として開催します。 設計の考え方から実装の実践、技術の最前線まで、現場で検索に関わるエンジニアたちが判断の根拠と試行錯誤を語ります。 こんな人におすすめ 生成AI時代の技術選定や設計判断の実例を知りたい人 生成AIをプロダクトに組み込んでいる、または検討しているエンジニア 検索・情報取得・データ活用に関わるエンジニア…"
     },
     {
       "title": "めぐろLT #37「AI×チーム開発、みんなどうしてる？」@八丁堀",
@@ -2402,12 +2170,28 @@
       "description": "📝イベント概要 DevRel オフラインシリーズ立ち上げ期に、 登壇者/参加者として最前線に立ち、イベントの価値を共に創り上げてくださった “先陣たち” をお招きし、これまでの歩みに感謝する特別なイベントを開催します！ Findy DevRelでは、「知見や学びを共有する文化」を尊び、 より多様なエンジニアが発信できる機会を創出することを重要なテーマとしています。 ▼Findy DevRelが展開してきたオフラインイベントシリーズ▼ 🌙 「登壇前夜」 🚩 「TECH BATON」 🪐 「Hello LT World」 DevRelのイベントで初登壇を飾っていただいた方、 ニッチなテーマだからこそ盛り上がったわかってる人との会話。 目が合う距離で感じる登壇者の熱量と会場の空気。 オフラインイベントならではの人と人とが対面で話すことの意味を感じられた方が多かったのではないかと思います。…"
     },
     {
+      "title": "シャーディング地獄から抜け出したい！でもNewSQLデータベースは高そう…",
+      "event_url": "https://oceanbase.connpass.com/event/394558/",
+      "started_at": "2026/06/25 18:30",
+      "place": "東京都",
+      "catch": "〜実性能・コスト・運用性など、POP MARTを事例に考える分散DB「OceanBase」の対応策〜",
+      "description": "企業の事業成長が加速する中、データ量の急増とコスト増加という二重の課題に直面しています。シャーディングといった現実的な課題をいかに解決するか、また、安定性・拡張性とコスト効率を両立するデータベース悩みをどのように構築するかは、多くの企業にとって重要なテーマとなっています。 本セミナーでは、グローバルを代表するNewSQLデータベースであるOceanBaseに焦点を当て、アーキテクチャ設計と技術革新によって、どのように企業のコスト削減とデータベースの運用効率の向上を実現するのかを深く解説します。 ■「ネイティブ分散型」および「マルチテナント」アーキテクチャにより、リソース利用効率を大幅に向上させる方法。 ■ ストレージエンジン技術（高圧縮率など）を活用し、高額なストレージコストを直接削減する方法。 ■…"
+    },
+    {
       "title": "Media-JAWS x JAWS-UG千葉支部 #3 1年ぶり！幕張よ再びやって来た！",
       "event_url": "https://jawsug-chiba.connpass.com/event/391407/",
       "started_at": "2026/06/25 18:30",
       "place": "オンライン",
       "catch": "1年ぶりのMedia‐JAWSコラボ回！1年ぶりの海浜幕張開催！",
       "description": "AWS Summit Japan 2026 初日の夜は、Media-JAWSとのコラボイベントとして、メディアと千葉、それぞれにゆかりのある方のLT大会を、幕張で開催いたします！！ 開催情報 日時：2026年06月25日(木) 18:30 - 20:00 18:00受付開始 場所：セミナーハウス クロス・ウェーブ幕張 千葉県千葉市美浜区中瀬 1-3 幕張テクノガーデンA棟 千葉ゆかり枠 千葉出身 千葉在住 千葉在勤 などなど、 千葉にゆかりがある！ という人はこちらからお申し込みください Mediaゆかり枠 テレビ・ラジオ・新聞・雑誌 だけじゃなくてもWebメディアも含めてMediaなエンジニア テレビで紹介されたらスパイクしちゃって大変だったお話 動画配信系であれこれやってる人 などなど メディアにゆかりがある！ という人はこちらからお申し込みください タイムテーブル…"
+    },
+    {
+      "title": "アニメから得た学びを発表会",
+      "event_url": "https://engineers-anime.connpass.com/event/394695/",
+      "started_at": "2026/06/25 18:45",
+      "place": "東京都",
+      "catch": "第２３回目の開催です！「エンジニアがアニメから得た学び」を発表したりアニメについて語ったりします",
+      "description": "本イベントは発表の様子をアーカイブに残しません。 オフラインでしか発表できないスライドやトークを楽しみましょう！ イベント概要 エンジニアが集まって アニメから得た学び について語り合いながら交流します。 皆さんもアニメを見てモチベーションが回復したり、頑張ろうと思えたりした瞬間があると思います。 この会では、ゆるくエンジニアの皆さんが「アニメに影響を受けて考えが変わった話」や「アニメから学ぶモチベーションの維持」などトークも聴きつつ、参加者の皆さんが交流できる場にしたいと思っています。 懇親会では技術の話で盛り上がってもいいですし、アニメなどの話題で交流していていただけると嬉しいです！ 過去の様子 2025/05/16 アニメから得た学びを発表会 #エンジニアニメ - posfie 対象者 アニメが好きなエンジニア ゆるくアニメの話で交流したい方 アニメ愛とエンジニアの話をしたい方…"
     },
     {
       "title": "Ebisu.mobile #14 〜現場で役にたつ AI モバイル開発〜",
@@ -2522,6 +2306,14 @@
       "description": "Rubyに関することなら何でもありの会です。 ゆるく集まって、もくもく作業したり情報交換（雑談）したりしましょう！ オープン時間は目安として設定しているものなので、遅れてくるのも早く帰るのも問題ありません。 （あまり早く来ても鍵がかかってたり、参加登録がない場合は早めに閉めたり、といった事があるかもしれません） 現地（コワーキングスペース）では、飲食物（アルコール含む🍺 ）持ち込み自由です。 オンライン枠は試験的に作ってみたもので、現地に会議用のスピーカー＆マイクを置いてDiscordのボイスチャット等で声だけ通るようにする予定です。 （以下、おまけの呟き） プログラミング初心者🔰の参加も大歓迎です。Ruby on Railsや(Pico|m)Ruby 関連のちょっと突っ込んだ話ができる中上級者とも出会えたら嬉しいなと思ったり。また、来年(2027)は RubyKaigi…"
     },
     {
+      "title": "6/27 OSC 2026 Hokkaido 当日スタッフ募集",
+      "event_url": "https://ospn.connpass.com/event/394555/",
+      "started_at": "2026/06/27 08:30",
+      "place": "オンライン",
+      "catch": "",
+      "description": "概要 オープンソースカンファレンス2026 Hokkaido の当日スタッフを募集いたします！ “当日スタッフ\" とは、イベントの始まりから終了まで、会場運営のお手伝いをしていただく方々のことです。毎年多数のセミナーが開催され、イベントの成功には当日スタッフの皆さんの力が必要不可欠です。 こちらの オープンソースカンファレンス2026 Hokkaido 行動規範 をお読みいただいた上で、スタッフ業務に興味をお持ちの方、少しだけでもお手伝いしても良いという方の参加をお待ちしております。もちろん、聴講を希望されるセミナーには参加できるよう調整した上で、お手伝いをお願いいたします。 ご不明な点などありましたら、本ページ内の イベントへのお問い合わせ からお問い合わせください。 お手伝いいただきたい内容 当日は朝8時に会場に現地集合となります。 会場設営・撤収 :…"
+    },
+    {
       "title": "【運動不足も解消】1日アナログ→デジタルもくもく会@戸越",
       "event_url": "https://kintech.connpass.com/event/392903/",
       "started_at": "2026/06/27 09:00",
@@ -2536,6 +2328,14 @@
       "place": "オンライン",
       "catch": "一緒にもくもく習慣をつくりませんか？",
       "description": "趣旨 学習や、やりたいことはあるけど、どうしても一人だとモチベーション維持が難しい。 オフラインのもくもく会イベントにわざわざ行くほどでもなく、かつもっと日々習慣的に参加できるものがいい。 そう感じている方々と一緒に、お互いに良い刺激を与え合えるような場を！と思い開催しています。 概要 作業内容はなんでもOKです。 会場 オンラインで、discordを使用します。顔出しはどちらでもOKです！参加者の方のみconnpassのメッセージからリンクをお伝えします。 スケジュール 時間 内容 詳細 9:00-9:15 自己紹介・目標設定 参加者同士の簡単な自己紹介と今日取り組む内容の共有 9:15-11:15 もくもくタイム 11:15-11:30 成果報告・振り返り 今日の学習成果や気づきの共有 主催者について…"
+    },
+    {
+      "title": "CoderDojo日進 子供向けプログラミング道場(会場&オンライン)2026/06/27",
+      "event_url": "https://coderdojo-nisshin.connpass.com/event/395135/",
+      "started_at": "2026/06/27 09:00",
+      "place": "オンライン",
+      "catch": "",
+      "description": "注意！！ ※当日PC貸出希望の方は、「参加者（子供）PC貸出」で申し込みください。 ● オンライン会議室のURLは、申し込み後このページで確認いただけます。また前日に参加者に連絡いたします。 開催概要 CoderDojoはボランティアで運営されている無料で自由なプログラミングクラブ（道場）です。それぞれのお子さんが自分のやりたいことに取り組み、大人（メンター）がそれをサポートします。 CoderDojo日進では、小学生でも簡単にプログラミングができるプログラミング言語Scratchを中心に行います。 Scratch以外にもWebプログラミングやmicro:bit 、Arduinoなどの電子工作もサポートします。 やりたいことがあれば相談してください。…"
     },
     {
       "title": "CoderDojo日本橋 #１２",
@@ -2554,12 +2354,28 @@
       "description": "CoderDojo末広町 第88回 CoderDojo末広町は、秋葉原で開催している子ども向け参加費無料のプログラミングクラブです。 基本的に毎月一回第4土曜日に行っています。 プログラミングに興味を持っている子どもたちが集まり、Scratchでゲームを作ったり、micro:bitやRaspberry Piで電子工作をしたり、それぞれ自分のやりたいことを行い交流するための場所です。 AIを活用したり、AIコーディング(Vibe Coding)をする子どもたちも集まっています。 開催内容 日 時 : 2026年6月27日（土） 10:00～12:00ごろ 参加費 : 無料 参加条件 : 7歳から17歳ぐらい 定 員 : ・ニンジャ（参加してくれる子どもたち） 10名ぐらい ・見学者・メンター（支援者） 5名ぐらい 準備するもの : ・好奇心…"
     },
     {
+      "title": "【大阪】Xグラスハッカソン 2026 チームビルド",
+      "event_url": "https://osaka-driven-dev.connpass.com/event/391910/",
+      "started_at": "2026/06/27 10:00",
+      "place": "オンライン",
+      "catch": "スマートグラスやXR技術を使って、近未来世界を体感できるアプリを制作してみよう！",
+      "description": "概要 スマートグラスやARグラスでできたらいいな、という体験を限られた期間で開発するハッカソンイベントです。 数年前からのXR(AR/MR/VR等)の盛り上がりや様々なデバイスの登場に加え、近年ではウェアラブルやAIといった要素も重視され、スマートグラスデバイスやアプリも色々と出始め、日本国内でも入手しやすくなってきています。 そこで、今までMRハッカソン等としてXRや空間コンピューティングを中心に開発を行っていたハッカソンイベントを、今年は特にスマートグラスやARグラスにフォーカスし、それらによってできたらいいな、と思う体験を作り上げるという形式で実施いたします。…"
+    },
+    {
       "title": "(第184回)Python mini Hack-a-thon(ハイブリッド)",
       "event_url": "https://pyhack.connpass.com/event/394752/",
       "started_at": "2026/06/27 11:00",
       "place": "東京都",
       "catch": "起業を応援する日",
       "description": "ハイブリッド開催です オンラインとオフラインのハイブリッド開催をします。 前日か当日にZoomのURLを送るので、ぜひご参加ください。 現地参加について 今回の会場は中野の Pleasanter Lounge です 住所: 東京都中野区中野2-30-5 中野アーバンビル7F(中野駅徒歩2分、 Googleマップ ) 参加者は直接7階にいってください、11時までには開場する予定です。 この勉強会について 基本的に毎月開催です。スプリントのゆるい版みたいな感じで各自自分でやりたいことを持ってきて、勝手に開発を進めています。参加費は無料です。 初めての方も常連さんもぜひご参加ください。 slackあります 参加はこちら オフラインの場合、会場には無線LANと電源があります。各自で用意するものは以下のとおりです。 開発用のPC タイムテーブル…"
+    },
+    {
+      "title": "仮)セキュリティを学びたいエンジニア歓迎！アキレステック#2",
+      "event_url": "https://akiressecurity.connpass.com/event/395230/",
+      "started_at": "2026/06/27 11:00",
+      "place": "東京都",
+      "catch": "セキュリティを学びたいエンジニア向けイベント開催を予定しています",
+      "description": "【6/27開催】アキレステック #2（仮） エンジニア・セキュリティに興味がある方向けのコミュニティイベントを開催します！ 前回好評だったイベントの第2回開催となります✨ 現在、詳細内容は調整中ですが、 今回も「セキュリティ」「「交流」をテーマにしたイベントを予定しています！ 📆 開催概要 日程：2026年6月27日（土） 時間：昼頃開始予定 会場：JPビルディング 2階 co-lab（五反田） 軽食・ドリンクあり ☕🍴 💡 こんな方におすすめ セキュリティに興味がある セキュリティ×AIを学んでみたい エンジニア同士で交流したい コミュニティに参加してみたい セキュリティ初心者だけど興味がある 🌱 前回の様子 前回は、 セキュリティ体験 交流会 などを行い、 学生〜社会人まで幅広い方にご参加いただきました！ 軽食を囲みながら、…"
     },
     {
       "title": "【ひろゆき氏登壇】CoLab Conf（コラコン）【テックカンファレンス】",
@@ -2746,6 +2562,14 @@
       "description": "本イベントはオンラインで行います ・配信はYouTube Liveで行います。当日の視聴URLはお申し込みいただいた方へ当日にお知らせいたします。 ・本イベントは、事前に録画した映像を配信いたします。 今回のテーマは『AI時代の業務改革最前線～Claude Code・Claude Designで広がる可能性～』 『Claude』をはじめとする生成AIの進化により、制作や開発現場での活用が広がる中、 AIは「個人の作業効率化ツール」から、「業務プロセスそのものを進化させる存在」へと変わりつつあります。 一方で、実務への導入にあたって「既存の業務フローにどう組み込むべきか」「新しいプロセスを現場にいかに定着させるか」という悩みを抱えるケースも多いのではないでしょうか。 本イベントでは、『Claude Code』や『Claude…"
     },
     {
+      "title": "毎週火曜にやってる！プログラミング&ITなんでも勉強部屋（6月第5週）",
+      "event_url": "https://hfs.connpass.com/event/391001/",
+      "started_at": "2026/06/30 19:00",
+      "place": "東京都",
+      "catch": "毎週火曜にやってる、もくもく勉強部屋！！",
+      "description": "#プログラミング勉強部屋 #eLV勉強会 毎週火曜やってます!! ※その他の火曜も参加希望の場合は このリンク からお願いします！ どんなイベント？ 一人だと、自宅だと、だらけちゃって自分に負けちゃう！やる気はあるのに進まない......心配ありません、人間そんなものです（笑）そこで、以下の環境を用意しております！！ なんとなく学習モードに切り替わることのできる「場」 一人ではなく同じような学習テーマをもった「仲間」 毎週火曜日開催！ 無言、途中参加、途中退出、ちょっと抜けてまた戻ってくる、などなど自由です。 ゆる〜くやっているので、お気軽にご参加ください。 参加者ってどんなことやっているの？ ・プログラミングの勉強 ・ネットワークやCloudの勉強 ・書籍を読む ・会社の仕事を仕上げる ・各種資料を作成する ・ブログなどの記事を書く ・統計や数学など基礎的な勉強 ・その他なんでも！…"
+    },
+    {
       "title": "The SRE Backlog: 蔵出し事例共有会",
       "event_url": "https://layerx.connpass.com/event/394351/",
       "started_at": "2026/06/30 19:00",
@@ -2760,6 +2584,14 @@
       "place": "東京都",
       "catch": "",
       "description": "イベント概要 ゆるAI勉強会は、ゆるくAIを学ぶをテーマに開催される初心者大歓迎の勉強会です。 ChatGPTとか、Claudeとか、Geminiとか、画像生成とか、便利そうなAIツールとか色々あるけども、 「これ使ってみたら面白かった」「なんか仕事で使えそうだった」「よくわからないけどすごかった」 みたいにゆる〜く話を、共有できればと思っています！ 初回のテーマは 『ゆるくAIの話をしよう』 です 🤖 AIがどんどん身近になってきている今日この頃。 ChatGPT、Claude、Gemini、画像生成、AIエージェント、業務活用、個人開発、プロンプトの工夫など、AIにまつわる話題をゆるく持ち寄って話す回です！ 「最近こんなAIツールを使ってみた」 「仕事でこういうふうに使ってみた」 「よくわからないけど、これ面白かった」 「AIで遊んでいたらこんなことができた」…"
+    },
+    {
+      "title": "エンジニア達の「完全に理解した」Talk　#78",
+      "event_url": "https://easy2.connpass.com/event/395246/",
+      "started_at": "2026/06/30 20:00",
+      "place": "オンライン",
+      "catch": "WEB技術？PM？設計？DB？はいはい、知ってる知ってる",
+      "description": "□ 完全に理解した Talk とは？ 完全に理解した、それはまさに「分かった気になったくらい」の理解できたくらいのもの！ 「覚えたての知識」や「この知識なら自信出てきた！」みたいなものから「あれ、ちょっと怪しいかも？」となり始めた知識まで自分が話したい知識をなんでもゆるーく話をする会です！ みんなにOUTPUTして、是非自分の実力を高めちゃいましょう！ 時間 内容 発表者 20:00 前座 @dach 20:30 LT1: 20:50 LT2: 21:10 LT3: 21:30 終了 ※ 当日はyouTube Liveを利用します ※ 時間は目安ですので、LTは5 ~ 30minでも大丈夫です ▽ 過去の完全に理解したTalk 動画を見てもらえればどのくらいゆるくやっているかが伝わるかと思います。 YouTube Live ▽ ポータルサイト EasyEasy Community…"
     },
     {
       "title": "[第８回] AIロボット駆動科学研究会",
@@ -2914,6 +2746,14 @@
       "description": "渋谷アジャイルとは 渋谷アジャイルは、スタートアップでアジャイルを試行錯誤している人たちが各々の関心を持ち寄り対話・議論する実践型のコミュニティです。毎月第2水曜日にミートアップを開催しています。 会はOST(全員参加型コンテンツ: 後述)を軸に進行しており、スタートアップのリアルな現場からアジャイルコミュニティを盛り上げることを目指しています。 スタートアップは不確実なものを取り扱う性質上、アジャイルとの親和性は高いと考えられます。しかし現実には、チームや会社、事業の状況が目まぐるしく変わるスタートアップならではの悩みも多く見られます。 チームが拡大しているが、カウボーイ開発からチーム開発に切り替えられていない チームがアジャイルを学んでおらず、開発プロセスがないことをアジャイルと呼称している 学んできたプラクティスを、チームの状況を考慮せずにそのまま適用してしまっている…"
     },
     {
+      "title": "Scrum Masters Night! in Tokyo（オンサイト）",
+      "event_url": "https://smn.connpass.com/event/394713/",
+      "started_at": "2026/07/08 19:30",
+      "place": "東京都",
+      "catch": "スクラムマスターのための、スクラムマスターによる課題解決型イベントです！",
+      "description": "実施概要 💁‍♀️ Scrum Masters Night! （スクラムマスターズナイト） は、オープンスペーステクノロジー（※）で運営される、スクラムマスターのための、スクラムマスターによる課題解決型イベントです！ 参加者同士のディスカッションを通じて、スクラムを実践する上でぶつかった課題や疑問に対して解決のヒントを得ることを目的としています。 日時・会場 日時：2026年7月8日(火) 19:30~(19:15開場） 場所： 株式会社ログラス本社 〒108-0073 東京都港区三田３丁目１１−２４ 国際興業三田第2ビル 9階 電車で来る場合 都営地下鉄浅草線・京浜急行電鉄「泉岳寺駅」: A4出口から徒歩1分 JR山手線・京浜東北線「高輪ゲートウェイ駅」: 徒歩7分 入館方法 ビル正面玄関からエレベーターで9階までお越しください。…"
+    },
+    {
       "title": "【限定3名！】未経験からインフラエンジニアを目指す本気の相談会",
       "event_url": "https://masaru-study.connpass.com/event/394461/",
       "started_at": "2026/07/09 21:00",
@@ -2928,6 +2768,14 @@
       "place": "東京都",
       "catch": "",
       "description": "C++ MIX ― ひろく学び、気軽に語る勉強会 「C++ MIX」は、C++とその周辺技術をゆるやかに横断して学べるコミュニティ勉強会です。 標準C++・周辺ライブラリやツール紹介はもちろん、ゲーム・音声処理・通信・高速化・数値計算・シミュレーション・AI・コンパイラなどさまざまな活用分野、Rust/Go など他言語や設計・開発プロセスの話題まで、C++プログラマに役立つトピックを幅広く扱います。 初参加の方、学生、再入門・転職/復職を目指す方、どなたでも歓迎です。 発表を聞くだけの参加もOK。途中参加・途中退席も気軽にどうぞ。 お知らせ 今回Akira Takahashiは不参加になります。ほかのスタッフがこれまで通り運営しますので、安心してご参加ください。 ライブ配信 当日の様子は YouTube でもライブ配信します。現地参加が難しい方はご活用ください。 CPP…"
+    },
+    {
+      "title": "〜今からキャッチアップ〜「SalesforceのインプリをAI Agentとやるってどんな感じ？」",
+      "event_url": "https://namespace.connpass.com/event/395095/",
+      "started_at": "2026/07/10 19:00",
+      "place": "東京都",
+      "catch": "Salesforce社公式、サードパーティ、内製の勘所を掴む土台づくり",
+      "description": "イベント概要 Salesforceの導入支援・インプリに関わる方に向けて、 Claude Code（汎用のAgent開発/実行環境） を使いながら、Salesforceの実装を “通しの型”で体験する デモ＋小型ハンズオン勉強会です。 忙しくて検証時間が取りづらい方が、短時間で 「できる／できない」「任せ方」「レビュー観点」 の経験値を作り、結果として Agentforce Vibesなどの公式ソリューションを相対的に評価できる 自身の技術スキルに合った内製ラインの見極めができる Blaze等のサードパーティツールを比較検討できる という状態を目指します。 本イベントは イグネス株式会社（Igness） と 株式会社ユークリッド（namespace） の共催で開催します。講師はイグネス株式会社の小倉さんです。 このイベントで扱うこと／扱わないこと 本イベントは…"
     },
     {
       "title": "第10回 ツクってアソぶハッカソン（オープニングイベント）",
@@ -3032,6 +2880,14 @@
       "place": "東京都",
       "catch": "",
       "description": "Svelte Japan Offline Meetup #8 Svelteに関することならなんでもOKのLTイベント。 ベテランも初心者も大歓迎です。 Svelte-related topics are all welcome at this LT event. Everyone is welcome! スケジュール Schedule 時間 Time スピーカー Speaker タイトル Title 18:30 ~ 19:00 開場 Doors open 19:00 ~ 19:05 主催より挨拶 Opening remarks 19:05 ~ 19:20 発表 Presentation 1: TBA TBA 19:20 ~ 19:35 発表 Presentation 2: TBA TBA 19:35 ~ 19:50 発表 Presentation 3: TBA TBA 19:50 ~…"
+    },
+    {
+      "title": "第10回 FlutterGakkai(オンライン/オフライン開催)",
+      "event_url": "https://fluttergakkai.connpass.com/event/394706/",
+      "started_at": "2026/07/17 19:00",
+      "place": "東京都",
+      "catch": "話し手も聞き手も、まえよりもっとFlutterを好きになれる Flutter の勉強会",
+      "description": "はじめに FlutterGakkai はみんながもっている Flutter の知見を持ち寄って意見交換をする場所です。 第10回を 2026/07/17(金) に 開催します！ 今回も公募の中から選ばれた、現場で活躍する Flutter エンジニアの皆さんが、知的好奇心を誘う様々なテーマで発表していだきます。 話し手も聞き手も、まえよりもっとFlutterを好きになれる場所をつくっていきましょう。 運営協力 株式会社ZOZO ファッションEC「ZOZOTOWN」、ファッションコーディネートアプリ「WEAR」など各種サービスの企画・展開をおこなうほか、「ZOZOMAT」「ZOZOGLASS」などの計測テクノロジー開発・活用にも取り組んでいます。 株式会社ZOZO ZOZO TECH BLOG ZOZOすべての中途採用 プライバシーポリシー イベント概要 2026/07/17(金)…"
     },
     {
       "title": "第2回 サウナでLT大会",

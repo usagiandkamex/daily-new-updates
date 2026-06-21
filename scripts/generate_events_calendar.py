@@ -600,7 +600,7 @@ def _fetch_rss_events(
 def _fetch_one_vendor_feed(feed_info: dict, today: datetime) -> list[dict]:
     """単一のベンダーイベント RSS フィードを取得し、イベントリストを返す。
 
-    - feed_info は ``name``、``url``、``place`` 必須、``lookback_days`` 省略可
+    - feed_info は ``name``、``url`` 必須、``place``・``lookback_days`` 省略可
     - ``lookback_days`` は int かつ 1 以上のみ受け付け、不正値は
       VENDOR_EVENT_LOOKBACK_DAYS にフォールバック
     - 計算した cutoff より前に公開された記事は除外

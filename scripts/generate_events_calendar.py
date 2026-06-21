@@ -600,14 +600,11 @@ def _fetch_rss_events(
 def _fetch_one_vendor_feed(feed_info: dict, today: datetime) -> list[dict]:
     """単一のベンダーイベント RSS フィードを取得し、イベントリストを返す。
 
-    :param feed_info: フィード設定辞書（``name``、``url``、``place`` 必須、
-        ``lookback_days`` 省略可）。
-    :param today: 取得基準日（タイムゾーン付き datetime）。cutoff の計算に使用する。
-
-    feed_info に ``lookback_days`` が指定されている場合はその日数を使用し、
-    未指定時は VENDOR_EVENT_LOOKBACK_DAYS（デフォルト 30 日）を適用する。
-    計算した cutoff より前に公開された記事は除外する。
-    取得失敗時は空リストを返す（fetch_vendor_news_events でのログ出力のため例外を抑制する）。
+    - feed_info は ``name``、``url``、``place`` 必須、``lookback_days`` 省略可
+    - ``lookback_days`` は int かつ 1 以上のみ受け付け、不正値は
+      VENDOR_EVENT_LOOKBACK_DAYS にフォールバック
+    - 計算した cutoff より前に公開された記事は除外
+    - 取得失敗時は空リストを返す（fetch_vendor_news_events でのログ出力のため例外を抑制）
     """
     results: list[dict] = []
     try:
@@ -615,6 +612,12 @@ def _fetch_one_vendor_feed(feed_info: dict, today: datetime) -> list[dict]:
         url = feed_info["url"]
         place = feed_info.get("place", "")
         lookback_days = feed_info.get("lookback_days", VENDOR_EVENT_LOOKBACK_DAYS)
+        if isinstance(lookback_days, bool) or not isinstance(lookback_days, int) or lookback_days <= 0:
+            print(
+                f"  ベンダーイベント RSS ({name}): lookback_days が不正 ({lookback_days!r}) のため "
+                f"{VENDOR_EVENT_LOOKBACK_DAYS} 日にフォールバック"
+            )
+            lookback_days = VENDOR_EVENT_LOOKBACK_DAYS
         cutoff = today - timedelta(days=lookback_days)
         cutoff_str = cutoff.strftime("%Y/%m/%d")
         resp = requests.get(url, headers=HTTP_HEADERS, timeout=10)

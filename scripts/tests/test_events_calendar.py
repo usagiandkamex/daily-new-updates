@@ -1382,7 +1382,7 @@ class TestFetchVendorNewsEvents(unittest.TestCase):
         """lookback_days が設定されたフィードはその日数内の記事を含む。"""
         today = datetime(2026, 5, 15, tzinfo=JST)
         # VENDOR_EVENT_LOOKBACK_DAYS(30日)より前だが VENDOR_REPORT_LOOKBACK_DAYS(90日)以内
-        old_pub = today - timedelta(days=VENDOR_EVENT_LOOKBACK_DAYS + 10)  # 40日前
+        old_pub = today - timedelta(days=VENDOR_EVENT_LOOKBACK_DAYS + 1)
 
         feed = _make_feed(
             self._entry(
@@ -1407,6 +1407,40 @@ class TestFetchVendorNewsEvents(unittest.TestCase):
         urls = [e["event_url"] for e in events]
         self.assertIn("https://news.google.com/article/report", urls,
                       "lookback_days 内の記事はカレンダーに含まれるべき")
+
+    def test_invalid_per_feed_lookback_days_falls_back_to_default(self):
+        """不正な lookback_days はデフォルト値にフォールバックする。"""
+        today = datetime(2026, 5, 15, tzinfo=JST)
+        recent_pub = today - timedelta(days=VENDOR_EVENT_LOOKBACK_DAYS - 1)
+        feed = _make_feed(
+            self._entry(
+                "AWS re:Invent 参加レポート",
+                "https://news.google.com/article/report",
+                published_dt=recent_pub,
+            ),
+        )
+
+        for invalid_value in ("30", 0, -1, True):
+            with self.subTest(lookback_days=invalid_value):
+                with patch("generate_events_calendar.VENDOR_EVENT_NEWS_FEEDS", [
+                    {
+                        "name": "AWS re:Invent 参加レポート",
+                        "url": "https://news.google.com/rss/test",
+                        "place": "Las Vegas / オンライン",
+                        "lookback_days": invalid_value,
+                    },
+                ]), \
+                     patch("generate_events_calendar.requests.get", return_value=_make_response()), \
+                     patch("generate_events_calendar.feedparser.parse", return_value=feed), \
+                     patch("builtins.print") as mock_print:
+                    events = fetch_vendor_news_events(today)
+
+                self.assertEqual(len(events), 1)
+                self.assertTrue(any(
+                    "lookback_days が不正" in str(call)
+                    and "AWS re:Invent 参加レポート" in str(call)
+                    for call in mock_print.call_args_list
+                ))
 
     def test_per_feed_lookback_days_excludes_articles_beyond_custom_window(self):
         """lookback_days を超えた記事はフィード個別の設定でも除外される。"""

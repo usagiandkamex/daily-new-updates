@@ -63,11 +63,16 @@ _ENRICH_WORKERS = 5
 # イベントページ取得タイムアウト（秒）
 _PAGE_FETCH_TIMEOUT = 10
 
-# ベンダーイベントニュース：何日前までの記事を含めるか（これより古い記事は参加レポ等として除外）
+# ベンダーイベントニュース：何日前までの記事を含めるか（デフォルト）
 VENDOR_EVENT_LOOKBACK_DAYS = 30
+
+# 参加レポート・参加記など、イベント後に公開されるコンテンツの取り込み期間
+# （デフォルトより長めに設定し、直近 3 か月以内の参加レポートを取得する）
+VENDOR_REPORT_LOOKBACK_DAYS = 90
 
 # 大手ベンダー・大規模カンファレンス情報取得用 RSS フィード（Google News 検索）
 # 各フィードには「name」（表示名）「url」（RSS URL）「place」（開催場所候補）を定義する。
+# オプションで「lookback_days」を指定すると、フィード個別の取り込み期間を設定できる（未指定時は VENDOR_EVENT_LOOKBACK_DAYS を使用）。
 VENDOR_EVENT_NEWS_FEEDS: list[dict] = [
     # Microsoft
     {
@@ -156,6 +161,72 @@ VENDOR_EVENT_NEWS_FEEDS: list[dict] = [
         "name": "Google I/O",
         "url": "https://news.google.com/rss/search?q=Google+IO+%E3%82%AB%E3%83%B3%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9+%E6%83%85%E5%A0%B1&hl=ja&gl=JP&ceid=JP:ja",
         "place": "Mountain View / オンライン",
+    },
+    # ---------------------------------------------------------------------------
+    # 参加レポート・参加記フィード（イベント開催後に公開されるコンテンツを取得）
+    # lookback_days に VENDOR_REPORT_LOOKBACK_DAYS を設定し、
+    # 直近 90 日以内の参加レポートを収集する。
+    # ---------------------------------------------------------------------------
+    # Microsoft
+    {
+        "name": "Microsoft Build 参加レポート",
+        "url": "https://news.google.com/rss/search?q=Microsoft+Build+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Seattle / オンライン",
+        "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+    },
+    {
+        "name": "Microsoft Ignite 参加レポート",
+        "url": "https://news.google.com/rss/search?q=Microsoft+Ignite+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Chicago / オンライン",
+        "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+    },
+    # AWS
+    {
+        "name": "AWS Summit Japan 参加レポート",
+        "url": "https://news.google.com/rss/search?q=AWS+Summit+Japan+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "東京 / オンライン",
+        "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+    },
+    {
+        "name": "AWS re:Invent 参加レポート",
+        "url": "https://news.google.com/rss/search?q=AWS+re%3AInvent+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Las Vegas / オンライン",
+        "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+    },
+    # Google Cloud
+    {
+        "name": "Google Cloud Next 参加レポート",
+        "url": "https://news.google.com/rss/search?q=Google+Cloud+Next+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Las Vegas / オンライン",
+        "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+    },
+    # CNCF
+    {
+        "name": "KubeCon 参加レポート",
+        "url": "https://news.google.com/rss/search?q=KubeCon+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "現地開催 / オンライン",
+        "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+    },
+    # Google
+    {
+        "name": "Google I/O 参加レポート",
+        "url": "https://news.google.com/rss/search?q=Google+IO+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "Mountain View / オンライン",
+        "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+    },
+    # NVIDIA
+    {
+        "name": "NVIDIA GTC 参加レポート",
+        "url": "https://news.google.com/rss/search?q=NVIDIA+GTC+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "San Jose / オンライン",
+        "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
+    },
+    # GitHub
+    {
+        "name": "GitHub Universe 参加レポート",
+        "url": "https://news.google.com/rss/search?q=GitHub+Universe+%E5%8F%82%E5%8A%A0%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88&hl=ja&gl=JP&ceid=JP:ja",
+        "place": "San Francisco / オンライン",
+        "lookback_days": VENDOR_REPORT_LOOKBACK_DAYS,
     },
 ]
 
@@ -526,17 +597,29 @@ def _fetch_rss_events(
     return collected, True
 
 
-def _fetch_one_vendor_feed(feed_info: dict, cutoff_str: str) -> list[dict]:
+def _fetch_one_vendor_feed(feed_info: dict, today: datetime) -> list[dict]:
     """単一のベンダーイベント RSS フィードを取得し、イベントリストを返す。
 
-    cutoff_str（YYYY/MM/DD 形式）より前に公開された記事は除外する。
-    取得失敗時は空リストを返す（fetch_vendor_news_events でのログ出力のため例外を抑制する）。
+    - feed_info は ``name``、``url`` 必須、``place``・``lookback_days`` 省略可
+    - ``lookback_days`` は int かつ 1 以上のみ受け付け、不正値は
+      VENDOR_EVENT_LOOKBACK_DAYS にフォールバック
+    - 計算した cutoff より前に公開された記事は除外
+    - 取得失敗時は空リストを返す（fetch_vendor_news_events でのログ出力のため例外を抑制）
     """
     results: list[dict] = []
     try:
         name = feed_info["name"]
         url = feed_info["url"]
         place = feed_info.get("place", "")
+        lookback_days = feed_info.get("lookback_days", VENDOR_EVENT_LOOKBACK_DAYS)
+        if isinstance(lookback_days, bool) or not isinstance(lookback_days, int) or lookback_days <= 0:
+            print(
+                f"  ベンダーイベント RSS ({name}): lookback_days が不正 ({lookback_days!r}) のため "
+                f"{VENDOR_EVENT_LOOKBACK_DAYS} 日にフォールバック"
+            )
+            lookback_days = VENDOR_EVENT_LOOKBACK_DAYS
+        cutoff = today - timedelta(days=lookback_days)
+        cutoff_str = cutoff.strftime("%Y/%m/%d")
         resp = requests.get(url, headers=HTTP_HEADERS, timeout=10)
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
@@ -556,7 +639,7 @@ def _fetch_one_vendor_feed(feed_info: dict, cutoff_str: str) -> list[dict]:
             started_at = _parse_started_at(entry)
             if not started_at:
                 continue
-            # 公開日が cutoff より前の記事は参加レポート等の可能性が高いため除外する。
+            # 公開日が cutoff より前の記事は除外する。
             if started_at[:10] < cutoff_str:
                 continue
             results.append({
@@ -581,8 +664,10 @@ def fetch_vendor_news_events(today: datetime) -> list[dict]:
     AWS Summit / re:Invent、Google Cloud Next、KubeCon 等）の最新ニュース記事を取得し、
     記事の公開日をカレンダー表示日として events.json に追加する。
 
-    VENDOR_EVENT_LOOKBACK_DAYS 日より前に公開された記事（参加レポート等）は除外し、
-    カレンダーには直近の情報のみを表示する。
+    各フィードに ``lookback_days`` が設定されている場合はその期間を使用し、
+    未設定の場合は VENDOR_EVENT_LOOKBACK_DAYS（デフォルト 30 日）を適用する。
+    参加レポート・参加記フィードには VENDOR_REPORT_LOOKBACK_DAYS（90 日）を
+    設定することを推奨する（各フィードの ``lookback_days`` フィールドで指定）。
 
     各エントリには「ベンダーイベント情報」であることを示す place フィールドおよび
     vendor_event フラグが設定される。
@@ -592,15 +677,13 @@ def fetch_vendor_news_events(today: datetime) -> list[dict]:
     """
     if not VENDOR_EVENT_NEWS_FEEDS:
         return []
-    cutoff = today - timedelta(days=VENDOR_EVENT_LOOKBACK_DAYS)
-    cutoff_str = cutoff.strftime("%Y/%m/%d")
-    print(f"  ベンダーイベント RSS を並列取得中 ({today.strftime('%Y/%m/%d')} 時点、{cutoff_str} 以降)...")
+    print(f"  ベンダーイベント RSS を並列取得中 ({today.strftime('%Y/%m/%d')} 時点)...")
     events: list[dict] = []
     seen_urls: set[str] = set()
 
     with ThreadPoolExecutor(max_workers=min(len(VENDOR_EVENT_NEWS_FEEDS), 8)) as executor:
         futures = {
-            executor.submit(_fetch_one_vendor_feed, feed_info, cutoff_str): feed_info
+            executor.submit(_fetch_one_vendor_feed, feed_info, today): feed_info
             for feed_info in VENDOR_EVENT_NEWS_FEEDS
         }
         for future in as_completed(futures):

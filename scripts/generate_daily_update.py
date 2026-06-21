@@ -44,7 +44,7 @@ FEEDS = {
     # 他ベンダーや非公式ニュース（Google News 等）は意図的に除外している。
     "azure": [
         {"name": "Azure Release Communications", "url": "https://www.microsoft.com/releasecommunications/api/v2/azure/rss"},
-        {"name": "Azure Updates", "url": "https://azure.microsoft.com/en-us/updates/feed/"},
+        {"name": "Azure Updates", "url": "https://azure.microsoft.com/ja-jp/updates/feed/"},
         {"name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/"},
     ],
     # --- 技術系 (日本語) ---

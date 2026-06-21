@@ -724,8 +724,9 @@ class TestFetchFeedDateFilter(unittest.TestCase):
 
     def test_recent_article_with_date_is_included(self):
         """since より新しい日付を持つ記事は含まれる。"""
-        since = datetime(2026, 4, 12, 0, 0, tzinfo=timezone.utc)
-        recent = datetime(2026, 4, 12, 6, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        since = now - timedelta(hours=2)
+        recent = now - timedelta(hours=1)
         entries = [
             {
                 "title": "Recent Article",
@@ -987,6 +988,31 @@ class TestSourceUrlTrackerDelegationInSmallchat(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as mock_out:
             sc._log_unsourced_reference_links(article, source_urls)
         self.assertIn("一致", mock_out.getvalue())
+
+
+class TestAzureFeedUrlsSmallchat(unittest.TestCase):
+    """generate_smallchat.py の Azure フィード URL 設定テスト"""
+
+    def test_azure_updates_feed_present_and_uses_ja_jp_locale(self):
+        """Azure Updates フィードは ja-jp ロケール URL で定義されている。
+
+        テクニカル雑談でも Azure Updates の公式情報を取得するために
+        ja-jp ロケールの Azure Updates フィードを参照する。
+        """
+        azure_feeds = sc.FEEDS.get("azure", [])
+        update_feeds = [f for f in azure_feeds if f.get("name") == "Azure Updates"]
+        self.assertTrue(len(update_feeds) > 0, "Azure Updates フィードが FEEDS に定義されていない")
+        for feed in update_feeds:
+            self.assertIn(
+                "ja-jp",
+                feed["url"],
+                f"Azure Updates フィードは ja-jp ロケール URL を使用するべき: {feed['url']}",
+            )
+            self.assertNotIn(
+                "en-us",
+                feed["url"],
+                f"Azure Updates フィードは en-us ロケール URL を使用すべきでない: {feed['url']}",
+            )
 
 
 if __name__ == "__main__":

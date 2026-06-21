@@ -3123,5 +3123,30 @@ class TestFetchConnpassEventsEnrichment(unittest.TestCase):
         mock_enrich.assert_called_once()
 
 
+class TestAzureFeedUrls(unittest.TestCase):
+    """Azure フィード URL の設定テスト"""
+
+    def test_azure_updates_feed_uses_ja_jp_locale(self):
+        """Azure Updates フィードは ja-jp ロケール URL を使用する。
+
+        en-us ロケールの URL ではなく ja-jp ロケールの URL を使用することで、
+        日本語ロケールのフィードから直接 Azure アップデート情報を取得する。
+        """
+        azure_feeds = du.FEEDS.get("azure", [])
+        update_feeds = [f for f in azure_feeds if f.get("name") == "Azure Updates"]
+        self.assertTrue(len(update_feeds) > 0, "Azure Updates フィードが FEEDS に定義されていない")
+        for feed in update_feeds:
+            self.assertIn(
+                "ja-jp",
+                feed["url"],
+                f"Azure Updates フィードは ja-jp ロケール URL を使用するべき: {feed['url']}",
+            )
+            self.assertNotIn(
+                "en-us",
+                feed["url"],
+                f"Azure Updates フィードは en-us ロケール URL を使用すべきでない: {feed['url']}",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

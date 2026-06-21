@@ -107,9 +107,14 @@ def _resolve_google_news_url(url: str) -> str:
 def _to_azure_ja_url(url: str) -> str:
     """Azure アップデートの URL を日本語ロケール付き（/ja-jp/updates）形式に変換する。
 
-    Azure Release Communications RSS フィードが提供する URL は
-    ロケールなし（/updates?id=NNNN）または英語ロケール（/en-us/updates?id=NNNN）だが、
+    Azure Updates RSS フィードの正規 URL 形式は以下の通り:
+      フィード: https://azure.microsoft.com/ja-jp/updates/feed/
+      記事:     https://azure.microsoft.com/ja-jp/updates?id=NNNN
+
+    フィードが提供する記事 URL はロケールなし（/updates?id=NNNN）または
+    英語ロケール（/en-us/updates?id=NNNN）の場合があるが、
     日本語ユーザーに適した /ja-jp/updates?id=NNNN 形式に変換して提供する。
+    すでに /ja-jp/ 付きの URL はそのまま返す。
     非 Azure URL、または /updates 以外のパス（/blog/ 等）はそのまま返す。
     """
     parsed = urlparse(url)

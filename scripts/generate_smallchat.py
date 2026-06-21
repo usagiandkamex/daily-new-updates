@@ -68,6 +68,7 @@ FEEDS = {
     # --- Azure ---
     # Microsoft 公式ソースに加え、SNS・コミュニティ・ブログ等の情報も収集する。
     "azure": [
+        {"name": "Azure Updates", "url": "https://azure.microsoft.com/ja-jp/updates/feed/"},
         {"name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/"},
         {"name": "Azure Release Communications", "url": "https://www.microsoft.com/releasecommunications/api/v2/azure/rss"},
         {"name": "Reddit Azure", "url": "https://www.reddit.com/r/AZURE/.rss"},

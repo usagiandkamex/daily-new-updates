@@ -3239,17 +3239,18 @@ class TestReplacedFeedUrlsDailyUpdate(unittest.TestCase):
             "Discord Engineering Blog": "https://news.google.com/rss/search?q=site%3Adiscord.com%2Fblog+",
         }
 
+        all_feeds: dict[str, str] = {}
         for category in ("tech_ja", "tech_en"):
-            feeds = {feed["name"]: feed["url"] for feed in du.FEEDS.get(category, [])}
-            for name, url_prefix in expected.items():
-                if name in feeds:
-                    if url_prefix.startswith("https://news.google.com/rss/search?q="):
-                        self.assertTrue(
-                            feeds[name].startswith(url_prefix),
-                            f"{name} は Google News RSS の置き換え URL を使うべき: {feeds[name]}",
-                        )
-                    else:
-                        self.assertEqual(feeds[name], url_prefix)
+            all_feeds.update({feed["name"]: feed["url"] for feed in du.FEEDS.get(category, [])})
+        for name, url_prefix in expected.items():
+            self.assertIn(name, all_feeds, f"{name} フィードが定義されていない")
+            if url_prefix.startswith("https://news.google.com/rss/search?q="):
+                self.assertTrue(
+                    all_feeds[name].startswith(url_prefix),
+                    f"{name} は Google News RSS の置き換え URL を使うべき: {all_feeds[name]}",
+                )
+            else:
+                self.assertEqual(all_feeds[name], url_prefix)
 
     def test_replaced_event_platform_feeds_use_expected_urls(self):
         expected = {

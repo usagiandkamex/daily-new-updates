@@ -1235,6 +1235,83 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
 
         self.assertEqual(result, [])
 
+    def test_google_news_event_url_is_resolved_before_storing(self):
+        """Google News RSS のイベント URL は保存前に実 URL へ解決する。"""
+        google_news_url = "https://news.google.com/rss/articles/CBMiQGh0dHBzOi8vZXhhbXBsZS5jb20vZXZlbnQ"
+        resolved_url = "https://doorkeeper.jp/events/123"
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry = MagicMock()
+        entry_data = {
+            "link": google_news_url,
+            "title": "Python 勉強会 東京",
+            "summary": "Python エンジニア向けイベント",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+            patch.object(du, "_resolve_google_news_url", return_value=resolved_url),
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            original_feeds = du._IT_EVENT_PLATFORM_FEEDS
+            du._IT_EVENT_PLATFORM_FEEDS = [{"name": "Doorkeeper エンジニア", "url": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+"}]
+            try:
+                seen: set[str] = set()
+                result = du._fetch_other_platform_events(seen)
+            finally:
+                du._IT_EVENT_PLATFORM_FEEDS = original_feeds
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["event_url"], resolved_url)
+        self.assertIn(resolved_url, seen)
+        self.assertNotIn(google_news_url, seen)
+
+    def test_unresolved_google_news_event_url_is_skipped(self):
+        """Google News RSS の URL が解決できない場合はイベントを取り込まない。"""
+        unresolved_url = "https://news.google.com/rss/articles/CBMiQGh0dHBzOi8vZXhhbXBsZS5jb20vZXZlbnQ"
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry = MagicMock()
+        entry_data = {
+            "link": unresolved_url,
+            "title": "Python 勉強会 東京",
+            "summary": "Python エンジニア向けイベント",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+            patch.object(du, "_resolve_google_news_url", return_value=unresolved_url),
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            original_feeds = du._IT_EVENT_PLATFORM_FEEDS
+            du._IT_EVENT_PLATFORM_FEEDS = [{"name": "Doorkeeper エンジニア", "url": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+"}]
+            try:
+                seen: set[str] = set()
+                result = du._fetch_other_platform_events(seen)
+            finally:
+                du._IT_EVENT_PLATFORM_FEEDS = original_feeds
+
+        self.assertEqual(result, [])
+        self.assertEqual(seen, set())
+
     def test_platform_feeds_constant_is_nonempty(self):
         """_IT_EVENT_PLATFORM_FEEDS には少なくとも 1 件のフィードが定義されている。"""
         self.assertGreater(len(du._IT_EVENT_PLATFORM_FEEDS), 0)
@@ -3146,6 +3223,56 @@ class TestAzureFeedUrls(unittest.TestCase):
                 feed["url"],
                 f"Azure Updates フィードは en-us ロケール URL を使用すべきでない: {feed['url']}",
             )
+
+
+class TestReplacedFeedUrlsDailyUpdate(unittest.TestCase):
+    """到達不能だったフィードの置き換え先 URL 設定テスト"""
+
+    def test_replaced_tech_blog_feeds_use_expected_urls(self):
+        expected = {
+            "Mercari Engineering Blog": "https://news.google.com/rss/search?q=site%3Aengineering.mercari.com+",
+            "LINE Engineering Blog": "https://news.google.com/rss/search?q=site%3Atechblog.lycorp.co.jp+",
+            "Recruit Tech Blog": "https://news.google.com/rss/search?q=site%3Atechblog.recruit.co.jp+",
+            "Google Cloud Blog": "https://cloudblog.withgoogle.com/rss",
+            "Uber Engineering Blog": "https://news.google.com/rss/search?q=site%3Auber.com%2Fblog%2Fengineering+",
+            "Stripe Engineering Blog": "https://news.google.com/rss/search?q=site%3Astripe.com%2Fblog+",
+            "Discord Engineering Blog": "https://news.google.com/rss/search?q=site%3Adiscord.com%2Fblog+",
+        }
+
+        all_feeds: dict[str, str] = {}
+        for category in ("tech_ja", "tech_en"):
+            all_feeds.update({feed["name"]: feed["url"] for feed in du.FEEDS.get(category, [])})
+        for name, url_prefix in expected.items():
+            self.assertIn(name, all_feeds, f"{name} フィードが定義されていない")
+            if url_prefix.startswith("https://news.google.com/rss/search?q="):
+                self.assertTrue(
+                    all_feeds[name].startswith(url_prefix),
+                    f"{name} は Google News RSS の置き換え URL を使うべき: {all_feeds[name]}",
+                )
+            else:
+                self.assertEqual(all_feeds[name], url_prefix)
+
+    def test_replaced_event_platform_feeds_use_expected_urls(self):
+        expected = {
+            "Doorkeeper エンジニア": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+",
+            "Doorkeeper 勉強会": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+",
+            "Doorkeeper 東京": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+",
+            "Doorkeeper オンライン": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+",
+            "TECH PLAY": "https://news.google.com/rss/search?q=site%3Atechplay.jp+",
+            "Findy": "https://findy.connpass.com/rss/",
+            "Codezine": "https://codezine.connpass.com/rss/",
+        }
+
+        feeds = {feed["name"]: feed["url"] for feed in du._IT_EVENT_PLATFORM_FEEDS}
+        for name, expected_url in expected.items():
+            self.assertIn(name, feeds, f"{name} フィードが定義されていない")
+            if expected_url.startswith("https://news.google.com/rss/search?q="):
+                self.assertTrue(
+                    feeds[name].startswith(expected_url),
+                    f"{name} は Google News RSS の置き換え URL を使うべき: {feeds[name]}",
+                )
+            else:
+                self.assertEqual(feeds[name], expected_url)
 
 
 if __name__ == "__main__":

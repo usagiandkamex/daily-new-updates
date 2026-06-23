@@ -105,7 +105,7 @@ FEEDS = {
         {"name": "Google News OCI", "url": "https://news.google.com/rss/search?q=Oracle+Cloud+Infrastructure&hl=en&gl=US&ceid=US:en"},
         {"name": "Google News クラウド JP", "url": "https://news.google.com/rss/search?q=AWS+GCP+%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%89&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "DevelopersIO AWS", "url": "https://dev.classmethod.jp/feed/"},
-        {"name": "Google Cloud Blog", "url": "https://cloud.google.com/feeds/gcp-blog-atom.xml"},
+        {"name": "Google Cloud Blog", "url": "https://cloudblog.withgoogle.com/rss"},
         {"name": "AWS News Blog", "url": "https://aws.amazon.com/blogs/aws/feed/"},
         {"name": "Google Blog", "url": "https://blog.google/rss/"},
         {"name": "Google News Google Cloud JP", "url": "https://news.google.com/rss/search?q=Google+Cloud+%E6%97%A5%E6%9C%AC+%E6%9C%80%E6%96%B0&hl=ja&gl=JP&ceid=JP:ja"},
@@ -141,10 +141,10 @@ FEEDS = {
     # --- 日本企業テックブログ ---
     "techblog_ja": [
         {"name": "Cybozu Inside Out", "url": "https://blog.cybozu.io/feed"},
-        {"name": "Mercari Engineering Blog", "url": "https://engineering.mercari.com/blog/feed.xml"},
-        {"name": "LINE Engineering Blog", "url": "https://engineering.linecorp.com/ja/feed.xml"},
+        {"name": "Mercari Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Aengineering.mercari.com+%E3%83%A1%E3%83%AB%E3%82%AB%E3%83%AA+%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2%E3%83%AA%E3%83%B3%E3%82%B0&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "LINE Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Atechblog.lycorp.co.jp+LINE+Engineering&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "ZOZO Tech Blog", "url": "https://techblog.zozo.com/feed"},
-        {"name": "Recruit Tech Blog", "url": "https://techblog.recruit.co.jp/feed"},
+        {"name": "Recruit Tech Blog", "url": "https://news.google.com/rss/search?q=site%3Atechblog.recruit.co.jp+%E3%83%AA%E3%82%AF%E3%83%AB%E3%83%BC%E3%83%88+%E3%83%86%E3%83%83%E3%82%AF%E3%83%96%E3%83%AD%E3%82%B0&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "DeNA Engineering Blog", "url": "https://engineering.dena.com/blog/index.xml"},
         {"name": "Google Japan Blog", "url": "https://japan.googleblog.com/feeds/posts/default?alt=rss"},
         {"name": "Zenn サイボウズ", "url": "https://zenn.dev/cybozu/feed"},
@@ -153,12 +153,12 @@ FEEDS = {
     # --- 海外企業テックブログ (英語) ---
     "techblog_en": [
         {"name": "Netflix Tech Blog", "url": "https://netflixtechblog.com/feed"},
-        {"name": "Uber Engineering Blog", "url": "https://eng.uber.com/feed/"},
+        {"name": "Uber Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Auber.com%2Fblog%2Fengineering+Uber+Engineering&hl=en&gl=US&ceid=US:en"},
         {"name": "Meta Engineering Blog", "url": "https://engineering.fb.com/feed/"},
         {"name": "GitHub Blog", "url": "https://github.blog/feed/"},
-        {"name": "Stripe Engineering Blog", "url": "https://stripe.com/blog/engineering.rss"},
+        {"name": "Stripe Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Astripe.com%2Fblog+Stripe+engineering&hl=en&gl=US&ceid=US:en"},
         {"name": "Airbnb Engineering Blog", "url": "https://medium.com/airbnb-engineering/feed"},
-        {"name": "Discord Engineering Blog", "url": "https://discord.com/category/engineering/rss"},
+        {"name": "Discord Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Adiscord.com%2Fblog+Discord+engineering&hl=en&gl=US&ceid=US:en"},
         {"name": "Dev.to", "url": "https://dev.to/feed"},
         {"name": "InfoQ", "url": "https://feed.infoq.com/"},
         {"name": "Hacker News (Best)", "url": "https://hnrss.org/best"},

@@ -62,10 +62,10 @@ FEEDS = {
         {"name": "Microsoft Japan Blog", "url": "https://news.microsoft.com/ja-jp/feed/"},
         {"name": "Google Japan Blog", "url": "https://japan.googleblog.com/feeds/posts/default?alt=rss"},
         {"name": "Cybozu Inside Out", "url": "https://blog.cybozu.io/feed"},
-        {"name": "Mercari Engineering Blog", "url": "https://engineering.mercari.com/blog/feed.xml"},
-        {"name": "LINE Engineering Blog", "url": "https://engineering.linecorp.com/ja/feed.xml"},
+        {"name": "Mercari Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Aengineering.mercari.com+%E3%83%A1%E3%83%AB%E3%82%AB%E3%83%AA+%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2%E3%83%AA%E3%83%B3%E3%82%B0&hl=ja&gl=JP&ceid=JP:ja"},
+        {"name": "LINE Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Atechblog.lycorp.co.jp+LINE+Engineering&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "ZOZO Tech Blog", "url": "https://techblog.zozo.com/feed"},
-        {"name": "Recruit Tech Blog", "url": "https://techblog.recruit.co.jp/feed"},
+        {"name": "Recruit Tech Blog", "url": "https://news.google.com/rss/search?q=site%3Atechblog.recruit.co.jp+%E3%83%AA%E3%82%AF%E3%83%AB%E3%83%BC%E3%83%88+%E3%83%86%E3%83%83%E3%82%AF%E3%83%96%E3%83%AD%E3%82%B0&hl=ja&gl=JP&ceid=JP:ja"},
         {"name": "DeNA Engineering Blog", "url": "https://engineering.dena.com/blog/index.xml"},
     ],
     # --- 技術系 (英語) ---
@@ -83,16 +83,16 @@ FEEDS = {
         {"name": "Google Blog", "url": "https://blog.google/rss/"},
         {"name": "Microsoft Blog", "url": "https://blogs.microsoft.com/feed/"},
         {"name": "Google Developers Blog", "url": "https://developers.googleblog.com/feeds/posts/default?alt=rss"},
-        {"name": "Google Cloud Blog", "url": "https://cloud.google.com/feeds/gcp-blog-atom.xml"},
+        {"name": "Google Cloud Blog", "url": "https://cloudblog.withgoogle.com/rss"},
         {"name": "AWS News Blog", "url": "https://aws.amazon.com/blogs/aws/feed/"},
         {"name": "Google News - Wiz", "url": "https://news.google.com/rss/search?q=wiz.io+security+cloud&hl=en&gl=US&ceid=US:en"},
         {"name": "Netflix Tech Blog", "url": "https://netflixtechblog.com/feed"},
-        {"name": "Uber Engineering Blog", "url": "https://eng.uber.com/feed/"},
+        {"name": "Uber Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Auber.com%2Fblog%2Fengineering+Uber+Engineering&hl=en&gl=US&ceid=US:en"},
         {"name": "Meta Engineering Blog", "url": "https://engineering.fb.com/feed/"},
         {"name": "GitHub Blog", "url": "https://github.blog/feed/"},
-        {"name": "Stripe Engineering Blog", "url": "https://stripe.com/blog/engineering.rss"},
+        {"name": "Stripe Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Astripe.com%2Fblog+Stripe+engineering&hl=en&gl=US&ceid=US:en"},
         {"name": "Airbnb Engineering Blog", "url": "https://medium.com/airbnb-engineering/feed"},
-        {"name": "Discord Engineering Blog", "url": "https://discord.com/category/engineering/rss"},
+        {"name": "Discord Engineering Blog", "url": "https://news.google.com/rss/search?q=site%3Adiscord.com%2Fblog+Discord+engineering&hl=en&gl=US&ceid=US:en"},
         {"name": "InfoQ", "url": "https://feed.infoq.com/"},
         # Anthropic Engineering Blog は公式 RSS を提供していないため、
         # Google News RSS で anthropic.com/engineering 配下の記事に絞り込む
@@ -499,20 +499,20 @@ _MAX_KEYWORDS_TO_SEARCH = 20
 # started_at_from_published=True のフィードは、published_parsed をイベント開始日時のプロキシとして使う
 #   （connpass グループ RSS はイベントエントリの published がイベント開催日時に対応するため）
 _IT_EVENT_PLATFORM_FEEDS: list[dict] = [
-    # Doorkeeper — タグ別 Atom フィード（認証不要）
-    {"name": "Doorkeeper エンジニア", "url": "https://www.doorkeeper.jp/tags/エンジニア.atom"},
-    {"name": "Doorkeeper 勉強会",     "url": "https://www.doorkeeper.jp/tags/勉強会.atom"},
-    {"name": "Doorkeeper 東京",       "url": "https://www.doorkeeper.jp/tags/東京.atom"},
-    {"name": "Doorkeeper オンライン", "url": "https://www.doorkeeper.jp/tags/オンライン.atom"},
-    # TECH PLAY — 全国対象 Atom フィード。location_filter で東京・神奈川・オンラインに限定
-    {"name": "TECH PLAY", "url": "https://techplay.jp/atom/events", "location_filter": True},
+    # Doorkeeper — 直リンク Atom が 404 のため、Google News RSS（site:doorkeeper.jp）で代替
+    {"name": "Doorkeeper エンジニア", "url": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+    {"name": "Doorkeeper 勉強会",     "url": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+IT+%E5%8B%89%E5%BC%B7%E4%BC%9A&hl=ja&gl=JP&ceid=JP:ja"},
+    {"name": "Doorkeeper 東京",       "url": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+IT+%E6%9D%B1%E4%BA%AC+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+    {"name": "Doorkeeper オンライン", "url": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+IT+%E3%82%AA%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%B3+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja"},
+    # TECH PLAY — 直リンク Atom が 404 のため、Google News RSS（site:techplay.jp）で代替
+    {"name": "TECH PLAY", "url": "https://news.google.com/rss/search?q=site%3Atechplay.jp+IT+%E6%9D%B1%E4%BA%AC+%E7%A5%9E%E5%A5%88%E5%B7%9D+%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88&hl=ja&gl=JP&ceid=JP:ja", "location_filter": True},
     # Findy — connpass グループ RSS（Findy 主催エンジニア向けイベント）
     # published_parsed が開催日時のプロキシとして使えるため started_at_from_published=True
-    {"name": "Findy", "url": "https://findy.connpass.com/rss", "started_at_from_published": True},
+    {"name": "Findy", "url": "https://findy.connpass.com/rss/", "started_at_from_published": True},
     # Codezine — connpass グループ RSS（Developers Summit / CodeZine Night 等の参加募集イベント）
     # 汎用ニュース RSS（codezine.jp/rss/）は記事と混在するため使用しない。connpass グループ RSS を使用する。
     # published_parsed が開催日時のプロキシとして使えるため started_at_from_published=True
-    {"name": "Codezine", "url": "https://codezine.connpass.com/rss", "started_at_from_published": True},
+    {"name": "Codezine", "url": "https://codezine.connpass.com/rss/", "started_at_from_published": True},
 ]
 
 # location_filter=True のフィードに適用する地域キーワード（小文字比較）
@@ -835,7 +835,10 @@ def _fetch_other_platform_events(
             feed = feedparser.parse(resp.content)
             count = 0
             for entry in feed.entries:
-                event_url = entry.get("link", "")
+                raw_event_url = entry.get("link", "")
+                event_url = _resolve_google_news_url(raw_event_url).strip()
+                if "news.google.com/rss/articles/" in event_url:
+                    continue
                 if not event_url or event_url in seen_urls:
                     continue
                 title = entry.get("title", "").strip()

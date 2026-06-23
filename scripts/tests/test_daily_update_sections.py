@@ -1235,6 +1235,83 @@ class TestFetchOtherPlatformEvents(unittest.TestCase):
 
         self.assertEqual(result, [])
 
+    def test_google_news_event_url_is_resolved_before_storing(self):
+        """Google News RSS のイベント URL は保存前に実 URL へ解決する。"""
+        google_news_url = "https://news.google.com/rss/articles/CBMiQGh0dHBzOi8vZXhhbXBsZS5jb20vZXZlbnQ"
+        resolved_url = "https://doorkeeper.jp/events/123"
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry = MagicMock()
+        entry_data = {
+            "link": google_news_url,
+            "title": "Python 勉強会 東京",
+            "summary": "Python エンジニア向けイベント",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+            patch.object(du, "_resolve_google_news_url", return_value=resolved_url),
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            original_feeds = du._IT_EVENT_PLATFORM_FEEDS
+            du._IT_EVENT_PLATFORM_FEEDS = [{"name": "Doorkeeper エンジニア", "url": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+"}]
+            try:
+                seen: set[str] = set()
+                result = du._fetch_other_platform_events(seen)
+            finally:
+                du._IT_EVENT_PLATFORM_FEEDS = original_feeds
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["event_url"], resolved_url)
+        self.assertIn(resolved_url, seen)
+        self.assertNotIn(google_news_url, seen)
+
+    def test_unresolved_google_news_event_url_is_skipped(self):
+        """Google News RSS の URL が解決できない場合はイベントを取り込まない。"""
+        unresolved_url = "https://news.google.com/rss/articles/CBMiQGh0dHBzOi8vZXhhbXBsZS5jb20vZXZlbnQ"
+
+        def fake_get(url, headers=None, timeout=None):
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.content = b""
+            return resp
+
+        entry = MagicMock()
+        entry_data = {
+            "link": unresolved_url,
+            "title": "Python 勉強会 東京",
+            "summary": "Python エンジニア向けイベント",
+            "published_parsed": None,
+            "updated_parsed": None,
+        }
+        entry.get.side_effect = lambda k, d=None: entry_data.get(k, d)
+
+        with (
+            patch("requests.get", side_effect=fake_get),
+            patch.object(du, "feedparser") as mock_fp,
+            patch.object(du, "_resolve_google_news_url", return_value=unresolved_url),
+        ):
+            mock_fp.parse.return_value = MagicMock(entries=[entry])
+            original_feeds = du._IT_EVENT_PLATFORM_FEEDS
+            du._IT_EVENT_PLATFORM_FEEDS = [{"name": "Doorkeeper エンジニア", "url": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+"}]
+            try:
+                seen: set[str] = set()
+                result = du._fetch_other_platform_events(seen)
+            finally:
+                du._IT_EVENT_PLATFORM_FEEDS = original_feeds
+
+        self.assertEqual(result, [])
+        self.assertEqual(seen, set())
+
     def test_platform_feeds_constant_is_nonempty(self):
         """_IT_EVENT_PLATFORM_FEEDS には少なくとも 1 件のフィードが定義されている。"""
         self.assertGreater(len(du._IT_EVENT_PLATFORM_FEEDS), 0)

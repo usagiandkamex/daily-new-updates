@@ -835,7 +835,10 @@ def _fetch_other_platform_events(
             feed = feedparser.parse(resp.content)
             count = 0
             for entry in feed.entries:
-                event_url = entry.get("link", "")
+                raw_event_url = entry.get("link", "")
+                event_url = _resolve_google_news_url(raw_event_url).strip()
+                if "news.google.com/rss/articles/" in event_url:
+                    continue
                 if not event_url or event_url in seen_urls:
                     continue
                 title = entry.get("title", "").strip()

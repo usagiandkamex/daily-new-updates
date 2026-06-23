@@ -1015,5 +1015,35 @@ class TestAzureFeedUrlsSmallchat(unittest.TestCase):
             )
 
 
+class TestReplacedFeedUrlsSmallchat(unittest.TestCase):
+    """到達不能だった小ネタ用フィードの置き換え先 URL 設定テスト"""
+
+    def test_replaced_cloud_and_techblog_feeds_use_expected_urls(self):
+        expected = {
+            "Google Cloud Blog": "https://cloudblog.withgoogle.com/rss",
+            "Mercari Engineering Blog": "https://news.google.com/rss/search?q=site%3Aengineering.mercari.com+",
+            "LINE Engineering Blog": "https://news.google.com/rss/search?q=site%3Atechblog.lycorp.co.jp+",
+            "Recruit Tech Blog": "https://news.google.com/rss/search?q=site%3Atechblog.recruit.co.jp+",
+            "Uber Engineering Blog": "https://news.google.com/rss/search?q=site%3Auber.com%2Fblog%2Fengineering+",
+            "Stripe Engineering Blog": "https://news.google.com/rss/search?q=site%3Astripe.com%2Fblog+",
+            "Discord Engineering Blog": "https://news.google.com/rss/search?q=site%3Adiscord.com%2Fblog+",
+        }
+
+        feeds = {}
+        for category in ("cloud", "techblog_ja", "techblog_en"):
+            for feed in sc.FEEDS.get(category, []):
+                feeds[feed["name"]] = feed["url"]
+
+        for name, expected_url in expected.items():
+            self.assertIn(name, feeds, f"{name} フィードが FEEDS に定義されていない")
+            if expected_url.startswith("https://news.google.com/rss/search?q="):
+                self.assertTrue(
+                    feeds[name].startswith(expected_url),
+                    f"{name} は Google News RSS の置き換え URL を使うべき: {feeds[name]}",
+                )
+            else:
+                self.assertEqual(feeds[name], expected_url)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -3148,5 +3148,54 @@ class TestAzureFeedUrls(unittest.TestCase):
             )
 
 
+class TestReplacedFeedUrlsDailyUpdate(unittest.TestCase):
+    """到達不能だったフィードの置き換え先 URL 設定テスト"""
+
+    def test_replaced_tech_blog_feeds_use_expected_urls(self):
+        expected = {
+            "Mercari Engineering Blog": "https://news.google.com/rss/search?q=site%3Aengineering.mercari.com+",
+            "LINE Engineering Blog": "https://news.google.com/rss/search?q=site%3Atechblog.lycorp.co.jp+",
+            "Recruit Tech Blog": "https://news.google.com/rss/search?q=site%3Atechblog.recruit.co.jp+",
+            "Google Cloud Blog": "https://cloudblog.withgoogle.com/rss",
+            "Uber Engineering Blog": "https://news.google.com/rss/search?q=site%3Auber.com%2Fblog%2Fengineering+",
+            "Stripe Engineering Blog": "https://news.google.com/rss/search?q=site%3Astripe.com%2Fblog+",
+            "Discord Engineering Blog": "https://news.google.com/rss/search?q=site%3Adiscord.com%2Fblog+",
+        }
+
+        for category in ("tech_ja", "tech_en"):
+            feeds = {feed["name"]: feed["url"] for feed in du.FEEDS.get(category, [])}
+            for name, url_prefix in expected.items():
+                if name in feeds:
+                    if url_prefix.startswith("https://news.google.com/rss/search?q="):
+                        self.assertTrue(
+                            feeds[name].startswith(url_prefix),
+                            f"{name} は Google News RSS の置き換え URL を使うべき: {feeds[name]}",
+                        )
+                    else:
+                        self.assertEqual(feeds[name], url_prefix)
+
+    def test_replaced_event_platform_feeds_use_expected_urls(self):
+        expected = {
+            "Doorkeeper エンジニア": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+",
+            "Doorkeeper 勉強会": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+",
+            "Doorkeeper 東京": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+",
+            "Doorkeeper オンライン": "https://news.google.com/rss/search?q=site%3Adoorkeeper.jp+",
+            "TECH PLAY": "https://news.google.com/rss/search?q=site%3Atechplay.jp+",
+            "Findy": "https://findy.connpass.com/rss/",
+            "Codezine": "https://codezine.connpass.com/rss/",
+        }
+
+        feeds = {feed["name"]: feed["url"] for feed in du._IT_EVENT_PLATFORM_FEEDS}
+        for name, expected_url in expected.items():
+            self.assertIn(name, feeds, f"{name} フィードが定義されていない")
+            if expected_url.startswith("https://news.google.com/rss/search?q="):
+                self.assertTrue(
+                    feeds[name].startswith(expected_url),
+                    f"{name} は Google News RSS の置き換え URL を使うべき: {feeds[name]}",
+                )
+            else:
+                self.assertEqual(feeds[name], expected_url)
+
+
 if __name__ == "__main__":
     unittest.main()

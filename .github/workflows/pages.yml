@@ -55,8 +55,32 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_r1.outputs.page_url || steps.deployment_r2.outputs.page_url }}
     steps:
       - name: GitHub Pages へデプロイ
-        uses: actions/deploy-pages@v4
         id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: デプロイ失敗のため待機中 (再試行 1/2)
+        if: steps.deployment.outcome == 'failure'
+        run: |
+          echo "デプロイが失敗しました。30秒後に再試行します..."
+          sleep 30
+
+      - name: GitHub Pages へデプロイ (再試行 1/2)
+        id: deployment_r1
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: デプロイ失敗のため待機中 (再試行 2/2)
+        if: steps.deployment.outcome == 'failure' && steps.deployment_r1.outcome == 'failure'
+        run: |
+          echo "デプロイが再度失敗しました。60秒後に最終試行します..."
+          sleep 60
+
+      - name: GitHub Pages へデプロイ (再試行 2/2)
+        id: deployment_r2
+        if: steps.deployment.outcome == 'failure' && steps.deployment_r1.outcome == 'failure'
+        uses: actions/deploy-pages@v4

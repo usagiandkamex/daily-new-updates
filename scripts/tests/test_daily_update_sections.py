@@ -3278,10 +3278,25 @@ class TestReplacedFeedUrlsDailyUpdate(unittest.TestCase):
 class TestCreateLlmClients(unittest.TestCase):
     """create_llm_clients() の LLM クライアント構築ロジックのテスト"""
 
-    def _clients_with_env(self, env):
+    def _clients_with_env(
+        self,
+        env,
+        model_ids=(
+            "openai/gpt-4o",
+            "anthropic/claude-opus-4",
+            "anthropic/claude-opus-5",
+        ),
+    ):
         with patch.dict(os.environ, env, clear=True):
             with patch.object(du, "OpenAI") as mock_openai:
-                mock_openai.return_value = MagicMock(name="gh_client")
+                gh_client = MagicMock(name="gh_client")
+                if model_ids is None:
+                    gh_client.models.list.side_effect = RuntimeError("no listing")
+                else:
+                    gh_client.models.list.return_value.data = [
+                        MagicMock(id=mid) for mid in model_ids
+                    ]
+                mock_openai.return_value = gh_client
                 clients = du.create_llm_clients()
         return clients, mock_openai
 
@@ -3292,8 +3307,31 @@ class TestCreateLlmClients(unittest.TestCase):
             base_url="https://models.github.ai/inference",
             api_key="tok",
         )
-        models = [model for _client, model in clients]
-        self.assertEqual(models, ["anthropic/claude-opus-5"])
+
+    def test_latest_claude_opus_selected(self):
+        """モデル一覧から最新の Claude Opus を動的に選ぶ（ハードコードしない）。"""
+        clients, _ = self._clients_with_env(
+            {"GITHUB_TOKEN": "tok"},
+            model_ids=(
+                "openai/gpt-4o",
+                "anthropic/claude-opus-4",
+                "anthropic/claude-opus-4-1",
+                "anthropic/claude-opus-5",
+            ),
+        )
+        self.assertEqual(clients[0][1], "anthropic/claude-opus-5")
+
+    def test_model_override(self):
+        """GITHUB_MODELS_MODEL で使用モデルを明示指定できる。"""
+        clients, _ = self._clients_with_env(
+            {"GITHUB_TOKEN": "tok", "GITHUB_MODELS_MODEL": "openai/gpt-4o"},
+        )
+        self.assertEqual(clients[0][1], "openai/gpt-4o")
+
+    def test_model_fallback_when_listing_fails(self):
+        """モデル一覧の取得に失敗した場合はフォールバックを使う。"""
+        clients, _ = self._clients_with_env({"GITHUB_TOKEN": "tok"}, model_ids=None)
+        self.assertEqual(clients[0][1], "anthropic/claude-opus-5")
 
     def test_models_token_preferred_over_github_token(self):
         """MODELS_TOKEN が GITHUB_TOKEN より優先される。"""

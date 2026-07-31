@@ -1444,10 +1444,40 @@ def _limit_articles(articles: list[dict], category: str) -> list[dict]:
 # 別プロバイダーへ向ける場合は環境変数で上書きできる。
 GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference"
 
-# モデル選択は行わず、能力の高いモデルを 1 つだけ使用する。
-# 最新の Claude Opus (claude-opus-5) を利用する。
+# モデル名はハードコードせず、プロバイダーが公開するモデル一覧から最新の
+# Claude Opus を動的に選ぶ（新モデルへ追従できるようにするため）。
+# GITHUB_MODELS_MODEL で明示指定でき、一覧取得に失敗した場合や該当モデルが
+# 無い場合は下記のフォールバックを使用する。
 # GitHub Models 互換 API はプロバイダープレフィックス付きのモデル名を要求する。
-GITHUB_MODELS_MODEL = "anthropic/claude-opus-5"
+GITHUB_MODELS_MODEL_FALLBACK = "anthropic/claude-opus-5"
+
+
+def _model_version_key(model_id: str) -> list:
+    """Claude Opus モデル ID からバージョン番号を数値タプルとして取り出す。"""
+    match = re.search(r"claude-opus[-.]?(.*)$", model_id, re.IGNORECASE)
+    suffix = match.group(1) if match else ""
+    return [int(n) for n in re.findall(r"\d+", suffix)]
+
+
+def _resolve_github_model(client) -> str:
+    """最新の Claude Opus モデルを動的に選ぶ。
+
+    モデル名をハードコードすると新しいモデルへ追従できないため、プロバイダーが
+    公開するモデル一覧のうち Claude Opus 系でバージョン番号が最大のものを選ぶ。
+    GITHUB_MODELS_MODEL で明示指定でき、一覧取得に失敗した場合や該当が無い場合は
+    GITHUB_MODELS_MODEL_FALLBACK を使用する。
+    """
+    override = os.environ.get("GITHUB_MODELS_MODEL")
+    if override:
+        return override
+    try:
+        model_ids = [model.id for model in client.models.list().data]
+    except Exception:
+        return GITHUB_MODELS_MODEL_FALLBACK
+    opus_models = [mid for mid in model_ids if "claude-opus" in mid.lower()]
+    if not opus_models:
+        return GITHUB_MODELS_MODEL_FALLBACK
+    return max(opus_models, key=_model_version_key)
 
 
 def create_llm_clients() -> list[tuple]:
@@ -1462,7 +1492,7 @@ def create_llm_clients() -> list[tuple]:
             base_url=os.environ.get("GITHUB_MODELS_BASE_URL", GITHUB_MODELS_BASE_URL),
             api_key=github_token,
         )
-        clients.append((gh_client, GITHUB_MODELS_MODEL))
+        clients.append((gh_client, _resolve_github_model(gh_client)))
 
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     if azure_endpoint:

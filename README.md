@@ -8,7 +8,7 @@
 
 1. **Issue 作成** — 「YYYY/MM/DD デイリーアップデート」という Issue を作成
 2. **ブランチ作成** — `YYYYMMDD_update` ブランチを作成
-3. **ニュース収集 & 記事生成** — 89 の RSS/Atom フィード（技術系・ビジネス系・SNS・コミュニティ）から最新ニュースを取得し、LLM (anthropic/claude-opus-5) で記事を生成
+3. **ニュース収集 & 記事生成** — 89 の RSS/Atom フィード（技術系・ビジネス系・SNS・コミュニティ）から最新ニュースを取得し、LLM（最新の Claude Opus を自動選択）で記事を生成
 4. **PR 作成 & マージ** — main ブランチへの PR を作成し、自動マージ
 
 ## 生成される記事の構成
@@ -46,6 +46,7 @@
 | 環境変数 | 説明 |
 |---|---|
 | `GITHUB_MODELS_BASE_URL` | GitHub Models 互換クライアントの base URL（既定: `https://models.github.ai/inference`）。OpenAI 互換の別プロバイダーへ向ける場合に指定します。 |
+| `GITHUB_MODELS_MODEL` | 使用するモデル名を明示指定します。未設定時はプロバイダーのモデル一覧から最新の Claude Opus を自動選択し、モデル名のハードコードを避けます（取得失敗時は `anthropic/claude-opus-5` にフォールバック）。 |
 
 ### ニュースソース
 
@@ -198,7 +199,7 @@ GitHub Actions の **Actions** タブからワークフローを手動実行で�
 
 1. **Issue 作成** — 「YYYY/MM/DD テクニカル雑談（午前/午後）」という Issue を作成
 2. **ブランチ作成** — `YYYYMMDD_smallchat_am` または `YYYYMMDD_smallchat_pm` ブランチを作成
-3. **ニュース収集 & 記事生成** — 96 の RSS フィード（SNS・テックブログ中心）から直近12時間のニュースを取得し、LLM (anthropic/claude-opus-5) で記事を生成
+3. **ニュース収集 & 記事生成** — 96 の RSS フィード（SNS・テックブログ中心）から直近12時間のニュースを取得し、LLM（最新の Claude Opus を自動選択）で記事を生成
 4. **PR 作成 & マージ** — main ブランチへの PR を作成し、自動マージ
 
 ### 生成される記事の構成

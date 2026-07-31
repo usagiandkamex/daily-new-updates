@@ -361,8 +361,9 @@ _verify_link_source_match = SourceUrlTracker.verify_link_source_match
 GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference"
 
 # モデル選択は行わず、能力の高いモデルを 1 つだけ使用する。
-# 現行 API はプロバイダープレフィックス付きのモデル名を要求する。
-GITHUB_MODELS_MODEL = "openai/gpt-4o"
+# 最新の Claude Opus (claude-opus-5) を利用する。
+# GitHub Models 互換 API はプロバイダープレフィックス付きのモデル名を要求する。
+GITHUB_MODELS_MODEL = "anthropic/claude-opus-5"
 
 
 def create_llm_clients() -> list[tuple]:

@@ -1063,7 +1063,7 @@ class TestCreateLlmClients(unittest.TestCase):
             api_key="tok",
         )
         models = [model for _client, model in clients]
-        self.assertEqual(models, ["openai/gpt-4o"])
+        self.assertEqual(models, ["anthropic/claude-opus-5"])
 
     def test_models_token_preferred_over_github_token(self):
         """MODELS_TOKEN が GITHUB_TOKEN より優先される。"""

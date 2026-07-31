@@ -355,9 +355,9 @@ _verify_link_source_match = SourceUrlTracker.verify_link_source_match
 # --- LLM クライアント -----------------------------------------------------------
 
 
-# GitHub Models 互換エンドポイント。旧 https://models.inference.ai.azure.com は
-# 2026-07-30 の GitHub Models 廃止に伴い停止したため、現行 API へ移行する。
-# 別プロバイダーへ向ける場合は環境変数で上書きできる。
+# GitHub Models 互換エンドポイント。既定値の https://models.github.ai/inference は
+# GitHub 提供エンドポイント廃止前の互換性のために残している。
+# 実運用では GITHUB_MODELS_BASE_URL を稼働中の OpenAI 互換プロバイダーへ上書きする。
 GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference"
 
 # モデル名はハードコードせず、プロバイダーが公開するモデル一覧から最新の
@@ -375,13 +375,13 @@ def _model_version_key(model_id: str) -> list:
     return [int(n) for n in re.findall(r"\d+", suffix)]
 
 
-def _resolve_github_model(client) -> str:
+def _resolve_github_model(client, base_url: str) -> str:
     """最新の Claude Opus モデルを動的に選ぶ。
 
     モデル名をハードコードすると新しいモデルへ追従できないため、プロバイダーが
     公開するモデル一覧のうち Claude Opus 系でバージョン番号が最大のものを選ぶ。
-    GITHUB_MODELS_MODEL で明示指定でき、一覧取得に失敗した場合や該当が無い場合は
-    GITHUB_MODELS_MODEL_FALLBACK を使用する。
+    Claude Opus が無い場合は一覧の先頭モデルを使い、一覧取得に失敗した場合は
+    既定エンドポイントのみ GITHUB_MODELS_MODEL_FALLBACK を使用する。
     """
     override = os.environ.get("GITHUB_MODELS_MODEL")
     if override:
@@ -389,11 +389,18 @@ def _resolve_github_model(client) -> str:
     try:
         model_ids = [model.id for model in client.models.list().data]
     except Exception:
-        return GITHUB_MODELS_MODEL_FALLBACK
+        model_ids = []
     opus_models = [mid for mid in model_ids if "claude-opus" in mid.lower()]
-    if not opus_models:
-        return GITHUB_MODELS_MODEL_FALLBACK
-    return max(opus_models, key=_model_version_key)
+    if opus_models:
+        return max(opus_models, key=_model_version_key)
+    if model_ids:
+        return model_ids[0]
+    if base_url != GITHUB_MODELS_BASE_URL:
+        raise RuntimeError(
+            "GITHUB_MODELS_BASE_URL を上書きした環境でモデル一覧を取得できませんでした。"
+            "GITHUB_MODELS_MODEL を明示指定してください。"
+        )
+    return GITHUB_MODELS_MODEL_FALLBACK
 
 
 def create_llm_clients() -> list[tuple]:
@@ -401,14 +408,15 @@ def create_llm_clients() -> list[tuple]:
     clients = []
 
     # GitHub Models 互換エンドポイント。models 権限を持つ MODELS_TOKEN を優先し、
-    # 未設定なら Actions が自動発行する GITHUB_TOKEN を使用する。
+    # 未設定なら Actions が自動発行する GITHUB_TOKEN も試す（互換フォールバック）。
     github_token = os.environ.get("MODELS_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if github_token:
+        base_url = os.environ.get("GITHUB_MODELS_BASE_URL") or GITHUB_MODELS_BASE_URL
         gh_client = OpenAI(
-            base_url=os.environ.get("GITHUB_MODELS_BASE_URL", GITHUB_MODELS_BASE_URL),
+            base_url=base_url,
             api_key=github_token,
         )
-        clients.append((gh_client, _resolve_github_model(gh_client)))
+        clients.append((gh_client, _resolve_github_model(gh_client, base_url)))
 
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     if azure_endpoint:

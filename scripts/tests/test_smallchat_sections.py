@@ -1071,7 +1071,7 @@ class TestCreateLlmClients(unittest.TestCase):
         return clients, mock_openai
 
     def test_github_models_uses_new_endpoint(self):
-        """GITHUB_TOKEN 使用時は現行 GitHub Models エンドポイントを使う。"""
+        """GITHUB_TOKEN 使用時は既定の GitHub Models 互換エンドポイントを使う。"""
         clients, mock_openai = self._clients_with_env({"GITHUB_TOKEN": "tok"})
         mock_openai.assert_called_once_with(
             base_url="https://models.github.ai/inference",
@@ -1099,9 +1099,25 @@ class TestCreateLlmClients(unittest.TestCase):
         self.assertEqual(clients[0][1], "openai/gpt-4o")
 
     def test_model_fallback_when_listing_fails(self):
-        """モデル一覧の取得に失敗した場合はフォールバックを使う。"""
+        """既定エンドポイントで一覧取得に失敗した場合はフォールバックを使う。"""
         clients, _ = self._clients_with_env({"GITHUB_TOKEN": "tok"}, model_ids=None)
         self.assertEqual(clients[0][1], "anthropic/claude-opus-5")
+
+    def test_non_claude_provider_uses_listed_model(self):
+        """Claude Opus が無いプロバイダーでは一覧の先頭モデルを使う。"""
+        clients, _ = self._clients_with_env(
+            {"GITHUB_TOKEN": "tok", "GITHUB_MODELS_BASE_URL": "https://example.test/v1"},
+            model_ids=("openai/gpt-4o", "openai/gpt-4o-mini"),
+        )
+        self.assertEqual(clients[0][1], "openai/gpt-4o")
+
+    def test_custom_base_url_requires_explicit_model_if_listing_fails(self):
+        """base URL 上書き時に一覧取得できない場合は明示モデル指定を要求する。"""
+        with self.assertRaises(RuntimeError):
+            self._clients_with_env(
+                {"GITHUB_TOKEN": "tok", "GITHUB_MODELS_BASE_URL": "https://example.test/v1"},
+                model_ids=None,
+            )
 
     def test_models_token_preferred_over_github_token(self):
         """MODELS_TOKEN が GITHUB_TOKEN より優先される。"""

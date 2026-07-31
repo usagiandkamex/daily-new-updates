@@ -34,18 +34,19 @@
 
 | Secret 名 | 説明 |
 |---|---|
-| `MODELS_TOKEN` | GitHub Models 互換エンドポイント（既定: `https://models.github.ai/inference`）を利用する場合の `models` 権限付きトークン（PAT 等）。未設定時は Actions 自動発行の `GITHUB_TOKEN` を使用します。 |
+| `MODELS_TOKEN` | GitHub Models 互換クライアント用の `models` 権限付きトークン（PAT 等）。`MODELS_TOKEN` を使う場合は **`GITHUB_MODELS_BASE_URL` を稼働中の OpenAI 互換プロバイダー URL に設定**してください（既定値は互換性のために残している廃止済み URL）。 |
 | `OPENAI_API_KEY` | OpenAI API キー |
 | `AZURE_OPENAI_ENDPOINT` | Azure OpenAI を使用する場合のエンドポイント URL |
 | `AZURE_OPENAI_DEPLOYMENT` | Azure OpenAI のデプロイメント名（既定: `gpt-4o`） |
 | `AZURE_OPENAI_API_KEY` | Azure OpenAI 専用キー（未設定時は `OPENAI_API_KEY` を使用） |
 | `CONNPASS_API_KEY` | connpass API v2 キー（未設定時は RSS フォールバック）。設定後に `python scripts/verify_connpass_api.py` で実 API の動作確認が可能。 |
 
-利用する LLM エンドポイントは、生成ステップの環境変数でも上書きできます。
+コードは互換性のため `GITHUB_TOKEN` もフォールバックで試しますが、GitHub 提供の推論エンドポイントは廃止済みのため成功しない可能性が高いです。運用では `MODELS_TOKEN` + `GITHUB_MODELS_BASE_URL` または `OPENAI_API_KEY` / Azure を設定してください。  
+利用する LLM エンドポイントは、生成ステップの環境変数でも上書きできます（workflow では repo variable 経由で渡せます）。
 
 | 環境変数 | 説明 |
 |---|---|
-| `GITHUB_MODELS_BASE_URL` | GitHub Models 互換クライアントの base URL（既定: `https://models.github.ai/inference`）。OpenAI 互換の別プロバイダーへ向ける場合に指定します。 |
+| `GITHUB_MODELS_BASE_URL` | GitHub Models 互換クライアントの base URL。**必ず稼働中の OpenAI 互換プロバイダー URL を指定**してください（既定: `https://models.github.ai/inference` は互換性のために残している廃止済み URL）。 |
 | `GITHUB_MODELS_MODEL` | 使用するモデル名を明示指定します。未設定時はプロバイダーのモデル一覧から最新の Claude Opus を自動選択し、モデル名のハードコードを避けます（取得失敗時は `anthropic/claude-opus-5` にフォールバック）。 |
 
 ### ニュースソース

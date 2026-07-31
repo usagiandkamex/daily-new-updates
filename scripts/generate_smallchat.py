@@ -2,7 +2,7 @@
 テクニカル雑談生成スクリプト
 
 SNS を中心に IT 関連の話題を収集し、
-GitHub Copilot (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
+GitHub Models 互換エンドポイント / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
 """
 
 import os
@@ -355,24 +355,39 @@ _verify_link_source_match = SourceUrlTracker.verify_link_source_match
 # --- LLM クライアント -----------------------------------------------------------
 
 
+# GitHub Models 互換エンドポイント。旧 https://models.inference.ai.azure.com は
+# 2026-07-30 の GitHub Models 廃止に伴い停止したため、現行 API へ移行する。
+# 別プロバイダーへ向ける場合は環境変数で上書きできる。
+GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference"
+
+# 現行 API はプロバイダープレフィックス付きのモデル名を要求する。
 GITHUB_MODELS_CANDIDATES = [
-    "claude-opus-4-6",
-    "gpt-4o",
-    "gpt-4o-mini",
+    "openai/gpt-4o",
+    "openai/gpt-4o-mini",
 ]
+
+
+def _github_models_candidates() -> list[str]:
+    """環境変数 GITHUB_MODELS でモデル候補を上書きできるようにする。"""
+    override = os.environ.get("GITHUB_MODELS")
+    if override:
+        return [name.strip() for name in override.split(",") if name.strip()]
+    return list(GITHUB_MODELS_CANDIDATES)
 
 
 def create_llm_clients() -> list[tuple]:
     """環境変数に応じて利用可能な LLM クライアントを優先順に返す。"""
     clients = []
 
-    github_token = os.environ.get("GITHUB_TOKEN")
+    # GitHub Models 互換エンドポイント。models 権限を持つ MODELS_TOKEN を優先し、
+    # 未設定なら Actions が自動発行する GITHUB_TOKEN を使用する。
+    github_token = os.environ.get("MODELS_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if github_token:
         gh_client = OpenAI(
-            base_url="https://models.inference.ai.azure.com",
+            base_url=os.environ.get("GITHUB_MODELS_BASE_URL", GITHUB_MODELS_BASE_URL),
             api_key=github_token,
         )
-        for model_name in GITHUB_MODELS_CANDIDATES:
+        for model_name in _github_models_candidates():
             clients.append((gh_client, model_name))
 
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")

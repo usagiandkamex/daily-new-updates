@@ -8,7 +8,7 @@
 
 1. **Issue 作成** — 「YYYY/MM/DD デイリーアップデート」という Issue を作成
 2. **ブランチ作成** — `YYYYMMDD_update` ブランチを作成
-3. **ニュース収集 & 記事生成** — 89 の RSS/Atom フィード（技術系・ビジネス系・SNS・コミュニティ）から最新ニュースを取得し、GitHub Models (claude-opus-4-6 / gpt-4o / gpt-4o-mini) で記事を生成
+3. **ニュース収集 & 記事生成** — 89 の RSS/Atom フィード（技術系・ビジネス系・SNS・コミュニティ）から最新ニュースを取得し、LLM (openai/gpt-4o / openai/gpt-4o-mini) で記事を生成
 4. **PR 作成 & マージ** — main ブランチへの PR を作成し、自動マージ
 
 ## 生成される記事の構成
@@ -28,17 +28,25 @@
 
 ### 必要な Secrets
 
-**GitHub Models（推奨）を使う場合、追加の Secret は不要です。** ニュース取得は無料の RSS フィード、LLM は `GITHUB_TOKEN` 経由の GitHub Models を使用します。
+> **重要（2026-07-30 の GitHub Models 廃止対応）:** 旧来は `GITHUB_TOKEN` 経由の GitHub Models を利用しており追加 Secret は不要でしたが、[GitHub Models は 2026-07-30 に推論 API を含め完全廃止](https://github.blog/changelog/2026-07-01-github-models-is-being-fully-retired-on-july-30-2026/)されました。GitHub が提供する「Secret 不要」の推論エンドポイントは現在利用できないため、**記事生成には LLM プロバイダーの Secret 設定が必須のセットアップ手順**になりました。
 
-独自の OpenAI / Azure OpenAI を使いたい場合のみ、リポジトリの **Settings → Secrets and variables → Actions** に以下を設定してください。
+リポジトリの **Settings → Secrets and variables → Actions** に、以下のいずれかを設定してください（上から順に優先して利用されます）。
 
-| Secret 名 | 必須 | 説明 |
-|---|---|---|
-| `OPENAI_API_KEY` | - | OpenAI API キー |
-| `AZURE_OPENAI_ENDPOINT` | - | Azure OpenAI を使用する場合のエンドポイント URL |
-| `AZURE_OPENAI_DEPLOYMENT` | - | Azure OpenAI のデプロイメント名（既定: `gpt-4o`） |
-| `AZURE_OPENAI_API_KEY` | - | Azure OpenAI 専用キー（未設定時は `OPENAI_API_KEY` を使用） |
-| `CONNPASS_API_KEY` | - | connpass API v2 キー（未設定時は RSS フォールバック）。設定後に `python scripts/verify_connpass_api.py` で実 API の動作確認が可能。 |
+| Secret 名 | 説明 |
+|---|---|
+| `MODELS_TOKEN` | GitHub Models 互換エンドポイント（既定: `https://models.github.ai/inference`）を利用する場合の `models` 権限付きトークン（PAT 等）。未設定時は Actions 自動発行の `GITHUB_TOKEN` を使用します。 |
+| `OPENAI_API_KEY` | OpenAI API キー |
+| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI を使用する場合のエンドポイント URL |
+| `AZURE_OPENAI_DEPLOYMENT` | Azure OpenAI のデプロイメント名（既定: `gpt-4o`） |
+| `AZURE_OPENAI_API_KEY` | Azure OpenAI 専用キー（未設定時は `OPENAI_API_KEY` を使用） |
+| `CONNPASS_API_KEY` | connpass API v2 キー（未設定時は RSS フォールバック）。設定後に `python scripts/verify_connpass_api.py` で実 API の動作確認が可能。 |
+
+利用する LLM エンドポイントやモデルは、生成ステップの環境変数でも上書きできます。
+
+| 環境変数 | 説明 |
+|---|---|
+| `GITHUB_MODELS_BASE_URL` | GitHub Models 互換クライアントの base URL（既定: `https://models.github.ai/inference`）。OpenAI 互換の別プロバイダーへ向ける場合に指定します。 |
+| `GITHUB_MODELS` | 試行するモデル名をカンマ区切りで指定（既定: `openai/gpt-4o,openai/gpt-4o-mini`）。 |
 
 ### ニュースソース
 
@@ -191,7 +199,7 @@ GitHub Actions の **Actions** タブからワークフローを手動実行で�
 
 1. **Issue 作成** — 「YYYY/MM/DD テクニカル雑談（午前/午後）」という Issue を作成
 2. **ブランチ作成** — `YYYYMMDD_smallchat_am` または `YYYYMMDD_smallchat_pm` ブランチを作成
-3. **ニュース収集 & 記事生成** — 96 の RSS フィード（SNS・テックブログ中心）から直近12時間のニュースを取得し、GitHub Models (claude-opus-4-6 / gpt-4o / gpt-4o-mini) で記事を生成
+3. **ニュース収集 & 記事生成** — 96 の RSS フィード（SNS・テックブログ中心）から直近12時間のニュースを取得し、LLM (openai/gpt-4o / openai/gpt-4o-mini) で記事を生成
 4. **PR 作成 & マージ** — main ブランチへの PR を作成し、自動マージ
 
 ### 生成される記事の構成

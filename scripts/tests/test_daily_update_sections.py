@@ -3275,5 +3275,56 @@ class TestReplacedFeedUrlsDailyUpdate(unittest.TestCase):
                 self.assertEqual(feeds[name], expected_url)
 
 
+class TestCreateLlmClients(unittest.TestCase):
+    """create_llm_clients() の LLM クライアント構築ロジックのテスト"""
+
+    def _clients_with_env(self, env):
+        with patch.dict(os.environ, env, clear=True):
+            with patch.object(du, "OpenAI") as mock_openai:
+                mock_openai.return_value = MagicMock(name="gh_client")
+                clients = du.create_llm_clients()
+        return clients, mock_openai
+
+    def test_github_models_uses_new_endpoint(self):
+        """GITHUB_TOKEN 使用時は現行 GitHub Models エンドポイントを使う。"""
+        clients, mock_openai = self._clients_with_env({"GITHUB_TOKEN": "tok"})
+        mock_openai.assert_called_once_with(
+            base_url="https://models.github.ai/inference",
+            api_key="tok",
+        )
+        models = [model for _client, model in clients]
+        self.assertEqual(models, ["openai/gpt-4o", "openai/gpt-4o-mini"])
+
+    def test_models_token_preferred_over_github_token(self):
+        """MODELS_TOKEN が GITHUB_TOKEN より優先される。"""
+        _clients, mock_openai = self._clients_with_env(
+            {"GITHUB_TOKEN": "gh", "MODELS_TOKEN": "pat"}
+        )
+        _, kwargs = mock_openai.call_args
+        self.assertEqual(kwargs["api_key"], "pat")
+
+    def test_base_url_override(self):
+        """GITHUB_MODELS_BASE_URL でエンドポイントを上書きできる。"""
+        _clients, mock_openai = self._clients_with_env(
+            {"GITHUB_TOKEN": "tok", "GITHUB_MODELS_BASE_URL": "https://example.test/v1"}
+        )
+        _, kwargs = mock_openai.call_args
+        self.assertEqual(kwargs["base_url"], "https://example.test/v1")
+
+    def test_candidates_override(self):
+        """GITHUB_MODELS でモデル候補を上書きできる。"""
+        clients, _mock_openai = self._clients_with_env(
+            {"GITHUB_TOKEN": "tok", "GITHUB_MODELS": "openai/gpt-4o-mini, meta/llama"}
+        )
+        models = [model for _client, model in clients]
+        self.assertEqual(models, ["openai/gpt-4o-mini", "meta/llama"])
+
+    def test_no_credentials_raises(self):
+        """認証情報が無ければ RuntimeError を送出する。"""
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(RuntimeError):
+                du.create_llm_clients()
+
+
 if __name__ == "__main__":
     unittest.main()

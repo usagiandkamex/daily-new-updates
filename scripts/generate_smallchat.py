@@ -360,19 +360,9 @@ _verify_link_source_match = SourceUrlTracker.verify_link_source_match
 # 別プロバイダーへ向ける場合は環境変数で上書きできる。
 GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference"
 
+# モデル選択は行わず、能力の高いモデルを 1 つだけ使用する。
 # 現行 API はプロバイダープレフィックス付きのモデル名を要求する。
-GITHUB_MODELS_CANDIDATES = [
-    "openai/gpt-4o",
-    "openai/gpt-4o-mini",
-]
-
-
-def _github_models_candidates() -> list[str]:
-    """環境変数 GITHUB_MODELS でモデル候補を上書きできるようにする。"""
-    override = os.environ.get("GITHUB_MODELS")
-    if override:
-        return [name.strip() for name in override.split(",") if name.strip()]
-    return list(GITHUB_MODELS_CANDIDATES)
+GITHUB_MODELS_MODEL = "openai/gpt-4o"
 
 
 def create_llm_clients() -> list[tuple]:
@@ -387,8 +377,7 @@ def create_llm_clients() -> list[tuple]:
             base_url=os.environ.get("GITHUB_MODELS_BASE_URL", GITHUB_MODELS_BASE_URL),
             api_key=github_token,
         )
-        for model_name in _github_models_candidates():
-            clients.append((gh_client, model_name))
+        clients.append((gh_client, GITHUB_MODELS_MODEL))
 
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     if azure_endpoint:

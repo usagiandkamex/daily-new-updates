@@ -41,12 +41,11 @@
 | `AZURE_OPENAI_API_KEY` | Azure OpenAI 専用キー（未設定時は `OPENAI_API_KEY` を使用） |
 | `CONNPASS_API_KEY` | connpass API v2 キー（未設定時は RSS フォールバック）。設定後に `python scripts/verify_connpass_api.py` で実 API の動作確認が可能。 |
 
-利用する LLM エンドポイントやモデルは、生成ステップの環境変数でも上書きできます。
+利用する LLM エンドポイントは、生成ステップの環境変数でも上書きできます。
 
 | 環境変数 | 説明 |
 |---|---|
 | `GITHUB_MODELS_BASE_URL` | GitHub Models 互換クライアントの base URL（既定: `https://models.github.ai/inference`）。OpenAI 互換の別プロバイダーへ向ける場合に指定します。 |
-| `GITHUB_MODELS` | 試行するモデル名をカンマ区切りで指定（既定: `openai/gpt-4o,openai/gpt-4o-mini`）。 |
 
 ### ニュースソース
 

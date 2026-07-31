@@ -1063,7 +1063,7 @@ class TestCreateLlmClients(unittest.TestCase):
             api_key="tok",
         )
         models = [model for _client, model in clients]
-        self.assertEqual(models, ["openai/gpt-4o", "openai/gpt-4o-mini"])
+        self.assertEqual(models, ["openai/gpt-4o"])
 
     def test_models_token_preferred_over_github_token(self):
         """MODELS_TOKEN が GITHUB_TOKEN より優先される。"""
@@ -1080,14 +1080,6 @@ class TestCreateLlmClients(unittest.TestCase):
         )
         _, kwargs = mock_openai.call_args
         self.assertEqual(kwargs["base_url"], "https://example.test/v1")
-
-    def test_candidates_override(self):
-        """GITHUB_MODELS でモデル候補を上書きできる。"""
-        clients, _mock_openai = self._clients_with_env(
-            {"GITHUB_TOKEN": "tok", "GITHUB_MODELS": "openai/gpt-4o-mini, meta/llama"}
-        )
-        models = [model for _client, model in clients]
-        self.assertEqual(models, ["openai/gpt-4o-mini", "meta/llama"])
 
     def test_no_credentials_raises(self):
         """認証情報が無ければ RuntimeError を送出する。"""

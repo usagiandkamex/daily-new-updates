@@ -1,11 +1,6 @@
 name: テクニカル雑談
 
 on:
-  schedule:
-    # 毎日 3:00 JST (= 18:00 UTC 前日)
-    - cron: '0 18 * * *'
-    # 毎日 15:00 JST (= 6:00 UTC)
-    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       target_date:

@@ -1,9 +1,6 @@
 name: イベントカレンダー更新
 
 on:
-  schedule:
-    # 毎日 3:00 JST (= 18:00 UTC 前日)
-    - cron: '0 18 * * *'
   workflow_dispatch:
 
 permissions:

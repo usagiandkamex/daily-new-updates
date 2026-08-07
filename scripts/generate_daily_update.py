@@ -2,7 +2,7 @@
 デイリーアップデート生成スクリプト
 
 複数の RSS/Atom フィードで最新ニュースを取得し、
-GitHub Copilot (Claude Opus) / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
+GitHub Models 互換エンドポイント / Azure OpenAI / OpenAI API でマークダウン記事を生成する。
 """
 
 import os
@@ -1439,25 +1439,68 @@ def _limit_articles(articles: list[dict], category: str) -> list[dict]:
 # --- LLM クライアント -----------------------------------------------------------
 
 
-GITHUB_MODELS_CANDIDATES = [
-    "claude-opus-4-6",
-    "gpt-4o",
-    "gpt-4o-mini",
-]
+# GitHub Models 互換エンドポイント。既定値の https://models.github.ai/inference は
+# GitHub 提供エンドポイント廃止前の互換性のために残している。
+# 実運用では GITHUB_MODELS_BASE_URL を稼働中の OpenAI 互換プロバイダーへ上書きする。
+GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference"
+
+# モデル名はハードコードせず、プロバイダーが公開するモデル一覧から最新の
+# Claude Opus を動的に選ぶ（新モデルへ追従できるようにするため）。
+# GITHUB_MODELS_MODEL で明示指定でき、一覧取得に失敗した場合や該当モデルが
+# 無い場合は下記のフォールバックを使用する。
+# GitHub Models 互換 API はプロバイダープレフィックス付きのモデル名を要求する。
+GITHUB_MODELS_MODEL_FALLBACK = "anthropic/claude-opus-5"
+
+
+def _model_version_key(model_id: str) -> list:
+    """Claude Opus モデル ID からバージョン番号を数値タプルとして取り出す。"""
+    match = re.search(r"claude-opus[-.]?(.*)$", model_id, re.IGNORECASE)
+    suffix = match.group(1) if match else ""
+    return [int(n) for n in re.findall(r"\d+", suffix)]
+
+
+def _resolve_github_model(client, base_url: str) -> str:
+    """最新の Claude Opus モデルを動的に選ぶ。
+
+    モデル名をハードコードすると新しいモデルへ追従できないため、プロバイダーが
+    公開するモデル一覧のうち Claude Opus 系でバージョン番号が最大のものを選ぶ。
+    Claude Opus が無い場合は一覧の先頭モデルを使い、一覧取得に失敗した場合は
+    既定エンドポイントのみ GITHUB_MODELS_MODEL_FALLBACK を使用する。
+    """
+    override = os.environ.get("GITHUB_MODELS_MODEL")
+    if override:
+        return override
+    try:
+        model_ids = [model.id for model in client.models.list().data]
+    except Exception:
+        model_ids = []
+    opus_models = [mid for mid in model_ids if "claude-opus" in mid.lower()]
+    if opus_models:
+        return max(opus_models, key=_model_version_key)
+    if model_ids:
+        return model_ids[0]
+    if base_url != GITHUB_MODELS_BASE_URL:
+        raise RuntimeError(
+            "GITHUB_MODELS_BASE_URL を上書きした環境でモデル一覧を取得できませんでした。"
+            "GITHUB_MODELS_MODEL を明示指定してください。"
+        )
+    return GITHUB_MODELS_MODEL_FALLBACK
 
 
 def create_llm_clients() -> list[tuple]:
     """環境変数に応じて利用可能な LLM クライアントを優先順に返す。"""
     clients = []
 
-    github_token = os.environ.get("GITHUB_TOKEN")
+    # GitHub Models 互換エンドポイント。models 権限を持つ MODELS_TOKEN を優先し、
+    # 未設定なら Actions が自動発行する GITHUB_TOKEN も試す（互換フォールバック）。
+    github_token = os.environ.get("MODELS_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if github_token:
+        base_url = os.environ.get("GITHUB_MODELS_BASE_URL") or GITHUB_MODELS_BASE_URL
         gh_client = OpenAI(
-            base_url="https://models.inference.ai.azure.com",
+            base_url=base_url,
             api_key=github_token,
         )
-        for model_name in GITHUB_MODELS_CANDIDATES:
-            clients.append((gh_client, model_name))
+        clients.append((gh_client, _resolve_github_model(gh_client, base_url)))
 
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     if azure_endpoint:
